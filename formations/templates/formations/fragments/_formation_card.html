@@ -1,0 +1,71 @@
+<div
+  class="group bg-white rounded-xl border border-gray-100
+         shadow-sm hover:shadow-2xl
+         transition-all duration-300
+         overflow-hidden flex flex-col justify-between"
+>
+
+  <!-- ================= HEADER ================= -->
+
+  <div class="p-6 space-y-4">
+
+    <!-- Badge + durée -->
+    <div class="flex items-center justify-between">
+
+      <span class="inline-flex items-center
+                   text-xs font-semibold px-3 py-1
+                   rounded-full
+                   bg-primary/10 text-primary
+                   transition group-hover:bg-primary group-hover:text-white">
+        {{ programme.cycle.name }}
+      </span>
+
+      <span class="text-xs text-gray-400">
+        {{ programme.duration_years }} an{{ programme.duration_years|pluralize }}
+      </span>
+
+    </div>
+
+    <!-- Titre -->
+    <h3 class="text-lg font-semibold text-gray-800
+               leading-snug
+               group-hover:text-primary
+               transition-colors duration-300">
+      {{ programme.title }}
+    </h3>
+
+    <!-- Description -->
+    <p class="text-sm text-gray-600 leading-relaxed line-clamp-3">
+      {{ programme.short_description|default:programme.description|truncatewords:18 }}
+    </p>
+
+  </div>
+
+
+  <!-- ================= FOOTER ================= -->
+
+  <div class="px-6 pb-6 pt-2 flex items-center justify-between">
+
+    <div class="text-xs text-gray-500">
+      Diplôme :
+      <span class="font-medium text-gray-700">
+        {{ programme.diploma_awarded.name }}
+      </span>
+    </div>
+
+    <a
+      href="{% url 'formations:detail' programme.slug %}"
+      class="inline-flex items-center gap-1
+             text-sm font-semibold text-primary
+             transition-all duration-300
+             group-hover:gap-2"
+    >
+      Voir
+      <span class="transition-transform duration-300 group-hover:translate-x-1">
+        →
+      </span>
+    </a>
+
+  </div>
+
+</div>

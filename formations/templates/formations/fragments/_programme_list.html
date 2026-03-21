@@ -1,0 +1,10 @@
+{% load component_tags %}
+
+{% component "programme_grid"
+    programmes=programmes
+    page_obj=page_obj
+    total_programmes=total_programmes
+    current_cycle=current_cycle
+    search_query=search_query
+%}
+{% endcomponent %}

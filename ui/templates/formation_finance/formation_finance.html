@@ -1,0 +1,57 @@
+{% load humanize %}
+
+<section id="financement" class="py-20 bg-white">
+
+<div class="max-w-7xl mx-auto px-6">
+
+<h2 class="text-3xl md:text-4xl font-bold text-primary mb-12">
+Organisation financière
+</h2>
+
+<div class="grid md:grid-cols-2 gap-8">
+
+{% for item in years_with_totals %}
+
+<div class="bg-gray-50 rounded-2xl border border-gray-200 p-8">
+
+<h3 class="text-xl font-bold text-primary mb-6">
+Année {{ item.year.year_number }}
+</h3>
+
+<ul class="space-y-4 text-gray-600">
+
+{% for fee in item.year.fees.all %}
+
+<li class="flex justify-between">
+
+<span>{{ fee.label }}</span>
+
+<span class="font-semibold">
+{{ fee.amount|intcomma }} Fcfa
+</span>
+
+</li>
+
+{% endfor %}
+
+</ul>
+
+<div class="mt-6 pt-4 border-t flex justify-between font-bold text-secondary">
+
+<span>Total annuel</span>
+
+<span>
+{{ item.year_total|intcomma }} Fcfa
+</span>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+</section>

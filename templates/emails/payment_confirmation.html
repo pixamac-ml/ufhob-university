@@ -1,0 +1,85 @@
+{% extends "emails/base_email.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<!-- Greeting -->
+<p style="margin-bottom:25px;font-size:15px;">
+Bonjour
+<strong style="color:#1e4f6f;">
+{{ candidature.first_name }} {{ candidature.last_name }}
+</strong>,
+</p>
+
+<!-- Main Message -->
+<p style="font-size:15px;">
+Nous avons le plaisir de vous informer que votre paiement a été
+<strong style="color:#16a34a;">validé avec succès</strong> par notre service financier.
+</p>
+
+<p style="font-size:15px;">
+Votre dossier d'inscription est actuellement en cours de traitement.
+</p>
+
+<!-- Payment Summary -->
+<div style="background:#f8fafc;border-radius:6px;padding:20px;margin:30px 0;border:1px solid #e5e7eb;">
+
+<h4 style="margin-top:0;color:#1e4f6f;">Résumé du paiement</h4>
+
+<table width="100%" style="font-size:14px;line-height:1.8;">
+<tr>
+<td><strong>Référence paiement :</strong></td>
+<td>{{ payment.reference }}</td>
+</tr>
+
+<tr>
+<td><strong>Montant payé :</strong></td>
+<td>{{ payment.amount|intcomma }} FCFA</td>
+</tr>
+
+<tr>
+<td><strong>Total inscription :</strong></td>
+<td>{{ amount_due|intcomma }} FCFA</td>
+</tr>
+
+<tr>
+<td><strong>Total payé :</strong></td>
+<td>{{ amount_paid|intcomma }} FCFA</td>
+</tr>
+
+<tr>
+<td><strong>Solde restant :</strong></td>
+<td style="color:#dc2626;">
+{{ balance|intcomma }} FCFA
+</td>
+</tr>
+
+</table>
+
+</div>
+
+<!-- Next Steps -->
+<p style="font-size:15px;">
+Vous pouvez consulter votre dossier d'inscription et suivre l'évolution de votre situation administrative via le lien ci-dessous :
+</p>
+
+<p style="text-align:center;margin:30px 0;">
+<a href="{{ public_link }}"
+style="
+background:#1e4f6f;
+color:white;
+padding:12px 20px;
+text-decoration:none;
+border-radius:5px;
+font-size:14px;
+font-weight:bold;
+">
+Accéder à mon dossier
+</a>
+</p>
+
+<p style="font-size:14px;color:#555;">
+Nous vous remercions pour votre confiance et restons à votre disposition pour toute information complémentaire.
+</p>
+
+{% endblock %}

@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% load static %}
+{% load component_tags %}
+{% load humanize %}
+
+{% block title %}Accueil – ESFE{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 1 : HERO
+   ══════════════════════════════════════════════════════════════════════════════ #}
+{% component "hero"
+   title="ESFE"
+   subtitle="Former les cadres de la santé"
+   cities="['Abidjan','Kati','Koulikoro','San','Gao','Bobo']"
+%}{% endcomponent %}
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 2 : À PROPOS (Fusion Qui sommes-nous + Vision)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="a-propos" class="py-24 lg:py-32 bg-soft">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.30.once="show = true">
+
+    {# Header #}
+    <div class="text-center mb-16 lg:mb-20"
+         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+         class="transition-all duration-700">
+      <span class="inline-block text-sm font-semibold text-secondary uppercase tracking-wider mb-4">
+        Qui sommes-nous
+      </span>
+      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-6">
+        Une institution dédiée aux <span class="text-secondary">sciences de la santé</span>
+      </h2>
+      <p class="text-gray-600 text-lg max-w-3xl mx-auto">
+        ESFE forme les professionnels de santé de demain selon des standards académiques
+        rigoureux adaptés aux réalités du Mali.
+      </p>
+    </div>
+
+    {# Grid Principal #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-20">
+
+      {# Image #}
+      <div :class="show ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
+           class="transition-all duration-1000 delay-200">
+        <div class="relative">
+          <img src="{% static 'images/institution/students-academic.jpg' %}"
+               class="w-full rounded-3xl shadow-2xl object-cover"
+               alt="Étudiants ESFE"
+               loading="lazy">
+          {# Badge flottant #}
+          <div class="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-6 hidden lg:block">
+            <div class="text-3xl font-bold text-secondary">15+</div>
+            <div class="text-sm text-gray-600">Années d'excellence</div>
+          </div>
+        </div>
+      </div>
+
+      {# Contenu texte #}
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'"
+           class="transition-all duration-1000 delay-300">
+
+        <h3 class="text-2xl font-bold text-primary-700 mb-6">
+          Former les acteurs clés du système de santé malien
+        </h3>
+
+        <p class="text-gray-600 mb-6 leading-relaxed">
+          <strong class="text-primary-700">L'École de Santé Félix Houphouët-Boigny</strong>
+          est un établissement d'enseignement supérieur spécialisé dans les sciences de la santé,
+          qui ambitionne de devenir une référence nationale en matière de formation paramédicale.
+        </p>
+
+        <p class="text-gray-600 mb-8 leading-relaxed">
+          Notre approche combine excellence académique, rigueur professionnelle
+          et engagement social durable pour transformer les compétences en impact réel sur le terrain.
+        </p>
+
+        {# Points clés #}
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="award" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-primary-700">Diplômes reconnus par l'État</h4>
+              <p class="text-sm text-gray-600">Validés pour concours et fonction publique.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-primary-700">Encadrement expérimenté</h4>
+              <p class="text-sm text-gray-600">Corps enseignant issu du terrain professionnel.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+              <i data-lucide="heart-pulse" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-primary-700">Impact sanitaire durable</h4>
+              <p class="text-sm text-gray-600">Contribution directe au renforcement du système de santé.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Piliers (si disponibles) #}
+    {% if pillars %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+         class="transition-all duration-700 delay-500">
+      {% for pillar in pillars %}
+        <div class="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-secondary">
+          <h3 class="font-semibold text-lg mb-2 text-primary-700">{{ pillar.title }}</h3>
+          <p class="text-sm text-gray-600">{{ pillar.description }}</p>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 3 : STATISTIQUES (Compacte, intégrée)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="stats" class="py-16 bg-primary-700 text-white">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.50.once="show = true">
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
+
+      {% for stat in stats %}
+      <div class="text-center"
+           x-data="advancedCounter({{ stat.value }}, '{{ stat.suffix }}')"
+           x-intersect.once="start()"
+           :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+           style="transition-delay: {{ forloop.counter0 }}50ms"
+           class="transition-all duration-700">
+
+        <div class="text-4xl lg:text-5xl font-bold text-white mb-2">
+          <span x-text="display"></span>{{ stat.suffix }}
+        </div>
+        <div class="text-sm text-white/70 uppercase tracking-wider">
+          {{ stat.label }}
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 4 : FORMATIONS
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="formations" class="py-24 lg:py-32 bg-gradient-to-b from-white to-soft/50">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.20.once="show = true">
+
+    {# Header #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-end mb-16">
+      <div>
+        <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
+          Catalogue académique
+        </span>
+        <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-700">
+          Nos Formations Professionnelles
+        </h2>
+        <p class="mt-4 text-gray-600 max-w-xl">
+          Des parcours structurés, reconnus par l'État, conçus pour former les professionnels de santé de demain.
+        </p>
+      </div>
+      <div class="lg:text-right">
+        <a href="{% url 'formations:list' %}"
+           class="inline-flex items-center gap-2 bg-secondary hover:bg-secondary/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1">
+          Explorer toutes les formations
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    {# Grid Formations #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {% for formation in formations_home %}
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'"
+           style="transition-delay: {{ forloop.counter0 }}00ms"
+           class="group relative bg-white rounded-2xl p-8 shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-l-4 {% if formation.is_featured %}border-secondary{% else %}border-primary{% endif %}">
+
+        {# Meta #}
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            {{ formation.cycle.name }}
+          </span>
+          {% if formation.is_featured %}
+          <span class="text-xs bg-secondary/20 text-secondary px-3 py-1 rounded-full font-medium">
+            Recommandé
+          </span>
+          {% endif %}
+        </div>
+
+        {# Titre #}
+        <h3 class="text-xl font-semibold mb-4 text-primary-700 leading-snug group-hover:text-secondary transition-colors">
+          {{ formation.title }}
+        </h3>
+
+        {# Description #}
+        <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+          {{ formation.short_description|truncatewords:18 }}
+        </p>
+
+        {# Infos #}
+        <div class="flex justify-between text-xs text-gray-400 mb-6 pb-6 border-b border-gray-100">
+          <span class="flex items-center gap-1">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            {{ formation.duration_years }} an{% if formation.duration_years > 1 %}s{% endif %}
+          </span>
+          <span>{{ formation.diploma_awarded.name }}</span>
+        </div>
+
+        {# Link #}
+        <a href="{{ formation.get_absolute_url }}"
+           class="inline-flex items-center text-primary-600 font-medium hover:text-secondary transition-colors duration-300 group/link">
+          Voir le programme
+          <svg class="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </a>
+
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 5 : POURQUOI ESFE (Simplifiée)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="pourquoi-esfe" class="py-24 lg:py-32 bg-soft">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.20.once="show = true">
+
+    {# Header #}
+    <div class="text-center mb-16">
+      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
+        Notre engagement
+      </span>
+      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-700">
+        Pourquoi choisir <span class="text-secondary">ESFE</span> ?
+      </h2>
+    </div>
+
+    {# Grid visuel #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {% for item in why_blocks %}
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+           style="transition-delay: {{ forloop.counter0 }}00ms"
+           class="group relative rounded-2xl overflow-hidden shadow-xl transition-all duration-500 hover:-translate-y-3">
+
+        <img src="{% static 'images/esfe/' %}{{ item.img }}"
+             class="w-full h-56 object-cover transition duration-700 group-hover:scale-110"
+             alt="{{ item.title }}"
+             loading="lazy">
+
+        {# Overlay #}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+
+        {# Texte #}
+        <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+          <h4 class="font-semibold text-lg mb-2">{{ item.title }}</h4>
+          <p class="text-sm text-white/80">{{ item.desc }}</p>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Points clés #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
+         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+         class="transition-all duration-700 delay-300">
+
+      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
+        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="graduation-cap" class="w-7 h-7"></i>
+        </div>
+        <h4 class="font-semibold text-primary-700 mb-2">Excellence académique</h4>
+        <p class="text-sm text-gray-600">Rigueur pédagogique et suivi individualisé.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
+        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="briefcase" class="w-7 h-7"></i>
+        </div>
+        <h4 class="font-semibold text-primary-700 mb-2">Insertion professionnelle</h4>
+        <p class="text-sm text-gray-600">Formations alignées avec les besoins du terrain.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
+        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="map-pin" class="w-7 h-7"></i>
+        </div>
+        <h4 class="font-semibold text-primary-700 mb-2">Présence nationale</h4>
+        <p class="text-sm text-gray-600">{{ annexes|length }} annexes stratégiques au Mali.</p>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 6 : GALERIE SPOTLIGHT (NOUVELLE)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+{% component "gallery_spotlight"
+   title="Instants Capturés"
+   subtitle="Revivez les moments forts de notre communauté"
+   gallery_url="/galerie/"
+   total_count=48
+%}{% endcomponent %}
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 7 : ANNEXES (Simplifiée - Slider)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="annexes" class="py-24 lg:py-32 bg-white">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.20.once="show = true">
+
+    {# Header #}
+    <div class="text-center mb-16">
+      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
+        Présence nationale
+      </span>
+      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-700">
+        Nos Annexes Stratégiques
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        ESFE déploie ses formations à travers plusieurs régions du Mali pour garantir
+        accessibilité et excellence académique sur l'ensemble du territoire.
+      </p>
+    </div>
+
+    {# Grid Annexes #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      {# Annexe Card - Répéter pour chaque annexe #}
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
+        <div class="relative h-48 overflow-hidden">
+          <img src="{% static 'images/annexes/dielibougou.jpg' %}"
+               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+               alt="ESFE Djélibougou"
+               loading="lazy">
+          <div class="absolute inset-0 bg-gradient-to-t from-primary-700/80 to-transparent"></div>
+          <div class="absolute bottom-4 left-4 text-white">
+            <h4 class="font-semibold text-lg">ESFE Djélibougou</h4>
+            <p class="text-white/80 text-sm">Siège principal</p>
+          </div>
+        </div>
+        <div class="p-4">
+          <a href="tel:+22370000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
+            <i data-lucide="phone" class="w-4 h-4"></i>
+            +223 70 00 00 00
+          </a>
+        </div>
+      </div>
+
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+           style="transition-delay: 100ms"
+           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
+        <div class="relative h-48 overflow-hidden">
+          <img src="{% static 'images/annexes/segou.jpg' %}"
+               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+               alt="ESFE Ségou"
+               loading="lazy">
+          <div class="absolute inset-0 bg-gradient-to-t from-primary-700/80 to-transparent"></div>
+          <div class="absolute bottom-4 left-4 text-white">
+            <h4 class="font-semibold text-lg">ESFE Ségou</h4>
+            <p class="text-white/80 text-sm">Annexe régionale</p>
+          </div>
+        </div>
+        <div class="p-4">
+          <a href="tel:+22371000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
+            <i data-lucide="phone" class="w-4 h-4"></i>
+            +223 71 00 00 00
+          </a>
+        </div>
+      </div>
+
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+           style="transition-delay: 200ms"
+           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
+        <div class="relative h-48 overflow-hidden">
+          <img src="{% static 'images/annexes/sikasso.jpg' %}"
+               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+               alt="ESFE Sikasso"
+               loading="lazy">
+          <div class="absolute inset-0 bg-gradient-to-t from-primary-700/80 to-transparent"></div>
+          <div class="absolute bottom-4 left-4 text-white">
+            <h4 class="font-semibold text-lg">ESFE Sikasso</h4>
+            <p class="text-white/80 text-sm">Annexe régionale</p>
+          </div>
+        </div>
+        <div class="p-4">
+          <a href="tel:+22374000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
+            <i data-lucide="phone" class="w-4 h-4"></i>
+            +223 74 00 00 00
+          </a>
+        </div>
+      </div>
+
+      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
+           style="transition-delay: 300ms"
+           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
+        <div class="relative h-48 overflow-hidden">
+          <img src="{% static 'images/annexes/kayes.jpg' %}"
+               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+               alt="ESFE Kayes"
+               loading="lazy">
+          <div class="absolute inset-0 bg-gradient-to-t from-primary-700/80 to-transparent"></div>
+          <div class="absolute bottom-4 left-4 text-white">
+            <h4 class="font-semibold text-lg">ESFE Kayes</h4>
+            <p class="text-white/80 text-sm">Annexe régionale</p>
+          </div>
+        </div>
+        <div class="p-4">
+          <a href="tel:+22375000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
+            <i data-lucide="phone" class="w-4 h-4"></i>
+            +223 75 00 00 00
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    {# Voir plus #}
+    <div class="text-center mt-12">
+      <a href="#"
+         class="inline-flex items-center gap-2 text-primary-700 font-semibold hover:text-secondary transition-colors">
+        Voir toutes nos implantations
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+        </svg>
+      </a>
+    </div>
+
+  </div>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 8 : ACTUALITÉS & BLOG (Simplifiée)
+   ══════════════════════════════════════════════════════════════════════════════ #}
+<section id="actualites" class="py-24 lg:py-32 bg-soft">
+  <div class="max-w-7xl mx-auto px-6"
+       x-data="{ show: false }"
+       x-intersect:enter.threshold.15.once="show = true">
+
+    {# Header #}
+    <div class="text-center mb-16"
+         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+         class="transition-all duration-700">
+      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
+        Actualités & Publications
+      </span>
+      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-700">
+        La vie académique en continu
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Suivez les événements institutionnels et découvrez nos analyses pédagogiques.
+      </p>
+    </div>
+
+    {# Grid Actualités + Blog #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+      {# Actualités #}
+      <div>
+        <h3 class="text-xl font-semibold text-primary-700 mb-8 flex items-center gap-2">
+          <i data-lucide="newspaper" class="w-5 h-5 text-secondary"></i>
+          Actualités
+        </h3>
+
+        <div class="space-y-4">
+          {% for news in latest_news %}
+          <a href="{{ news.get_absolute_url }}"
+             class="group flex gap-5 items-center bg-white rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300">
+
+            {% if news.image %}
+            <div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+              <img src="{{ news.image.url }}"
+                   class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                   alt="{{ news.titre }}">
+            </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2">
+                {% if news.is_urgent %}
+                <span class="text-[10px] px-2 py-0.5 bg-red-100 text-red-600 rounded-full uppercase font-medium">
+                  Urgent
+                </span>
+                {% endif %}
+                {% if news.is_important %}
+                <span class="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full uppercase font-medium">
+                  Important
+                </span>
+                {% endif %}
+                <span class="text-xs text-gray-400">{{ news.published_at|date:"d M Y" }}</span>
+              </div>
+              <h4 class="font-semibold text-primary-700 group-hover:text-secondary transition truncate">
+                {{ news.titre }}
+              </h4>
+            </div>
+
+            <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Blog #}
+      <div>
+        <h3 class="text-xl font-semibold text-primary-700 mb-8 flex items-center gap-2">
+          <i data-lucide="book-open" class="w-5 h-5 text-secondary"></i>
+          Articles & Analyses
+        </h3>
+
+        <div class="space-y-4">
+          {% for article in latest_articles %}
+          <a href="{{ article.get_absolute_url }}"
+             class="group flex gap-5 items-center bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-lg transition-all duration-300">
+
+            {% if article.image %}
+            <div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+              <img src="{{ article.image.url }}"
+                   class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                   alt="{{ article.title }}">
+            </div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+              <span class="text-xs text-gray-400">{{ article.published_at|date:"d M Y" }}</span>
+              <h4 class="font-semibold text-primary-700 group-hover:text-secondary transition truncate mt-1">
+                {{ article.title }}
+              </h4>
+            </div>
+
+            <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    {# CTA #}
+    <div class="text-center mt-16">
+      <a href="{% url 'news:list' %}"
+         class="inline-flex items-center gap-3 bg-secondary hover:bg-secondary/90 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1">
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        Voir toutes les publications
+      </a>
+    </div>
+
+  </div>
+</section>
+
+{# ══════════════════════════════════════════════════════════════════════════════
+   SECTION 7 : FAQ
+   ══════════════════════════════════════════════════════════════════════════════ #}
+{% component "faq"
+   title="Questions Fréquentes"
+   subtitle="Trouvez rapidement les réponses à vos interrogations"
+%}{% endcomponent %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load component_tags %}
+
+{% block title %}Actualités{% endblock %}
+
+{% block content %}
+
+{% component "news_hero"
+    title="Actualités & Communiqués Institutionnels"
+    subtitle="Informations académiques, partenariats internationaux, décisions administratives." %}
+{% endcomponent %}
+
+<section class="py-16 bg-gray-50">
+    {% include "news/fragments/news_content_fragment.html" %}
+</section>
+
+{% endblock %}

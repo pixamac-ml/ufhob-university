@@ -1,0 +1,655 @@
+{% extends "accounts/dashboard/base_dashboard.html" %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block dashboard_title %}Gestion des Paiements{% endblock %}
+{% block dashboard_subtitle %}
+    {% if is_global %}Vue globale - Toutes les annexes{% else %}Votre tableau de bord{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- ================= BRANCH INFO BANNER ================= -->
+{% if not is_global %}
+<div class="bg-gradient-to-r from-[#1e4f6f] to-[#2d6a8f] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-user-tie text-lg sm:text-xl"></i>
+            </div>
+            <div>
+                <p class="font-semibold text-sm sm:text-base">{{ request.user.get_full_name|default:request.user.username }}</p>
+                <p class="text-xs sm:text-sm text-white/70">Agent de paiement</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 sm:gap-6">
+            <div class="text-left sm:text-center px-0 sm:px-4 sm:border-r border-white/20">
+                <p class="text-xs sm:text-sm text-white/70">Annexe</p>
+                <p class="font-bold text-sm sm:text-base">{{ branch.name|default:"Non assignée" }}</p>
+            </div>
+            <div class="text-left sm:text-right">
+                <p class="text-xs sm:text-sm text-white/70">Périmètre</p>
+                <p class="font-semibold text-xs sm:text-sm">Cette annexe uniquement</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="bg-gradient-to-r from-[#1db5b0] to-[#49c7c3] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-globe text-lg sm:text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs sm:text-sm text-white/70">Mode Direction</p>
+                <p class="font-bold text-base sm:text-lg">Vue Globale - Toutes les annexes</p>
+            </div>
+        </div>
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20 w-fit">
+            <i class="fas fa-eye mr-1"></i> Tous les paiements
+        </span>
+    </div>
+</div>
+{% endif %}
+
+<!-- ================= FILTERS & SEARCH BAR ================= -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
+    <form method="get" class="space-y-4">
+        <!-- Search + Export Row -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" name="q" value="{{ request.GET.q }}"
+                       placeholder="Rechercher par nom, référence ou token..."
+                       class="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] focus:border-transparent">
+            </div>
+            <a href="{% url 'accounts:export_payments_csv' %}?{{ request.GET.urlencode }}"
+               class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1db5b0] text-white font-medium rounded-xl hover:bg-[#19a09b] transition-colors">
+                <i class="fas fa-download"></i>
+                <span class="hidden sm:inline">Export CSV</span>
+            </a>
+        </div>
+
+        <!-- Filters Row -->
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-filter text-[#1db5b0]"></i>
+                <span class="text-sm font-semibold hidden sm:inline">Filtres:</span>
+            </div>
+
+            <select name="status" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Tous les statuts</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>En attente</option>
+                <option value="validated" {% if request.GET.status == 'validated' %}selected{% endif %}>Validé</option>
+                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Annulé</option>
+            </select>
+
+            <select name="method" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Toutes méthodes</option>
+                <option value="cash" {% if request.GET.method == 'cash' %}selected{% endif %}>Espèces</option>
+                <option value="orange_money" {% if request.GET.method == 'orange_money' %}selected{% endif %}>Orange Money</option>
+                <option value="bank_transfer" {% if request.GET.method == 'bank_transfer' %}selected{% endif %}>Virement</option>
+            </select>
+
+            <select name="order" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Plus récents</option>
+                <option value="oldest" {% if request.GET.order == 'oldest' %}selected{% endif %}>Plus anciens</option>
+                <option value="amount" {% if request.GET.order == 'amount' %}selected{% endif %}>Montant décroissant</option>
+            </select>
+
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button type="submit" class="flex-1 sm:flex-none px-5 py-2.5 bg-[#1e4f6f] text-white font-medium rounded-xl hover:bg-[#163b53] flex items-center justify-center gap-2 transition-colors">
+                    <i class="fas fa-search"></i>
+                    <span>Filtrer</span>
+                </button>
+                {% if request.GET %}
+                <a href="{% url 'accounts:finance_dashboard' %}" class="px-4 py-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl text-sm flex items-center gap-2 transition-colors">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ================= STATS CARDS ================= -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6" id="finance-stats-section"
+     hx-get="{% url 'accounts:refresh_stats_htmx' %}"
+     hx-trigger="paymentValidated from:body, paymentRejected from:body, sessionCompleted from:body"
+     hx-swap="innerHTML">
+
+    <!-- Paiements du jour -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                <i class="fas fa-receipt text-lg sm:text-xl" style="color: #1db5b0;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #1db5b0;">{{ stats_today.count|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Paiements aujourd'hui</p>
+    </div>
+
+    <!-- Collecte du jour -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(34, 197, 94, 0.1);">
+                <i class="fas fa-money-bill-wave text-lg sm:text-xl" style="color: #22c55e;"></i>
+            </div>
+        </div>
+        <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 truncate">{{ stats_today.total|default:0|intcomma }} F</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Collecte du jour</p>
+    </div>
+
+    <!-- En attente -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(243, 156, 18, 0.1);">
+                <i class="fas fa-hourglass-half text-lg sm:text-xl" style="color: #f39c12;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #f39c12;">{{ pending_payments|length }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">En attente</p>
+    </div>
+
+    <!-- Collecte semaine -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(59, 130, 246, 0.1);">
+                <i class="fas fa-calendar-week text-lg sm:text-xl" style="color: #3b82f6;"></i>
+            </div>
+        </div>
+        <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600 truncate">{{ stats_week.total|default:0|intcomma }} F</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Cette semaine</p>
+    </div>
+
+    <!-- Total global -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 col-span-2 sm:col-span-1">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(139, 92, 246, 0.1);">
+                <i class="fas fa-chart-line text-lg sm:text-xl" style="color: #8b5cf6;"></i>
+            </div>
+        </div>
+        <p class="text-xl sm:text-2xl lg:text-3xl font-bold" style="color: #8b5cf6;">{{ stats_global.total|default:0|intcomma }} F</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Total validé</p>
+    </div>
+</div>
+
+<!-- ================= MAIN CONTENT ================= -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+
+    <!-- Paiements en attente de validation -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" id="pending-payments-section">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
+            <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+                <i class="fas fa-clock mr-2" style="color: #f39c12;"></i>
+                <span class="hidden sm:inline">Paiements en attente</span>
+                <span class="sm:hidden">En attente</span>
+            </h2>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
+                {{ pending_payments|length }}
+            </span>
+        </div>
+        <div class="p-3 sm:p-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto custom-scrollbar">
+            {% if pending_payments %}
+            <div class="space-y-3">
+                {% for payment in pending_payments %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors gap-3" id="payment-row-{{ payment.id }}">
+                    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                            {{ payment.inscription.candidature.first_name.0|upper }}{{ payment.inscription.candidature.last_name.0|upper }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 truncate">
+                                {{ payment.inscription.candidature.full_name }}
+                            </p>
+                            <p class="text-sm text-slate-500 truncate">
+                                {{ payment.inscription.candidature.programme.title }}
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                <span class="text-xs font-semibold text-slate-700">{{ payment.amount|intcomma }} F</span>
+                                <span class="px-2 py-0.5 text-xs rounded-full
+                                    {% if payment.method == 'cash' %}bg-slate-100 text-slate-600
+                                    {% elif payment.method == 'orange_money' %}bg-orange-100 text-orange-600
+                                    {% else %}bg-blue-100 text-blue-600{% endif %}">
+                                    {{ payment.get_method_display }}
+                                </span>
+                                <span class="text-xs text-slate-400">{{ payment.created_at|date:"d/m H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end sm:justify-start flex-shrink-0" id="payment-actions-{{ payment.id }}">
+                        <button
+                            hx-post="{% url 'accounts:validate_payment_htmx' payment.id %}"
+                            hx-target="#payment-row-{{ payment.id }}"
+                            hx-swap="outerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 hover:shadow-md transition-all"
+                            style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+                            <i class="fas fa-check"></i>
+                            <span class="hidden sm:inline">Valider</span>
+                        </button>
+                        <button
+                            hx-post="{% url 'accounts:reject_payment_htmx' payment.id %}"
+                            hx-target="#payment-row-{{ payment.id }}"
+                            hx-swap="outerHTML swap:0.3s"
+                            hx-confirm="Êtes-vous sûr de vouloir rejeter ce paiement ?"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 hover:shadow-md transition-all"
+                            style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                            <i class="fas fa-times"></i>
+                            <span class="hidden sm:inline">Rejeter</span>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12" id="pending-payments-empty">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                    <i class="fas fa-check-circle text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                </div>
+                <p class="font-semibold text-slate-600">Aucun paiement en attente</p>
+                <p class="text-sm text-slate-400 mt-1">Tous les paiements ont été traités</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Inscriptions en attente de paiement -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
+            <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+                <i class="fas fa-user-plus mr-2" style="color: #3b82f6;"></i>
+                <span class="hidden sm:inline">Inscriptions en attente</span>
+                <span class="sm:hidden">Inscriptions</span>
+            </h2>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                {{ inscriptions_pending|length }}
+            </span>
+        </div>
+        <div class="p-3 sm:p-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto custom-scrollbar">
+            {% if inscriptions_pending %}
+            <div class="space-y-3">
+                {% for ins in inscriptions_pending %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors gap-3"
+                     hx-get="{% url 'accounts:inscription_finance_detail_htmx' ins.id %}"
+                     hx-target="#modal-container"
+                     hx-trigger="click"
+                     style="cursor: pointer;">
+                    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 100%);">
+                            {{ ins.candidature.first_name.0|upper }}{{ ins.candidature.last_name.0|upper }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 truncate">
+                                {{ ins.candidature.full_name }}
+                            </p>
+                            <p class="text-sm text-slate-500 truncate">
+                                {{ ins.candidature.programme.title }}
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                <span class="text-xs text-slate-400">Dû: {{ ins.amount_due|intcomma }} F</span>
+                                <span class="text-xs text-green-600">Payé: {{ ins.amount_paid|intcomma }} F</span>
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">
+                                    {{ ins.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-lg sm:text-xl font-bold" style="color: #f39c12;">{{ ins.balance|intcomma }} F</p>
+                        <p class="text-xs text-slate-500">solde restant</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                    <i class="fas fa-check-double text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                </div>
+                <p class="font-semibold text-slate-600">Aucune inscription en attente</p>
+                <p class="text-sm text-slate-400 mt-1">Toutes les inscriptions sont à jour</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ================= CASH PAYMENT SESSIONS ================= -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 mb-6" id="cash-sessions-section">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style="background-color: #f4fbfb;">
+        <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+            <i class="fas fa-money-bill-alt mr-2" style="color: #8b5cf6;"></i>
+            Sessions de paiement espèces
+        </h2>
+        <button
+            onclick="document.getElementById('create-session-form').classList.toggle('hidden')"
+            class="px-4 sm:px-5 py-2 sm:py-2.5 font-medium rounded-xl text-sm flex items-center justify-center gap-2 hover:shadow-md transition-all w-full sm:w-auto"
+            style="background-color: #8b5cf6; color: white;">
+            <i class="fas fa-plus"></i>
+            Nouvelle session
+        </button>
+    </div>
+
+    <!-- Formulaire de création de session -->
+    <div id="create-session-form" class="hidden px-4 sm:px-6 py-4 sm:py-5" style="background-color: rgba(139, 92, 246, 0.05);">
+        <form hx-post="{% url 'accounts:create_cash_session_htmx' %}"
+              hx-target="#active-sessions-list"
+              hx-swap="afterbegin"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Sélectionner l'inscription</label>
+                    <select name="inscription_id" required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#8b5cf6] focus:border-[#8b5cf6]">
+                        <option value="">-- Choisir une inscription --</option>
+                        {% for ins in inscriptions_pending %}
+                        <option value="{{ ins.id }}">
+                            {{ ins.candidature.full_name }} - {{ ins.candidature.programme.title|truncatechars:20 }} (Solde: {{ ins.balance|intcomma }} F)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Montant à encaisser</label>
+                    <input type="number" name="amount" required min="1" placeholder="Montant en FCFA"
+                           class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#8b5cf6] focus:border-[#8b5cf6]">
+                </div>
+            </div>
+            <div class="flex gap-2 sm:gap-3 justify-end">
+                <button type="button"
+                        onclick="document.getElementById('create-session-form').classList.add('hidden')"
+                        class="px-4 sm:px-5 py-3 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 transition-colors">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="px-5 sm:px-6 py-3 font-medium rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all"
+                        style="background-color: #8b5cf6; color: white;">
+                    <i class="fas fa-check"></i>
+                    <span>Créer la session</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="p-3 sm:p-4">
+        <!-- Sessions actives -->
+        {% if sessions %}
+        <div class="mb-4">
+            <h3 class="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Sessions actives ({{ sessions|length }})
+            </h3>
+            <div class="space-y-3" id="active-sessions-list">
+                {% for session in sessions %}
+                <div class="p-4 rounded-xl border-2 border-purple-200 bg-purple-50" id="session-row-{{ session.id }}">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-white text-lg" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">
+                                {{ session.inscription.candidature.first_name.0|upper }}{{ session.inscription.candidature.last_name.0|upper }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-800">{{ session.inscription.candidature.full_name }}</p>
+                                <p class="text-sm text-slate-500 truncate">{{ session.inscription.candidature.programme.title }}</p>
+                                <p class="text-lg font-bold text-purple-600 mt-1">{{ session.amount|intcomma }} FCFA</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="text-center px-4 py-2 bg-white rounded-lg border border-purple-200">
+                                <p class="text-xs text-slate-500">Code de vérification</p>
+                                <p class="text-2xl font-mono font-bold text-purple-700 tracking-wider" id="session-code-{{ session.id }}">
+                                    {{ session.verification_code }}
+                                </p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    hx-post="{% url 'accounts:regenerate_code_htmx' session.id %}"
+                                    hx-target="#session-code-{{ session.id }}"
+                                    hx-swap="innerHTML"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                                    <i class="fas fa-sync-alt mr-1"></i>Régénérer
+                                </button>
+                                <button
+                                    hx-post="{% url 'accounts:mark_session_used_htmx' session.id %}"
+                                    hx-target="#session-row-{{ session.id }}"
+                                    hx-swap="outerHTML"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    class="px-3 py-1.5 text-xs rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                                    <i class="fas fa-check mr-1"></i>Encaissé
+                                </button>
+                                <button
+                                    hx-post="{% url 'accounts:cancel_session_htmx' session.id %}"
+                                    hx-target="#session-row-{{ session.id }}"
+                                    hx-swap="outerHTML swap:0.3s"
+                                    hx-confirm="Annuler cette session ?"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    class="px-3 py-1.5 text-xs rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-8" id="active-sessions-list">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center" style="background-color: rgba(139, 92, 246, 0.1);">
+                <i class="fas fa-money-bill-alt text-xl" style="color: #8b5cf6;"></i>
+            </div>
+            <p class="font-semibold text-slate-600">Aucune session active</p>
+            <p class="text-sm text-slate-400 mt-1">Créez une session pour encaisser un paiement en espèces</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= ALL PAYMENTS TABLE ================= -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" id="payments-table-section">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
+        <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+            <i class="fas fa-list-alt mr-2" style="color: #1db5b0;"></i>
+            Historique des paiements
+        </h2>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+            {{ payments.paginator.count }} total
+        </span>
+    </div>
+    <div class="p-3 sm:p-4">
+        {% if payments %}
+        <!-- Mobile Cards -->
+        <div class="block lg:hidden space-y-3">
+            {% for payment in payments %}
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100"
+                 hx-get="{% url 'accounts:payment_detail_htmx' payment.id %}"
+                 hx-target="#modal-container"
+                 hx-trigger="click"
+                 style="cursor: pointer;">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono text-sm text-slate-600">{{ payment.paid_at|date:"d/m/Y H:i" }}</span>
+                    <span class="px-2 py-1 text-xs font-medium rounded-lg
+                        {% if payment.status == 'validated' %}bg-green-100 text-green-700
+                        {% elif payment.status == 'pending' %}bg-yellow-100 text-yellow-700
+                        {% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ payment.get_status_display }}
+                    </span>
+                </div>
+                <p class="font-semibold text-slate-800">{{ payment.inscription.candidature.full_name }}</p>
+                <p class="text-sm text-slate-500 truncate">{{ payment.inscription.candidature.programme.title }}</p>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="font-bold text-slate-800">{{ payment.amount|intcomma }} F</span>
+                    <span class="px-2 py-1 text-xs font-medium rounded-lg
+                        {% if payment.method == 'cash' %}bg-slate-100 text-slate-600
+                        {% elif payment.method == 'orange_money' %}bg-orange-100 text-orange-600
+                        {% else %}bg-blue-100 text-blue-600{% endif %}">
+                        {{ payment.get_method_display }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Desktop Table -->
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-sm text-slate-500 border-b border-slate-200">
+                        <th class="pb-3 font-semibold">Date</th>
+                        <th class="pb-3 font-semibold">Étudiant</th>
+                        <th class="pb-3 font-semibold">Formation</th>
+                        <th class="pb-3 font-semibold">Méthode</th>
+                        <th class="pb-3 font-semibold">Montant</th>
+                        <th class="pb-3 font-semibold">Statut</th>
+                        <th class="pb-3 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for payment in payments %}
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-4 text-slate-600 font-mono text-sm">{{ payment.paid_at|date:"d/m/Y H:i"|default:"-" }}</td>
+                        <td class="py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs" style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 100%);">
+                                    {{ payment.inscription.candidature.first_name.0|upper }}{{ payment.inscription.candidature.last_name.0|upper }}
+                                </div>
+                                <span class="font-semibold text-slate-800">{{ payment.inscription.candidature.full_name }}</span>
+                            </div>
+                        </td>
+                        <td class="py-4 text-slate-600">{{ payment.inscription.candidature.programme.title|truncatechars:25 }}</td>
+                        <td class="py-4">
+                            <span class="px-3 py-1.5 text-xs font-medium rounded-lg
+                                {% if payment.method == 'cash' %}bg-slate-100 text-slate-600
+                                {% elif payment.method == 'orange_money' %}bg-orange-100 text-orange-600
+                                {% else %}bg-blue-100 text-blue-600{% endif %}">
+                                {{ payment.get_method_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 font-bold text-slate-800">{{ payment.amount|intcomma }} F</td>
+                        <td class="py-4">
+                            <span class="px-3 py-1.5 text-xs font-medium rounded-lg
+                                {% if payment.status == 'validated' %}bg-green-100 text-green-700
+                                {% elif payment.status == 'pending' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {% if payment.status == 'validated' %}<i class="fas fa-check-circle mr-1"></i>{% endif %}
+                                {{ payment.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4">
+                            <button
+                                hx-get="{% url 'accounts:payment_detail_htmx' payment.id %}"
+                                hx-target="#modal-container"
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>Détail
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if payments.has_other_pages %}
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-sm text-slate-500">
+                Page {{ payments.number }} sur {{ payments.paginator.num_pages }}
+                <span class="hidden sm:inline">— {{ payments.paginator.count }} paiements au total</span>
+            </p>
+            <div class="flex items-center gap-2">
+                {% if payments.has_previous %}
+                <a href="?page={{ payments.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.method %}&method={{ request.GET.method }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}"
+                   class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                    <i class="fas fa-chevron-left mr-1"></i> Précédent
+                </a>
+                {% endif %}
+
+                <div class="hidden sm:flex items-center gap-1">
+                    {% for page_num in payments.paginator.page_range %}
+                        {% if page_num == payments.number %}
+                        <span class="w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold text-white" style="background-color: #1e4f6f;">
+                            {{ page_num }}
+                        </span>
+                        {% elif page_num == 1 or page_num == payments.paginator.num_pages or page_num >= payments.number|add:"-2" and page_num <= payments.number|add:"2" %}
+                        <a href="?page={{ page_num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.method %}&method={{ request.GET.method }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}"
+                           class="w-10 h-10 flex items-center justify-center rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+                            {{ page_num }}
+                        </a>
+                        {% elif page_num == payments.number|add:"-3" or page_num == payments.number|add:"3" %}
+                        <span class="w-10 h-10 flex items-center justify-center text-slate-400">...</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {% if payments.has_next %}
+                <a href="?page={{ payments.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.method %}&method={{ request.GET.method }}{% endif %}{% if request.GET.order %}&order={{ request.GET.order }}{% endif %}"
+                   class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                    Suivant <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(30, 79, 111, 0.1);">
+                <i class="fas fa-receipt text-2xl sm:text-3xl" style="color: #1e4f6f;"></i>
+            </div>
+            <p class="font-semibold text-slate-600">Aucun paiement trouvé</p>
+            <p class="text-sm text-slate-400 mt-1">
+                {% if request.GET %}
+                Essayez de modifier vos filtres de recherche
+                {% else %}
+                Les paiements apparaîtront ici
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= MODAL CONTAINER ================= -->
+<div id="modal-container"></div>
+
+<!-- ================= TOAST NOTIFICATIONS ================= -->
+<script>
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Fermer le formulaire de création après succès
+    if (event.detail.target.id === 'active-sessions-list') {
+        document.getElementById('create-session-form').classList.add('hidden');
+    }
+});
+
+// Écouter les triggers HTMX pour les toasts
+document.body.addEventListener('showToast', function(event) {
+    const detail = event.detail;
+    if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('toast', {
+            detail: { message: detail.message, type: detail.type }
+        }));
+    }
+});
+
+// Parser les triggers HX-Trigger
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    const triggerHeader = event.detail.xhr.getResponseHeader('HX-Trigger');
+    if (triggerHeader) {
+        try {
+            const triggers = JSON.parse(triggerHeader);
+            if (triggers.showToast) {
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: triggers.showToast
+                }));
+            }
+        } catch (e) {
+            // Pas de JSON, ignorer
+        }
+    }
+});
+</script>
+
+{% endblock %}
