@@ -1,3 +1,5 @@
+# formations/models.py
+
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -21,7 +23,7 @@ class Cycle(models.Model):
     theme = models.CharField(
         max_length=20,
         choices=THEME_CHOICES,
-        default="accent",  # ✅ CORRIGÉ : était "primary" qui n'existe pas
+        default="accent",
     )
 
     min_duration_years = models.PositiveSmallIntegerField()
@@ -30,6 +32,8 @@ class Cycle(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        verbose_name = "Cycle"
+        verbose_name_plural = "Cycles"
         ordering = ["min_duration_years"]
 
     def __str__(self):
@@ -56,6 +60,10 @@ class Diploma(models.Model):
         ]
     )
 
+    class Meta:
+        verbose_name = "Diplôme"
+        verbose_name_plural = "Diplômes"
+
     def __str__(self):
         return self.name
 
@@ -69,6 +77,8 @@ class Filiere(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        verbose_name = "Filière"
+        verbose_name_plural = "Filières"
         ordering = ["name"]
 
     def __str__(self):
@@ -81,6 +91,20 @@ class Filiere(models.Model):
 class Programme(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, blank=True)
+
+    # ==================================================
+    # LIEN VERS L'ÉCOLE (NOUVEAU - UFHOB)
+    # ==================================================
+    school = models.ForeignKey(
+        'schools.School',
+        on_delete=models.PROTECT,
+        related_name="programmes",
+        verbose_name="École",
+        help_text="École à laquelle appartient ce programme (EsMed, ESGA, FATEC)",
+        null=True,
+        blank=True
+    )
+    # ==================================================
 
     filiere = models.ForeignKey(
         Filiere,
@@ -134,16 +158,21 @@ class Programme(models.Model):
     is_featured = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  # ✅ NOUVEAU
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        verbose_name = "Programme"
+        verbose_name_plural = "Programmes"
         ordering = ["title"]
         indexes = [
             models.Index(fields=["is_active"]),
             models.Index(fields=["is_featured"]),
+            models.Index(fields=["school"]),  # Index pour filtrage par école
         ]
 
     def __str__(self):
+        if self.school:
+            return f"{self.title} ({self.school.short_name})"
         return self.title
 
     def get_absolute_url(self):
@@ -193,6 +222,8 @@ class ProgrammeYear(models.Model):
     year_number = models.PositiveSmallIntegerField()
 
     class Meta:
+        verbose_name = "Année de programme"
+        verbose_name_plural = "Années de programme"
         unique_together = ("programme", "year_number")
         ordering = ["year_number"]
 
@@ -214,6 +245,8 @@ class Fee(models.Model):
     due_month = models.CharField(max_length=50)
 
     class Meta:
+        verbose_name = "Frais"
+        verbose_name_plural = "Frais"
         ordering = ["amount"]
         unique_together = ("programme_year", "label")
 
@@ -246,6 +279,8 @@ class ProgrammeQuickFact(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        verbose_name = "Fait rapide"
+        verbose_name_plural = "Faits rapides"
         ordering = ["order", "id"]
         unique_together = ("programme", "icon", "label")
 
@@ -277,6 +312,8 @@ class ProgrammeTab(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        verbose_name = "Onglet"
+        verbose_name_plural = "Onglets"
         ordering = ["order", "id"]
         unique_together = ("programme", "slug")
 
@@ -309,6 +346,8 @@ class ProgrammeSection(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        verbose_name = "Section"
+        verbose_name_plural = "Sections"
         ordering = ["order", "id"]
 
 
@@ -326,6 +365,8 @@ class CompetenceBlock(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        verbose_name = "Bloc de compétences"
+        verbose_name_plural = "Blocs de compétences"
         ordering = ["order", "id"]
 
 
@@ -343,6 +384,8 @@ class CompetenceItem(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        verbose_name = "Item de compétence"
+        verbose_name_plural = "Items de compétences"
         ordering = ["order", "id"]
 
 
@@ -353,6 +396,10 @@ class RequiredDocument(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
     is_mandatory = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Document requis"
+        verbose_name_plural = "Documents requis"
 
     def __str__(self):
         return self.name
@@ -370,4 +417,6 @@ class ProgrammeRequiredDocument(models.Model):
     )
 
     class Meta:
+        verbose_name = "Document requis pour programme"
+        verbose_name_plural = "Documents requis pour programmes"
         unique_together = ("programme", "document")
