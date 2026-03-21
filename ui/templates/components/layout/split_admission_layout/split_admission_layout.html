@@ -1,0 +1,93 @@
+{% load component_tags %}
+
+<style>
+@keyframes slowZoom {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.zoom-slow {
+  animation: slowZoom 24s ease-in-out infinite;
+}
+
+/* amélioration visuelle formulaire */
+.admission-form-panel{
+    background:white;
+    border-radius:0 18px 18px 0;
+    box-shadow:0 20px 40px rgba(0,0,0,0.08);
+}
+
+/* responsive */
+@media (max-width:1024px){
+
+.admission-grid{
+    grid-template-columns:1fr;
+}
+
+.admission-form-panel{
+    border-radius:0 0 18px 18px;
+}
+
+}
+</style>
+
+
+<section class="bg-neutral-50 py-20">
+
+    <div class="max-w-7xl mx-auto">
+
+        <div class="grid lg:grid-cols-2 admission-grid items-stretch overflow-hidden rounded-2xl">
+
+            <!-- IMAGE -->
+            <div class="relative overflow-hidden">
+
+                <!-- Image -->
+                <img
+                    src="{{ image_url }}"
+                    alt="Admission ESFE"
+                    class="w-full h-full object-cover zoom-slow"
+                />
+
+                <!-- Gradient doux -->
+                <div class="absolute inset-0 bg-gradient-to-r
+                            from-black/35
+                            via-black/15
+                            to-transparent">
+                </div>
+
+                <!-- Texte -->
+                <div class="absolute bottom-10 left-10 text-white max-w-sm">
+
+                    {% if image_text_title %}
+                    <h3 class="text-xl md:text-2xl font-semibold mb-2 drop-shadow-md">
+                        {{ image_text_title }}
+                    </h3>
+                    {% endif %}
+
+                    {% if image_text_subtitle %}
+                    <p class="text-white/85 text-sm">
+                        {{ image_text_subtitle }}
+                    </p>
+                    {% endif %}
+
+                </div>
+
+            </div>
+            <!-- FORM -->
+            <div class="admission-form-panel flex items-center">
+
+                <div class="w-full p-10 lg:p-12">
+
+                    {% slot "content" %}
+                    {% endslot %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>

@@ -1,0 +1,58 @@
+{% load humanize %}
+{% load custom_filters %}
+
+<!-- Session cash créée -->
+<div class="p-4 rounded-xl border-2 border-purple-200 bg-purple-50" id="session-row-{{ session.id }}">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-white text-lg" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">
+                {{ session.inscription.candidature.first_name.0|upper }}{{ session.inscription.candidature.last_name.0|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-800">{{ session.inscription.candidature.full_name }}</p>
+                <p class="text-sm text-slate-500 truncate">{{ session.inscription.candidature.programme.title }}</p>
+                <p class="text-xs text-slate-400 mt-1">Solde: {{ session.inscription.balance|intcomma }} FCFA</p>
+            </div>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+            <div class="text-center px-4 py-2 bg-white rounded-lg border border-purple-200">
+                <p class="text-xs text-slate-500">Code de vérification</p>
+                <p class="text-2xl font-mono font-bold text-purple-700 tracking-wider" id="session-code-{{ session.id }}">
+                    {{ session.verification_code }}
+                </p>
+                <p class="text-xs text-slate-400 mt-1">Expire dans 5 min</p>
+            </div>
+            <div class="flex gap-2">
+                <button
+                    hx-post="{% url 'accounts:regenerate_code_htmx' session.id %}"
+                    hx-target="#session-code-{{ session.id }}"
+                    hx-swap="innerHTML"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                    <i class="fas fa-sync-alt mr-1"></i>Régénérer
+                </button>
+                <form hx-post="{% url 'accounts:mark_session_used_htmx' session.id %}"
+                      hx-target="#session-row-{{ session.id }}"
+                      hx-swap="outerHTML"
+                      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                      class="flex gap-1">
+                    <input type="number" name="amount" placeholder="Montant" min="1" max="{{ session.inscription.balance }}" required
+                           class="w-24 px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-1 focus:ring-purple-500">
+                    <button type="submit"
+                            class="px-3 py-1.5 text-xs rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                        <i class="fas fa-check mr-1"></i>Encaisser
+                    </button>
+                </form>
+                <button
+                    hx-post="{% url 'accounts:cancel_session_htmx' session.id %}"
+                    hx-target="#session-row-{{ session.id }}"
+                    hx-swap="outerHTML swap:0.3s"
+                    hx-confirm="Annuler cette session ?"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    class="px-3 py-1.5 text-xs rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

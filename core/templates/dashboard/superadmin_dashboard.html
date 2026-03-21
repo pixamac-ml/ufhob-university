@@ -1,0 +1,168 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- ========================= -->
+    <!-- TITRE -->
+    <!-- ========================= -->
+    <div class="mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-chart-line me-2"></i>
+            Pilotage Institutionnel – ESFé
+        </h2>
+        <small class="text-muted">
+            Vue stratégique globale
+        </small>
+    </div>
+
+    <!-- ========================= -->
+    <!-- SYNTHÈSE RAPIDE -->
+    <!-- ========================= -->
+    <div class="row mb-4">
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Candidatures</h6>
+                    <h3>{{ total_candidatures }}</h3>
+                    <a href="/admin/admissions/candidature/"
+                       class="btn btn-sm btn-primary mt-2">
+                        Gérer
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Inscriptions</h6>
+                    <h3>{{ total_inscriptions }}</h3>
+                    <a href="/admin/inscriptions/inscription/"
+                       class="btn btn-sm btn-primary mt-2">
+                        Voir
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Paiements validés</h6>
+                    <h3>{{ total_payments }}</h3>
+                    <a href="/admin/payments/payment/?status__exact=validated"
+                       class="btn btn-sm btn-success mt-2">
+                        Détail
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Revenus totaux</h6>
+                    <h3>{{ total_revenue|intcomma }} FCFA</h3>
+                    <a href="/admin/payments/payment/"
+                       class="btn btn-sm btn-warning mt-2">
+                        Rapport
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- ADMISSIONS -->
+    <!-- ========================= -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+
+            <div class="card">
+                <div class="card-header">
+                    Admissions
+                </div>
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>En analyse</span>
+                        <strong>{{ under_review }}</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Acceptées</span>
+                        <strong>{{ accepted }}</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Refusées</span>
+                        <strong>{{ rejected }}</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>À compléter</span>
+                        <strong>{{ to_complete }}</strong>
+                    </div>
+
+                    <hr>
+
+                    <a href="/admin/admissions/candidature/?status__exact=under_review"
+                       class="btn btn-sm btn-outline-primary">
+                        Voir dossiers en attente
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================= -->
+        <!-- FINANCES -->
+        <!-- ========================= -->
+
+        <div class="col-md-6">
+
+            <div class="card">
+                <div class="card-header">
+                    Situation Financière
+                </div>
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total dû</span>
+                        <strong>{{ total_due|intcomma }} FCFA</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total payé</span>
+                        <strong>{{ total_paid|intcomma }} FCFA</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Reste à encaisser</span>
+                        <strong class="text-danger">
+                            {{ remaining_balance|intcomma }} FCFA
+                        </strong>
+                    </div>
+
+                    <hr>
+
+                    <a href="/admin/inscriptions/inscription/"
+                       class="btn btn-sm btn-outline-primary">
+                        Voir inscriptions non soldées
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

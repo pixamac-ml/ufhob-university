@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ================= HERO ================= -->
+<section class="relative pt-32 pb-24 bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white overflow-hidden">
+
+    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,white,transparent_40%)]"></div>
+
+    <div class="relative max-w-6xl mx-auto px-4">
+
+        <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wide mb-6">
+            <i class="fa-solid fa-users text-secondary"></i>
+            Espace communautaire
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+            Discussions Académiques
+        </h1>
+
+        <p class="text-primary-100 max-w-2xl text-lg">
+            Échange structuré de savoir, validation par les pairs et intelligence collective.
+        </p>
+
+        <div class="mt-8 text-sm text-primary-100 flex items-center gap-6">
+            <span class="flex items-center gap-2">
+                <i class="fa-solid fa-layer-group"></i>
+                {{ topics|length }} sujet{{ topics|length|pluralize }}
+            </span>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- ================= CONTENU ================= -->
+<section class="bg-soft py-20">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-14">
+
+            <!-- ================= COLONNE LISTE ================= -->
+            <div class="lg:col-span-2">
+
+                {% include "community/partials/topic_list_toolbar.html" %}
+
+                <!-- LOADER HTMX -->
+                <div id="list-loader"
+                     class="hidden text-center text-primary-600 py-6">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+                    Chargement des discussions...
+                </div>
+
+                <!-- ZONE SWAP -->
+                <div id="topic-list-container"
+                     class="transition-all duration-300 ease-in-out">
+
+                    {% include "community/partials/topic_list_items.html" %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ================= SIDEBAR ================= -->
+            <aside class="space-y-8">
+
+                {% include "community/partials/topic_list_sidebar.html" %}
+
+            </aside>
+
+        </div>
+    </div>
+</section>
+
+
+<!-- ================= ANIMATIONS HTMX ================= -->
+<script>
+document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.detail.target.id === "topic-list-container") {
+        evt.detail.target.classList.add("opacity-0", "translate-y-2");
+    }
+});
+
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === "topic-list-container") {
+        setTimeout(() => {
+            evt.detail.target.classList.remove("opacity-0", "translate-y-2");
+        }, 10);
+    }
+});
+</script>
+
+{% endblock %}

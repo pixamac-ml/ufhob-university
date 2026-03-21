@@ -1,0 +1,1233 @@
+{% extends "accounts/dashboard/base_dashboard.html" %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block dashboard_title %}Gestion des Candidatures{% endblock %}
+{% block dashboard_subtitle %}Suivez et gérez les dossiers d'admission{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Mobile card stack */
+    @media (max-width: 640px) {
+        .mobile-stack { display: flex; flex-direction: column; }
+        .mobile-full { width: 100%; }
+    }
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    /* Selection checkbox */
+    .candidate-checkbox { accent-color: #1e4f6f; }
+    /* Action buttons */
+    .btn-action { transition: all 0.2s ease; }
+    .btn-action:hover { transform: translateY(-1px); }
+    /* Status badges animation */
+    .status-badge { transition: all 0.3s ease; }
+    /* Loading state */
+    .htmx-request { opacity: 0.6; pointer-events: none; }
+    .htmx-request::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Sortable headers */
+    .sortable-header { cursor: pointer; user-select: none; }
+    .sortable-header:hover { color: #1e4f6f; }
+    /* Timeline */
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 1.25rem;
+        top: 2.5rem;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+    .timeline-item:last-child::before { display: none; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- ================= ALERTES SYSTÈME ================= -->
+{% if alerts %}
+<div class="space-y-3 mb-6">
+    {% for alert in alerts %}
+    <div class="flex items-start gap-4 p-4 rounded-2xl border
+        {% if alert.type == 'warning' %}bg-amber-50 border-amber-200
+        {% elif alert.type == 'danger' %}bg-red-50 border-red-200
+        {% elif alert.type == 'success' %}bg-green-50 border-green-200
+        {% else %}bg-blue-50 border-blue-200{% endif %}">
+        <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center
+            {% if alert.type == 'warning' %}bg-amber-100
+            {% elif alert.type == 'danger' %}bg-red-100
+            {% elif alert.type == 'success' %}bg-green-100
+            {% else %}bg-blue-100{% endif %}">
+            <i class="fas {% if alert.type == 'warning' %}fa-exclamation-triangle text-amber-500
+                {% elif alert.type == 'danger' %}fa-times-circle text-red-500
+                {% elif alert.type == 'success' %}fa-check-circle text-green-500
+                {% else %}fa-info-circle text-blue-500{% endif %}"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-semibold {% if alert.type == 'warning' %}text-amber-800
+                {% elif alert.type == 'danger' %}text-red-800
+                {% elif alert.type == 'success' %}text-green-800
+                {% else %}text-blue-800{% endif %}">
+                {{ alert.title }}
+            </p>
+            <p class="text-sm mt-1 {% if alert.type == 'warning' %}text-amber-600
+                {% elif alert.type == 'danger' %}text-red-600
+                {% elif alert.type == 'success' %}text-green-600
+                {% else %}text-blue-600{% endif %}">
+                {{ alert.message }}
+            </p>
+        </div>
+        <button class="text-slate-400 hover:text-slate-600 p-1" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ================= INDICATEUR ANNEXE ================= -->
+{% if not is_global %}
+<div class="bg-gradient-to-r from-[#1e4f6f] to-[#2d6a8f] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-building text-lg sm:text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs sm:text-sm text-white/70">Annexe actuelle</p>
+                <p class="font-bold text-base sm:text-lg">{{ branch.name|default:"Non assignée" }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-left sm:text-right">
+                <p class="text-xs sm:text-sm text-white/70">Vous gérez uniquement</p>
+                <p class="font-semibold text-sm sm:text-base">les candidatures de cette annexe</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="bg-gradient-to-r from-[#1db5b0] to-[#49c7c3] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-globe text-lg sm:text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs sm:text-sm text-white/70">Mode Direction</p>
+                <p class="font-bold text-base sm:text-lg">Vue Globale - Toutes les annexes</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20">
+                <i class="fas fa-eye mr-1"></i> Accès complet
+            </span>
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20">
+                <i class="fas fa-code-branch mr-1"></i> {{ branches_count|default:0 }} annexe{{ branches_count|pluralize }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ================= FILTERS & SEARCH BAR ================= -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
+    <form method="get" id="filter-form" class="space-y-4">
+        <!-- Search + Actions Row -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" name="search" value="{{ request.GET.search }}"
+                       placeholder="Rechercher un candidat (nom, email, téléphone)..."
+                       class="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] focus:border-transparent">
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'accounts:export_candidatures_csv' %}?{{ request.GET.urlencode }}"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1db5b0] text-white font-medium rounded-xl hover:bg-[#19a09b] transition-colors btn-action">
+                    <i class="fas fa-download"></i>
+                    <span class="hidden sm:inline">CSV</span>
+                </a>
+                <a href="{% url 'accounts:export_candidatures_csv' %}?{{ request.GET.urlencode }}&format=excel"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors btn-action">
+                    <i class="fas fa-file-excel"></i>
+                    <span class="hidden sm:inline">Excel</span>
+                </a>
+                <button type="button" onclick="printDashboard()"
+                        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-600 text-white font-medium rounded-xl hover:bg-slate-700 transition-colors btn-action">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Row -->
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-filter text-[#1db5b0]"></i>
+                <span class="text-sm font-semibold hidden sm:inline">Filtres:</span>
+            </div>
+
+            {% if is_global %}
+            <select name="branch" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Toutes les annexes</option>
+                {% for b in branches %}
+                <option value="{{ b.id }}" {% if request.GET.branch == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <select name="programme" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Tous les programmes</option>
+                {% for prog in programmes %}
+                <option value="{{ prog.id }}" {% if request.GET.programme == prog.id|stringformat:"s" %}selected{% endif %}>{{ prog.title }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="status" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Tous les statuts</option>
+                <option value="submitted" {% if request.GET.status == 'submitted' %}selected{% endif %}>Soumise</option>
+                <option value="under_review" {% if request.GET.status == 'under_review' %}selected{% endif %}>En cours d'analyse</option>
+                <option value="to_complete" {% if request.GET.status == 'to_complete' %}selected{% endif %}>À compléter</option>
+                <option value="accepted" {% if request.GET.status == 'accepted' %}selected{% endif %}>Acceptée</option>
+                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Refusée</option>
+            </select>
+
+            <select name="entry_year" class="px-3 sm:px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] min-w-0 flex-1 sm:flex-none sm:w-auto">
+                <option value="">Toutes les années</option>
+                <option value="1" {% if request.GET.entry_year == '1' %}selected{% endif %}>1ère année</option>
+                <option value="2" {% if request.GET.entry_year == '2' %}selected{% endif %}>2ème année</option>
+                <option value="3" {% if request.GET.entry_year == '3' %}selected{% endif %}>3ème année</option>
+                <option value="4" {% if request.GET.entry_year == '4' %}selected{% endif %}>4ème année</option>
+                <option value="5" {% if request.GET.entry_year == '5' %}selected{% endif %}>5ème année</option>
+            </select>
+
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <input type="date" name="date_from" value="{{ request.GET.date_from }}"
+                       class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] w-full sm:w-auto"
+                       title="Date début">
+                <span class="hidden sm:inline text-slate-400">→</span>
+                <input type="date" name="date_to" value="{{ request.GET.date_to }}"
+                       class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] w-full sm:w-auto"
+                       title="Date fin">
+            </div>
+
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button type="submit" class="flex-1 sm:flex-none px-5 py-2.5 bg-[#1e4f6f] text-white font-medium rounded-xl hover:bg-[#163b53] flex items-center justify-center gap-2 transition-colors btn-action">
+                    <i class="fas fa-search"></i>
+                    <span>Filtrer</span>
+                </button>
+                {% if request.GET %}
+                <a href="{% url 'accounts:admissions_dashboard' %}" class="px-4 py-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl text-sm flex items-center gap-2 transition-colors">
+                    <i class="fas fa-times"></i>
+                    <span class="hidden sm:inline">Réinitialiser</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Active Filters Display -->
+        {% if request.GET %}
+        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+            <span class="text-xs text-slate-500">Filtres actifs:</span>
+            {% if request.GET.search %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg">
+                <i class="fas fa-search"></i> "{{ request.GET.search }}"
+            </span>
+            {% endif %}
+            {% if request.GET.status %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-lg">
+                <i class="fas fa-tag"></i> {{ request.GET.status }}
+            </span>
+            {% endif %}
+            {% if request.GET.programme %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-lg">
+                <i class="fas fa-graduation-cap"></i> Programme filtré
+            </span>
+            {% endif %}
+            {% if request.GET.date_from or request.GET.date_to %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 text-xs rounded-lg">
+                <i class="fas fa-calendar"></i> Période filtrée
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- ================= STATS CARDS ENRICHIES ================= -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+    <!-- Total -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(30, 79, 111, 0.1);">
+                <i class="fas fa-file-alt text-lg sm:text-xl" style="color: #1e4f6f;"></i>
+            </div>
+            {% if stats.total_change %}
+            <span class="text-xs font-medium {% if stats.total_change > 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                {% if stats.total_change > 0 %}+{% endif %}{{ stats.total_change }}%
+            </span>
+            {% endif %}
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #1e4f6f;">{{ stats.total|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Total candidatures</p>
+    </div>
+
+    <!-- En attente -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow cursor-pointer"
+         onclick="filterByStatus('submitted')">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(243, 156, 18, 0.1);">
+                <i class="fas fa-clock text-lg sm:text-xl" style="color: #f39c12;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #f39c12;">{{ stats.pending|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">En attente</p>
+    </div>
+
+    <!-- En analyse -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow cursor-pointer"
+         onclick="filterByStatus('under_review')">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(59, 130, 246, 0.1);">
+                <i class="fas fa-search text-lg sm:text-xl" style="color: #3b82f6;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #3b82f6;">{{ stats.under_review|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">En analyse</p>
+    </div>
+
+    <!-- Acceptées -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow cursor-pointer"
+         onclick="filterByStatus('accepted')">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                <i class="fas fa-check-circle text-lg sm:text-xl" style="color: #1db5b0;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #1db5b0;">{{ stats.accepted|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Acceptées</p>
+    </div>
+
+    <!-- Refusées -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow cursor-pointer"
+         onclick="filterByStatus('rejected')">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(239, 68, 68, 0.1);">
+                <i class="fas fa-times-circle text-lg sm:text-xl" style="color: #ef4444;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #ef4444;">{{ stats.rejected|default:0 }}</p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Refusées</p>
+    </div>
+
+    <!-- Taux de conversion -->
+    <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow col-span-2 sm:col-span-1">
+        <div class="flex items-center justify-between mb-2 sm:mb-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(139, 92, 246, 0.1);">
+                <i class="fas fa-chart-line text-lg sm:text-xl" style="color: #8b5cf6;"></i>
+            </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold" style="color: #8b5cf6;">
+            {% widthratio stats.accepted stats.total 100 as conversion_rate %}
+            {{ conversion_rate|default:0 }}%
+        </p>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Taux conversion</p>
+    </div>
+</div>
+
+<!-- ================= CHARTS & TIMELINE SECTION ================= -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Status Distribution Chart -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+        <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
+            <i class="fas fa-chart-pie mr-2" style="color: #1db5b0;"></i>Répartition par statut
+        </h3>
+        <div class="relative h-64 sm:h-72">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Weekly Trend Chart -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+        <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
+            <i class="fas fa-chart-line mr-2" style="color: #f39c12;"></i>Tendance mensuelle
+        </h3>
+        <div class="relative h-64 sm:h-72">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Activity Timeline -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
+        <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
+            <i class="fas fa-history mr-2" style="color: #8b5cf6;"></i>Activité récente
+        </h3>
+        <div class="max-h-72 overflow-y-auto custom-scrollbar">
+            {% if recent_activities %}
+            <div class="space-y-0">
+                {% for activity in recent_activities|slice:":8" %}
+                <div class="timeline-item relative pl-10 pb-4">
+                    <div class="absolute left-0 top-1 w-10 h-10 rounded-full flex items-center justify-center
+                        {% if activity.action == 'accepted' %}bg-green-100
+                        {% elif activity.action == 'rejected' %}bg-red-100
+                        {% elif activity.action == 'submitted' %}bg-blue-100
+                        {% else %}bg-slate-100{% endif %}">
+                        <i class="fas {% if activity.action == 'accepted' %}fa-check text-green-500
+                            {% elif activity.action == 'rejected' %}fa-times text-red-500
+                            {% elif activity.action == 'submitted' %}fa-paper-plane text-blue-500
+                            {% else %}fa-edit text-slate-500{% endif %} text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-800">{{ activity.description }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ activity.created_at|timesince }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i class="fas fa-inbox text-3xl text-slate-300 mb-2"></i>
+                <p class="text-sm text-slate-400">Aucune activité récente</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ================= BULK ACTIONS BAR ================= -->
+<div id="bulk-actions-bar" class="hidden sticky top-0 z-30 bg-[#1e4f6f] text-white rounded-xl p-4 mb-4 shadow-lg">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <input type="checkbox" id="select-all-main" class="w-5 h-5 rounded candidate-checkbox" onchange="toggleSelectAll(this)">
+            <span class="font-medium"><span id="selected-count">0</span> candidature(s) sélectionnée(s)</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="bulkAction('under_review')" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                <i class="fas fa-search"></i>
+                <span class="hidden sm:inline">Passer en analyse</span>
+            </button>
+            <button onclick="bulkAction('accepted')" class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                <i class="fas fa-check"></i>
+                <span class="hidden sm:inline">Accepter</span>
+            </button>
+            <button onclick="bulkAction('rejected')" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                <i class="fas fa-times"></i>
+                <span class="hidden sm:inline">Rejeter</span>
+            </button>
+            <button onclick="clearSelection()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MAIN CONTENT ================= -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+    <!-- Candidatures en attente -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
+            <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+                <i class="fas fa-list-alt mr-2" style="color: #1db5b0;"></i>
+                <span class="hidden sm:inline">Candidatures en attente</span>
+                <span class="sm:hidden">En attente</span>
+            </h2>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
+                    {{ pending_candidatures|length }}
+                </span>
+                <button hx-get="{% url 'accounts:candidatures_list_htmx' %}?status=pending"
+                        hx-target="#pending-list"
+                        hx-swap="innerHTML"
+                        class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Actualiser">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-3 sm:p-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto custom-scrollbar" id="pending-list">
+            {% if pending_candidatures %}
+            <div class="space-y-3">
+                {% for cand in pending_candidatures %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-50 hover:bg-slate-100 gap-3 transition-colors" id="candidature-row-{{ cand.id }}">
+                    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <input type="checkbox" class="candidate-checkbox w-4 h-4 rounded flex-shrink-0"
+                               data-id="{{ cand.id }}" onchange="updateBulkSelection()">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white text-sm sm:text-base flex-shrink-0" style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 100%);">
+                            {{ cand.first_name.0|upper }}{{ cand.last_name.0|upper }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 truncate">{{ cand.full_name }}</p>
+                            <p class="text-sm text-slate-500 truncate">{{ cand.programme.title }}</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                <span class="text-xs text-slate-400">
+                                    <i class="fas fa-clock mr-1"></i>{{ cand.submitted_at|date:"d/m/Y H:i" }}
+                                </span>
+                                {% if cand.branch %}
+                                <span class="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">
+                                    {{ cand.branch.name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end sm:justify-start flex-shrink-0">
+                        <span class="status-badge px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium rounded-lg
+                            {% if cand.status == 'submitted' %}bg-slate-100 text-slate-600
+                            {% elif cand.status == 'under_review' %}bg-blue-100 text-blue-600
+                            {% else %}bg-amber-100 text-amber-600{% endif %}">
+                            {% if cand.status == 'submitted' %}Nouvelle
+                            {% elif cand.status == 'under_review' %}En analyse
+                            {% else %}À compléter{% endif %}
+                        </span>
+                        <!-- Quick actions -->
+                        <button hx-get="{% url 'accounts:candidature_detail_htmx' cand.id %}"
+                                hx-target="#candidate-detail-content"
+                                hx-swap="innerHTML"
+                                onclick="openModal('candidate-detail-modal')"
+                                class="p-2 text-slate-400 hover:text-[#1e4f6f] hover:bg-slate-200 rounded-lg transition-colors" title="Voir détails">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div x-show="open" @click.away="open = false"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 class="absolute right-0 mt-2 w-52 sm:w-56 bg-white rounded-xl shadow-lg border border-slate-200 z-20"
+                                 style="display: none;">
+                                <div class="py-2">
+                                    {% if cand.status == 'submitted' %}
+                                    <button hx-post="{% url 'accounts:set_candidature_under_review_htmx' cand.id %}"
+                                            hx-target="#candidature-row-{{ cand.id }}" hx-swap="outerHTML"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                            <i class="fas fa-search text-blue-500 text-xs"></i>
+                                        </div>
+                                        Passer en analyse
+                                    </button>
+                                    {% endif %}
+                                    {% if cand.status != 'to_complete' %}
+                                    <button hx-post="{% url 'accounts:set_candidature_to_complete_htmx' cand.id %}"
+                                            hx-target="#candidature-row-{{ cand.id }}" hx-swap="outerHTML"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                                            <i class="fas fa-edit text-amber-500 text-xs"></i>
+                                        </div>
+                                        Demander complément
+                                    </button>
+                                    {% endif %}
+                                    <button hx-post="{% url 'accounts:approve_candidature_htmx' cand.id %}"
+                                            hx-target="#candidature-row-{{ cand.id }}" hx-swap="outerHTML"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                            hx-confirm="Êtes-vous sûr de vouloir accepter la candidature de {{ cand.full_name }} ?"
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                            <i class="fas fa-check text-green-500 text-xs"></i>
+                                        </div>
+                                        Accepter
+                                    </button>
+                                    <button hx-post="{% url 'accounts:reject_candidature_htmx' cand.id %}"
+                                            hx-target="#candidature-row-{{ cand.id }}" hx-swap="outerHTML"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                            hx-confirm="Êtes-vous sûr de vouloir rejeter la candidature de {{ cand.full_name }} ?"
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                                            <i class="fas fa-times text-red-500 text-xs"></i>
+                                        </div>
+                                        Rejeter
+                                    </button>
+                                    <div class="border-t border-slate-100 my-1"></div>
+                                    <button hx-get="{% url 'accounts:candidature_detail_htmx' cand.id %}"
+                                            hx-target="#candidate-detail-content"
+                                            hx-swap="innerHTML"
+                                            onclick="openModal('candidate-detail-modal')"
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                                            <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                                        </div>
+                                        Voir le dossier complet
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                    <i class="fas fa-check-circle text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                </div>
+                <p class="font-semibold text-slate-600">Aucune candidature en attente</p>
+                <p class="text-sm text-slate-400 mt-1">Toutes les candidatures ont été traitées</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Documents à valider -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
+            <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+                <i class="fas fa-file-upload mr-2" style="color: #f39c12;"></i>
+                <span class="hidden sm:inline">Documents à valider</span>
+                <span class="sm:hidden">Documents</span>
+            </h2>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    {{ pending_docs|length }}
+                </span>
+                <button hx-get="{% url 'accounts:documents_list_htmx' %}"
+                        hx-target="#docs-list"
+                        hx-swap="innerHTML"
+                        class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Actualiser">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-3 sm:p-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto custom-scrollbar" id="docs-list">
+            {% if pending_docs %}
+            <div class="space-y-3">
+                {% for doc in pending_docs|slice:":15" %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-50 hover:bg-slate-100 gap-3 transition-colors" id="doc-row-{{ doc.id }}">
+                    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: rgba(243, 156, 18, 0.1);">
+                            {% if doc.file.name|slice:"-3:" == "pdf" %}
+                            <i class="fas fa-file-pdf text-lg" style="color: #ef4444;"></i>
+                            {% elif doc.file.name|slice:"-3:" == "jpg" or doc.file.name|slice:"-4:" == "jpeg" or doc.file.name|slice:"-3:" == "png" %}
+                            <i class="fas fa-file-image text-lg" style="color: #3b82f6;"></i>
+                            {% else %}
+                            <i class="fas fa-file text-lg" style="color: #f39c12;"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-800 truncate">{{ doc.candidature.full_name }}</p>
+                            <p class="text-sm text-slate-500 truncate">{{ doc.document_type.name }}</p>
+                            <p class="text-xs text-slate-400 mt-1">
+                                <i class="fas fa-clock mr-1"></i>{{ doc.uploaded_at|date:"d/m/Y H:i" }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 justify-end sm:justify-start flex-shrink-0">
+                        <a href="{{ doc.file.url }}" target="_blank"
+                           class="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            <i class="fas fa-eye"></i>
+                            <span class="hidden sm:inline">Voir</span>
+                        </a>
+                        <button hx-post="{% url 'accounts:validate_document_htmx' doc.id %}"
+                                hx-target="#doc-row-{{ doc.id }}" hx-swap="outerHTML"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                class="px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors"
+                                style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+                            <i class="fas fa-check"></i>
+                            <span class="hidden sm:inline">Valider</span>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if pending_docs|length > 15 %}
+            <div class="text-center mt-4">
+                <button hx-get="{% url 'accounts:documents_list_htmx' %}"
+                        hx-target="#docs-list"
+                        hx-swap="innerHTML"
+                        class="text-sm text-[#1e4f6f] hover:underline">
+                    Voir tous les documents ({{ pending_docs|length }})
+                </button>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
+                    <i class="fas fa-check-double text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                </div>
+                <p class="font-semibold text-slate-600">Aucun document à valider</p>
+                <p class="text-sm text-slate-400 mt-1">Tous les documents ont été validés</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ================= ACCEPTED CANDIDATURES ================= -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style="background-color: #f4fbfb;">
+        <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
+            <i class="fas fa-user-check mr-2" style="color: #1db5b0;"></i>
+            <span class="hidden sm:inline">Candidatures acceptées - Prêtes pour inscription</span>
+            <span class="sm:hidden">Acceptées</span>
+        </h2>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+                {{ accepted_candidatures.paginator.count|default:accepted_candidatures|length }}
+            </span>
+        </div>
+    </div>
+    <div class="p-3 sm:p-4">
+        {% if accepted_candidatures %}
+        <!-- Mobile Cards View -->
+        <div class="block lg:hidden space-y-3">
+            {% for cand in accepted_candidatures %}
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100" id="accepted-card-{{ cand.id }}">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-sm"
+                             style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 100%);">
+                            {{ cand.first_name.0|upper }}{{ cand.last_name.0|upper }}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-800">{{ cand.full_name }}</p>
+                            <p class="text-xs text-slate-500">{{ cand.email }}</p>
+                        </div>
+                    </div>
+                    {% if cand.inscription %}
+                    <span class="px-2 py-1 text-xs font-medium rounded-lg bg-green-100 text-green-700">
+                        <i class="fas fa-check-circle mr-1"></i>Inscrit
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 text-xs font-medium rounded-lg" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
+                        <i class="fas fa-clock mr-1"></i>En attente
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                    <div>
+                        <p class="text-slate-400 text-xs">Programme</p>
+                        <p class="text-slate-600 truncate">{{ cand.programme.title|truncatechars:20 }}</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 text-xs">Année d'entrée</p>
+                        <p class="text-slate-600">{{ cand.entry_year }}ère/ème année</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    {% if cand.inscription %}
+                    <button onclick="showInscriptionModal('{{ cand.full_name|escapejs }}', '{{ cand.inscription.access_code }}', '{{ cand.inscription.get_public_url }}')"
+                            class="flex-1 px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
+                            style="background-color: rgba(30, 79, 111, 0.1); color: #1e4f6f;">
+                        <i class="fas fa-link"></i>Voir lien
+                    </button>
+                    {% else %}
+                    <button hx-post="{% url 'accounts:create_inscription_htmx' cand.id %}"
+                            hx-target="#accepted-card-{{ cand.id }}" hx-swap="outerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            class="flex-1 px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
+                            style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+                        <i class="fas fa-plus"></i>Créer inscription
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-sm text-slate-500 border-b border-slate-200">
+                        <th class="pb-4 font-semibold sortable-header">
+                            Candidat <i class="fas fa-sort ml-1 text-xs"></i>
+                        </th>
+                        <th class="pb-4 font-semibold">Programme</th>
+                        <th class="pb-4 font-semibold">Année</th>
+                        <th class="pb-4 font-semibold sortable-header">
+                            Date acceptation <i class="fas fa-sort ml-1 text-xs"></i>
+                        </th>
+                        <th class="pb-4 font-semibold">Statut inscription</th>
+                        <th class="pb-4 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for cand in accepted_candidatures %}
+                    <tr class="hover:bg-slate-50 transition-colors" id="accepted-row-{{ cand.id }}">
+                        <td class="py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-sm"
+                                     style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 100%);">
+                                    {{ cand.first_name.0|upper }}{{ cand.last_name.0|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-800">{{ cand.full_name }}</p>
+                                    <p class="text-sm text-slate-500">{{ cand.email }}</p>
+                                    {% if cand.phone %}
+                                    <p class="text-xs text-slate-400">{{ cand.phone }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 text-slate-600">{{ cand.programme.title|truncatechars:30 }}</td>
+                        <td class="py-4 text-slate-600">{{ cand.entry_year }}ère/ème année</td>
+                        <td class="py-4 text-slate-600">{{ cand.reviewed_at|date:"d/m/Y" }}</td>
+                        <td class="py-4">
+                            {% if cand.inscription %}
+                            <span class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-100 text-green-700">
+                                <i class="fas fa-check-circle mr-1"></i>Inscrit
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1.5 text-xs font-medium rounded-lg" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
+                                <i class="fas fa-clock mr-1"></i>En attente
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4">
+                            <div class="flex items-center gap-2">
+                                {% if cand.inscription %}
+                                <button onclick="showInscriptionModal('{{ cand.full_name|escapejs }}', '{{ cand.inscription.access_code }}', '{{ cand.inscription.get_public_url }}')"
+                                        class="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-2"
+                                        style="background-color: rgba(30, 79, 111, 0.1); color: #1e4f6f;">
+                                    <i class="fas fa-link"></i>Lien
+                                </button>
+                                {% else %}
+                                <button hx-post="{% url 'accounts:create_inscription_htmx' cand.id %}"
+                                        hx-target="#accepted-row-{{ cand.id }}" hx-swap="outerHTML"
+                                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                        class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"
+                                        style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
+                                    <i class="fas fa-plus"></i>Créer inscription
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if accepted_candidatures.has_other_pages %}
+        <div class="mt-6 flex items-center justify-center gap-2">
+            {% if accepted_candidatures.has_previous %}
+            <a href="?accepted_page={{ accepted_candidatures.previous_page_number }}"
+               class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            <span class="px-4 py-2 text-sm text-slate-600">
+                Page {{ accepted_candidatures.number }} sur {{ accepted_candidatures.paginator.num_pages }}
+            </span>
+            {% if accepted_candidatures.has_next %}
+            <a href="?accepted_page={{ accepted_candidatures.next_page_number }}"
+               class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(30, 79, 111, 0.1);">
+                <i class="fas fa-user-plus text-2xl sm:text-3xl" style="color: #1e4f6f;"></i>
+            </div>
+            <p class="font-semibold text-slate-600">Aucune candidature acceptée</p>
+            <p class="text-sm text-slate-400 mt-1">Les candidatures acceptées apparaîtront ici</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- Modal: Inscription Link -->
+<div id="inscription-modal" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 class="text-lg sm:text-xl font-bold" style="color: #1e4f6f;">
+                <i class="fas fa-link mr-2" style="color: #1db5b0;"></i>Lien d'inscription
+            </h3>
+            <button onclick="closeModal('inscription-modal')" class="text-slate-400 hover:text-slate-600 p-2">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="inscription-modal-content"></div>
+        <div class="mt-6 flex justify-end">
+            <button onclick="closeModal('inscription-modal')" class="px-5 sm:px-6 py-2.5 sm:py-3 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 transition-colors">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Candidate Detail -->
+<div id="candidate-detail-modal" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold" style="color: #1e4f6f;">
+                <i class="fas fa-user mr-2" style="color: #1db5b0;"></i>Détails du candidat
+            </h3>
+            <button onclick="closeModal('candidate-detail-modal')" class="text-slate-400 hover:text-slate-600 p-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="candidate-detail-content" class="min-h-[200px]">
+            <div class="flex items-center justify-center py-12">
+                <i class="fas fa-spinner fa-spin text-2xl text-slate-400"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications Container -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+<!-- ================= SCRIPTS ================= -->
+<script>
+// ========== MODAL FUNCTIONS ==========
+function showInscriptionModal(name, code, url) {
+    document.getElementById('inscription-modal-content').innerHTML = `
+        <p class="text-slate-600 mb-4">Informations pour <strong>${name}</strong>:</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Lien public d'inscription</label>
+                <div class="flex gap-2">
+                    <input type="text" readonly value="${window.location.origin}${url}"
+                           class="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono truncate"
+                           id="inscription-url">
+                    <button onclick="copyToClipboard('${window.location.origin}${url}', 'Lien copié!')"
+                            class="px-3 sm:px-4 py-2 sm:py-3 rounded-xl flex-shrink-0 btn-action" style="background-color: #1e4f6f; color: white;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Code d'accès</label>
+                <div class="flex gap-2">
+                    <input type="text" readonly value="${code}"
+                           class="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-lg font-mono font-bold text-center tracking-widest"
+                           style="color: #1e4f6f;" id="inscription-code">
+                    <button onclick="copyToClipboard('${code}', 'Code copié!')"
+                            class="px-3 sm:px-4 py-2 sm:py-3 rounded-xl flex-shrink-0 btn-action" style="background-color: #1e4f6f; color: white;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    openModal('inscription-modal');
+}
+
+function openModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        ['inscription-modal', 'candidate-detail-modal'].forEach(id => {
+            closeModal(id);
+        });
+    }
+});
+
+// Close modals on backdrop click
+['inscription-modal', 'candidate-detail-modal'].forEach(id => {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeModal(id);
+        });
+    }
+});
+
+// ========== BULK ACTIONS ==========
+let selectedCandidates = new Set();
+
+function updateBulkSelection() {
+    const checkboxes = document.querySelectorAll('.candidate-checkbox[data-id]');
+    selectedCandidates.clear();
+
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            selectedCandidates.add(cb.dataset.id);
+        }
+    });
+
+    const bulkBar = document.getElementById('bulk-actions-bar');
+    const countSpan = document.getElementById('selected-count');
+
+    if (selectedCandidates.size > 0) {
+        bulkBar.classList.remove('hidden');
+        countSpan.textContent = selectedCandidates.size;
+    } else {
+        bulkBar.classList.add('hidden');
+    }
+}
+
+function toggleSelectAll(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.candidate-checkbox[data-id]');
+    checkboxes.forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+    });
+    updateBulkSelection();
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.candidate-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    selectedCandidates.clear();
+    document.getElementById('bulk-actions-bar').classList.add('hidden');
+}
+
+async function bulkAction(action) {
+    if (selectedCandidates.size === 0) return;
+
+    const actionLabels = {
+        'under_review': 'passer en analyse',
+        'accepted': 'accepter',
+        'rejected': 'rejeter'
+    };
+
+    if (!confirm(`Êtes-vous sûr de vouloir ${actionLabels[action]} ${selectedCandidates.size} candidature(s) ?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/accounts/htmx/admissions/candidatures/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ids: Array.from(selectedCandidates),
+                action: action
+            })
+        });
+
+        if (response.ok) {
+            showToast(`${selectedCandidates.size} candidature(s) traitée(s)`, 'success');
+            location.reload();
+        } else {
+            showToast('Erreur lors du traitement', 'error');
+        }
+    } catch (error) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
+// ========== UTILITIES ==========
+function copyToClipboard(text, message = 'Copié!') {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(message, 'success');
+    }).catch(() => {
+        showToast('Erreur lors de la copie', 'error');
+    });
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+
+    const bgColors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-amber-500',
+        info: 'bg-blue-500'
+    };
+
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+
+    toast.className = `${bgColors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-x-full transition-transform duration-300`;
+    toast.innerHTML = `
+        <i class="fas ${icons[type]}"></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 10);
+
+    // Auto remove
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function filterByStatus(status) {
+    const url = new URL(window.location);
+    url.searchParams.set('status', status);
+    window.location = url;
+}
+
+function printDashboard() {
+    window.print();
+}
+
+// ========== CHARTS ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Distribution Pie Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['En attente', 'En analyse', 'Acceptées', 'Refusées', 'À compléter'],
+                datasets: [{
+                    data: [
+                        {{ stats.pending|default:0 }},
+                        {{ stats.under_review|default:0 }},
+                        {{ stats.accepted|default:0 }},
+                        {{ stats.rejected|default:0 }},
+                        {{ stats.to_complete|default:0 }}
+                    ],
+                    backgroundColor: ['#f39c12', '#3b82f6', '#1db5b0', '#ef4444', '#9ca3af'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${context.raw} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    // Trend Line Chart
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        const trendData = {{ stats_for_charts.weekly_trend|safe|default:'[]' }};
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendData.map(d => d.week || d.label),
+                datasets: [{
+                    label: 'Candidatures',
+                    data: trendData.map(d => d.count || d.value),
+                    borderColor: '#1e4f6f',
+                    backgroundColor: 'rgba(30, 79, 111, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#1e4f6f',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e4f6f',
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 14 },
+                        padding: 12,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 11 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    }
+});
+
+// ========== HTMX EVENT LISTENERS ==========
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    // Re-init Alpine.js components after HTMX swap
+    if (typeof Alpine !== 'undefined') {
+        Alpine.initTree(evt.detail.target);
+    }
+});
+
+document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    evt.detail.target.classList.add('htmx-request');
+});
+
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    evt.detail.target.classList.remove('htmx-request');
+});
+
+// Show toast on HTMX success
+document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+    const xhr = evt.detail.xhr;
+    if (xhr.status >= 200 && xhr.status < 300) {
+        // Check for success messages in response headers
+        const message = xhr.getResponseHeader('HX-Trigger-After-Swap');
+        if (message) {
+            try {
+                const parsed = JSON.parse(message);
+                if (parsed.showToast) {
+                    showToast(parsed.showToast.message, parsed.showToast.type);
+                }
+            } catch(e) {}
+        }
+    }
+});
+</script>
+{% endblock %}
