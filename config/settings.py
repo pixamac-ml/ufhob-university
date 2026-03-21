@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "formations",
     "branches",
     # Contenu
+    'schools',
     "blog.apps.BlogConfig",
     "news",
     "community",
