@@ -5,10 +5,18 @@ from django_components import component
 class ProgrammeFilters(component.Component):
     template_name = "programme_filters/programme_filters.html"
 
-    def get_context_data(self, cycles, current_cycle=None, search_query=None, total_programmes=0):
+    def get_context_data(
+        self,
+        cycles,
+        current_cycle=None,
+        search_query=None,
+        total_programmes=0,
+        current_school=None,  # ✅ ajouté
+    ):
         return {
             "cycles": cycles,
             "current_cycle": current_cycle,
             "search_query": search_query,
             "total_programmes": total_programmes,
+            "current_school": current_school,  # ✅ ajouté
         }

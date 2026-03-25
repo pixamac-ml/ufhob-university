@@ -9,36 +9,47 @@ module.exports = {
     extend: {
       colors: {
 
-        // 🔵 Primary Institutionnelle
+        // 🟠 Primary - Orange Côte d'Ivoire (Bergère)
         primary: {
-          50:  '#eef4f7',
-          100: '#d6e4ec',
-          200: '#adc9d9',
-          300: '#84aec6',
-          400: '#5b93b3',
-          500: '#1e4f6f',   // ✅ Couleur institutionnelle principale
-          600: '#1a4561',
-          700: '#163b53',
-          800: '#123145',
-          900: '#0e2737',
+          50:  '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f77f00',   // ✅ Orange institutionnel UFHOB
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
         },
 
-        // 🟢 Turquoise secondaire
+        // 🔵 Secondary - Turquoise UFHOB
         secondary: {
-          DEFAULT: '#1db5b0',
-          light: '#49c7c3',
-          dark: '#179a96',
+          50:  '#f0fdfb',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#60B7B1',   // Turquoise logo
+          500: '#60B7B1',   // ✅ Turquoise institutionnel
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          DEFAULT: '#60B7B1',
         },
 
-        // 🟠 Accent (CTA, highlights)
+        // 🟡 Accent - Or/Doré (bannière logo)
         accent: {
-          DEFAULT: '#f39c12',
-          light: '#f7b955',
-          dark: '#c87f0e',
+          DEFAULT: '#FDBE54',
+          light: '#FED680',
+          dark: '#E5A93C',
         },
 
-        // ⚪ Fond doux global
-        soft: '#f4fbfb',
+        // ⚪ Fond doux - Turquoise menthe clair
+        soft: '#A8D9D5',
+
+        // 🖤 Texte institutionnel
+        'ufhob-dark': '#1a1a1a',
       },
     },
   },

@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from branches.models import Branch
-
+from schools.models import School
 User = get_user_model()
 
 
@@ -73,7 +73,18 @@ class Profile(models.Model):
         related_name="staff_profiles",
         db_index=True
     )
-
+    # ==================================================
+    # LIEN VERS L'ÉCOLE (NOUVEAU - UFHOB)
+    # ==================================================
+    school = models.ForeignKey(
+        'schools.School',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="profiles",
+        verbose_name="École",
+        help_text="École à laquelle l'utilisateur est rattaché"
+    )
     # ---------------------------------
     # IDENTITÉ PUBLIQUE
     # ---------------------------------
