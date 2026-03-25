@@ -7,18 +7,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="htmx-config" content='{"historyCacheSize": 0}'>
 
-  <title>{% block title %}ESFE{% endblock %}</title>
+  <title>{% block title %}UFHOB{% endblock %}</title>
 
   <!-- STYLES -->
   <link rel="stylesheet" href="{% static 'public/css/main.css' %}">
-  <link rel="stylesheet" href="{% static 'core/css/esfe_theme.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/ufhob_theme.css' %}">
   <link rel="stylesheet" href="{% static 'admin/css/widgets.css' %}">
 
   <!-- FONTS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
   <!-- ICONS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -63,11 +64,11 @@
 }
 
 .topic-title:hover {
-    color: #0d6efd;
+    color: #f77f00;
 }
 
 .category-link:hover {
-    color: #0d6efd;
+    color: #f77f00;
 }
 
 .topic-detail-card {
@@ -300,13 +301,13 @@
 
   <!-- ================= FOOTER ================= -->
   {% component "footer"
-     site_name="ESFE"
-     site_slogan="Excellence • Innovation • Engagement"
-     site_description="Établissement supérieur de formation en sciences de la santé, orienté vers l'excellence académique, l'innovation pédagogique et l'employabilité."
+     site_name="UFHOB"
+     site_slogan="Santé • Gestion • Technologies"
+     site_description="Université Félix Houphouët-Boigny du Mali — Trois écoles d'excellence (EsMed, ESGA, FATEC) pour former les leaders de demain dans la santé, la gestion et les technologies."
      footer_contact={
          'address': 'Djélibougou, Bamako, Mali',
          'phone': '+223 XX XX XX XX',
-         'email': 'contact@esfe.ml'
+         'email': 'contact@ufhob.ml'
      }
      opening_hours="Lun-Ven : 8h00 - 17h00"
      footer_legal_links=[
@@ -387,14 +388,14 @@
       const tabs = document.querySelectorAll(".profile-tab");
 
       tabs.forEach(tab => {
-        tab.classList.remove("border-primary-600", "text-primary-700");
+        tab.classList.remove("border-primary-600", "text-primary-500");
       });
 
       const url = evt.detail.requestConfig.path;
 
       tabs.forEach(tab => {
         if(tab.getAttribute("hx-get") === url){
-          tab.classList.add("border-primary-600", "text-primary-700");
+          tab.classList.add("border-primary-600", "text-primary-500");
         }
       });
     });
@@ -421,15 +422,16 @@
       }
     })();
   </script>
-    <!-- AOS JS -->
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        AOS.init({
-            duration: 800,
-            easing: 'ease-out-cubic',
-            once: true,
-            offset: 50,
-        });
-    </script>
+
+  <!-- AOS JS -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+      AOS.init({
+          duration: 800,
+          easing: 'ease-out-cubic',
+          once: true,
+          offset: 50,
+      });
+  </script>
 </body>
 </html>

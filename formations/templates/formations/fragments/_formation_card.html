@@ -9,16 +9,33 @@
 
   <div class="p-6 space-y-4">
 
-    <!-- Badge + durée -->
-    <div class="flex items-center justify-between">
+    <!-- Badges : Cycle + École + Durée -->
+    <div class="flex items-center justify-between flex-wrap gap-2">
 
-      <span class="inline-flex items-center
-                   text-xs font-semibold px-3 py-1
-                   rounded-full
-                   bg-primary/10 text-primary
-                   transition group-hover:bg-primary group-hover:text-white">
-        {{ programme.cycle.name }}
-      </span>
+      <div class="flex items-center gap-2 flex-wrap">
+
+        <!-- Badge Cycle -->
+        <span class="inline-flex items-center
+                     text-xs font-semibold px-3 py-1
+                     rounded-full
+                     bg-primary/10 text-primary
+                     transition group-hover:bg-primary group-hover:text-white">
+          {{ programme.cycle.name }}
+        </span>
+
+        <!-- Badge École (UFHOB) -->
+        {% if programme.school %}
+        <span class="inline-flex items-center
+                     text-xs font-semibold px-3 py-1
+                     rounded-full border"
+              style="background-color: {{ programme.school.primary_color }}15;
+                     color: {{ programme.school.primary_color }};
+                     border-color: {{ programme.school.primary_color }}30;">
+          {{ programme.school.short_name }}
+        </span>
+        {% endif %}
+
+      </div>
 
       <span class="text-xs text-gray-400">
         {{ programme.duration_years }} an{{ programme.duration_years|pluralize }}

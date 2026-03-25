@@ -2,7 +2,7 @@
 {% load component_tags %}
 {% load humanize %}
 
-{% block title %}{{ programme.title }} – ESFE{% endblock %}
+{% block title %}{{ programme.title }} – UFHOB{% endblock %}
 
 {% block content %}
 
@@ -36,7 +36,7 @@ Présentation
 </h2>
 
 <p class="text-gray-400 text-sm mb-6">
-{{ programme.title }}
+{{ programme.title }}{% if programme.school %} — {{ programme.school.short_name }}{% endif %}
 </p>
 
 <div class="prose prose-lg max-w-none text-gray-600 leading-relaxed">
@@ -45,7 +45,7 @@ Présentation
 
 <!-- DATE MISE A JOUR -->
 <p class="text-xs text-gray-400 mt-8 pt-6 border-t border-gray-100">
-Dernière mise à jour : {{ programme.created_at|date:"d F Y" }}
+Dernière mise à jour : {{ programme.updated_at|date:"d F Y"|default:programme.created_at|date:"d F Y" }}
 </p>
 
 </div>
@@ -65,6 +65,25 @@ Infos clés
 </h3>
 
 <ul class="space-y-5">
+
+<!-- ÉCOLE -->
+{% if programme.school %}
+<li class="flex items-center justify-between">
+
+<span class="flex items-center gap-3 text-gray-600">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
+<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+</svg>
+</div>
+École
+</span>
+
+<span class="font-semibold text-primary-800">{{ programme.school.short_name }}</span>
+
+</li>
+{% endif %}
 
 <!-- RENTREE -->
 <li class="flex items-center justify-between">
@@ -97,7 +116,7 @@ Rentrée
 Durée
 </span>
 
-<span class="font-semibold text-primary-800">{{ programme.duration_years }} ans</span>
+<span class="font-semibold text-primary-800">{{ programme.duration_years }} an{{ programme.duration_years|pluralize }}</span>
 
 </li>
 
@@ -135,7 +154,7 @@ Langue
 Campus
 </span>
 
-<span class="font-semibold text-primary-800">Dakar</span>
+<span class="font-semibold text-primary-800">Bamako</span>
 
 </li>
 
@@ -173,6 +192,7 @@ Campus
 {% elif obj.icon == 'users' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
 {% elif obj.icon == 'trending' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
 {% elif obj.icon == 'lightbulb' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+{% else %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
 {% endif %}
 </svg>
 </div>
@@ -214,17 +234,6 @@ Détail des frais par année d'études
 </p>
 </div>
 
-<!-- DROPDOWN FILTRER (optionnel) -->
-<div class="relative" x-data="{ open: false }">
-<button @click="open = !open"
-        class="flex items-center gap-2 bg-white border border-gray-200 px-5 py-3 rounded-xl text-primary-800 font-medium hover:border-primary-300 transition">
-    Tous alles
-    <svg class="w-4 h-4" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-    </svg>
-</button>
-</div>
-
 </div>
 
 
@@ -240,7 +249,7 @@ Détail des frais par année d'études
 
 <span class="inline-flex items-center gap-2 bg-primary-800 text-white px-5 py-2 rounded-full text-sm font-semibold">
     {% if item.year.year_number == 1 %}
-    Année 1
+    1<sup>ère</sup> année
     {% else %}
     {{ item.year.year_number }}<sup>ème</sup> année
     {% endif %}
@@ -275,7 +284,7 @@ Détail des frais par année d'études
 
 <!-- TOTAL ANNUEL -->
 <div class="px-6 py-4 bg-soft flex justify-between items-center border-t border-gray-100">
-    <span class="font-semibold text-primary-800">Total annuel atteint</span>
+    <span class="font-semibold text-primary-800">Total annuel</span>
     <span class="font-bold text-secondary text-lg">{{ item.year_total|intcomma }} FCFA</span>
 </div>
 
@@ -330,7 +339,7 @@ Coût de la formation
 </p>
 
 <p class="text-gray-500 text-sm">
-sur {{ programme.duration_years }} ans
+sur {{ programme.duration_years }} an{{ programme.duration_years|pluralize }}
 </p>
 
 </div>
@@ -353,11 +362,11 @@ Modalités de paiement
 <ul class="space-y-3">
 <li class="flex items-start gap-2 text-gray-600 text-sm">
     <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-    Échelonnement acquis en fois
+    Paiement échelonné en plusieurs fois
 </li>
 <li class="flex items-start gap-2 text-gray-600 text-sm">
     <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-    Prélèvements automatique en différé
+    Virement bancaire ou mobile money
 </li>
 <li class="flex items-start gap-2 text-gray-600 text-sm">
     <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>

@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Prefetch, Count, Q
 from django.core.paginator import Paginator
@@ -16,6 +18,7 @@ from .models import (
 def formation_list(request):
     # Récupération des paramètres
     cycle_slug = request.GET.get("cycle") or None
+    school_slug = request.GET.get("school") or None
     search_query = request.GET.get("q") or ""
     page_number = request.GET.get("page", 1)
 
@@ -23,7 +26,7 @@ def formation_list(request):
     programmes = (
         Programme.objects
         .filter(is_active=True)
-        .select_related("cycle", "filiere", "diploma_awarded")
+        .select_related("cycle", "filiere", "diploma_awarded", "school")
     )
 
     # Recherche textuelle
@@ -37,6 +40,12 @@ def formation_list(request):
     # Filtrage par cycle
     if cycle_slug:
         programmes = programmes.filter(cycle__slug=cycle_slug)
+
+    # ════════════════════════════════════════════════
+    # Filtrage par école (UFHOB)
+    # ════════════════════════════════════════════════
+    if school_slug:
+        programmes = programmes.filter(school__slug=school_slug)
 
     # Tri stratégique
     programmes = programmes.order_by(
@@ -59,6 +68,7 @@ def formation_list(request):
         "total_programmes": total_programmes,
         "cycles": Cycle.objects.filter(is_active=True).order_by("min_duration_years"),
         "current_cycle": cycle_slug,
+        "current_school": school_slug,
         "search_query": search_query,
     }
 
@@ -66,8 +76,6 @@ def formation_list(request):
     # GESTION HTMX - Retourner Sidebar + Liste ensemble
     # ==================================================
     if request.htmx:
-        # On retourne le fragment de liste uniquement
-        # La sidebar reste côté client (gérée par Alpine.js)
         return render(
             request,
             "formations/fragments/_programme_list.html",
@@ -82,8 +90,6 @@ def formation_list(request):
     )
 
 
-import json  # ← AJOUTE EN HAUT DU FICHIER
-
 # ==================================================
 # DÉTAIL D'UNE FORMATION
 # ==================================================
@@ -94,7 +100,8 @@ def formation_detail(request, slug):
         .select_related(
             "cycle",
             "filiere",
-            "diploma_awarded"
+            "diploma_awarded",
+            "school"  # ← AJOUT pour afficher l'école
         )
         .prefetch_related(
             Prefetch(
@@ -155,7 +162,7 @@ def formation_detail(request, slug):
         "cycle_type": cycle_type,
         "total_cost": total_programme_cost,
         "total_programme_cost": total_programme_cost,
-        "learning_objectives": learning_objectives,  # ← NOUVEAU
+        "learning_objectives": learning_objectives,
     }
     return render(
         request,
