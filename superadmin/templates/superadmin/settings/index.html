@@ -1,0 +1,154 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Paramètres{% endblock %}
+{% block page_subtitle %}Configuration de l'institution{% endblock %}
+
+{% block content_main %}
+
+<form method="POST" action="" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- General Info -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-university" style="margin-right: 0.5rem;"></i>Informations générales
+            </h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_name">Nom de l'institution</label>
+                    <input type="text" id="id_name" name="name" class="form-input"
+                           value="{{ institution.name|default:'' }}"
+                           placeholder="Ex: Université de Butembo">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_slogan">Slogan</label>
+                    <input type="text" id="id_slogan" name="slogan" class="form-input"
+                           value="{{ institution.slogan|default:'' }}"
+                           placeholder="Slogan de l'université">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_description">Description</label>
+                <textarea id="id_description" name="description" class="form-textarea" rows="4"
+                          placeholder="Description de l'institution...">{{ institution.description|default:'' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_logo">Logo</label>
+                {% if institution.logo %}
+                <div style="margin-bottom: 0.5rem;">
+                    <img src="{{ institution.logo.url }}" alt="Logo actuel"
+                         style="height: 60px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                </div>
+                {% endif %}
+                <input type="file" id="id_logo" name="logo" class="form-input"
+                       accept="image/*">
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Info -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-address-card" style="margin-right: 0.5rem;"></i>Coordonnées
+            </h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_email">Email</label>
+                    <input type="email" id="id_email" name="email" class="form-input"
+                           value="{{ institution.email|default:'' }}"
+                           placeholder="contact@universite.ac">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_phone">Téléphone</label>
+                    <input type="text" id="id_phone" name="phone" class="form-input"
+                           value="{{ institution.phone|default:'' }}"
+                           placeholder="+243...">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_address">Adresse</label>
+                <input type="text" id="id_address" name="address" class="form-input"
+                       value="{{ institution.address|default:'' }}"
+                       placeholder="Adresse physique">
+            </div>
+        </div>
+    </div>
+
+    <!-- Social Media -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-share-alt" style="margin-right: 0.5rem;"></i>Réseaux sociaux
+            </h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_facebook_url">
+                        <i class="fab fa-facebook" style="color: #1877f2; margin-right: 0.25rem;"></i>Facebook
+                    </label>
+                    <input type="url" id="id_facebook_url" name="facebook_url" class="form-input"
+                           value="{{ institution.facebook_url|default:'' }}"
+                           placeholder="https://facebook.com/...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_twitter_url">
+                        <i class="fab fa-twitter" style="color: #1da1f2; margin-right: 0.25rem;"></i>Twitter
+                    </label>
+                    <input type="url" id="id_twitter_url" name="twitter_url" class="form-input"
+                           value="{{ institution.twitter_url|default:'' }}"
+                           placeholder="https://twitter.com/...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_linkedin_url">
+                        <i class="fab fa-linkedin" style="color: #0a66c2; margin-right: 0.25rem;"></i>LinkedIn
+                    </label>
+                    <input type="url" id="id_linkedin_url" name="linkedin_url" class="form-input"
+                           value="{{ institution.linkedin_url|default:'' }}"
+                           placeholder="https://linkedin.com/...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_instagram_url">
+                        <i class="fab fa-instagram" style="color: #e1306c; margin-right: 0.25rem;"></i>Instagram
+                    </label>
+                    <input type="url" id="id_instagram_url" name="instagram_url" class="form-input"
+                           value="{{ institution.instagram_url|default:'' }}"
+                           placeholder="https://instagram.com/...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_youtube_url">
+                        <i class="fab fa-youtube" style="color: #ff0000; margin-right: 0.25rem;"></i>YouTube
+                    </label>
+                    <input type="url" id="id_youtube_url" name="youtube_url" class="form-input"
+                           value="{{ institution.youtube_url|default:'' }}"
+                           placeholder="https://youtube.com/...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save" style="margin-right: 0.5rem;"></i>Enregistrer les paramètres
+        </button>
+    </div>
+
+</form>
+
+{% endblock %}

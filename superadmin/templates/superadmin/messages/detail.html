@@ -1,0 +1,111 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Message de {{ message.full_name|default:message.name|default:"Contact" }}{% endblock %}
+{% block page_subtitle %}Détails du message de contact{% endblock %}
+
+{% block content_main %}
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+
+    <!-- Left: Message content -->
+    <div class="card">
+        <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-envelope-open" style="margin-right: 0.5rem;"></i>Message reçu
+            </h3>
+        </div>
+        <div class="card-body">
+            <dl style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <dt style="font-weight: 600; color: #64748b;">De</dt>
+                <dd><strong>{{ message.full_name|default:message.name|default:"—" }}</strong></dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Email</dt>
+                <dd>
+                    <a href="mailto:{{ message.email }}" style="color: var(--primary);">{{ message.email }}</a>
+                </dd>
+
+                {% if message.phone %}
+                <dt style="font-weight: 600; color: #64748b;">Téléphone</dt>
+                <dd>{{ message.phone }}</dd>
+                {% endif %}
+
+                {% if message.subject %}
+                <dt style="font-weight: 600; color: #64748b;">Sujet</dt>
+                <dd>{{ message.subject }}</dd>
+                {% endif %}
+
+                <dt style="font-weight: 600; color: #64748b;">Statut</dt>
+                <dd>
+                    {% if message.status == 'new' %}
+                        <span class="badge-status badge-warning">Nouveau</span>
+                    {% elif message.status == 'read' %}
+                        <span class="badge-status badge-draft">Lu</span>
+                    {% elif message.status == 'replied' %}
+                        <span class="badge-status badge-success">Répondu</span>
+                    {% elif message.status == 'archived' %}
+                        <span class="badge-status badge-danger">Archivé</span>
+                    {% else %}
+                        <span class="badge-status badge-draft">{{ message.status }}</span>
+                    {% endif %}
+                </dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Date</dt>
+                <dd>{{ message.created_at|date:"d/m/Y H:i" }}</dd>
+            </dl>
+
+            <div style="background: #f8fafc; border-radius: 8px; padding: 1.25rem; border-left: 4px solid var(--primary);">
+                <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; color: #374151;">{{ message.message }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Actions -->
+    <div>
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="card-header">
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>Changer le statut
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'superadmin:message_status' message.pk %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <select name="status" id="id_status" class="form-input">
+                            <option value="new" {% if message.status == 'new' %}selected{% endif %}>Nouveau</option>
+                            <option value="read" {% if message.status == 'read' %}selected{% endif %}>Lu</option>
+                            <option value="replied" {% if message.status == 'replied' %}selected{% endif %}>Répondu</option>
+                            <option value="archived" {% if message.status == 'archived' %}selected{% endif %}>Archivé</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-save" style="margin-right: 0.5rem;"></i>Mettre à jour
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <a href="mailto:{{ message.email }}?subject=Re: {{ message.subject|default:'Votre message' }}"
+               class="btn btn-primary" style="text-align: center;">
+                <i class="fas fa-reply" style="margin-right: 0.5rem;"></i>Répondre par email
+            </a>
+
+            <form method="POST" action="{% url 'superadmin:message_delete' message.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" style="width: 100%;"
+                        onclick="return confirm('Supprimer définitivement ce message ?')">
+                    <i class="fas fa-trash" style="margin-right: 0.5rem;"></i>Supprimer
+                </button>
+            </form>
+
+            <a href="{% url 'superadmin:message_list' %}" class="btn btn-outline btn-secondary" style="text-align: center;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i>Retour à la liste
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

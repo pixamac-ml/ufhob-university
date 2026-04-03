@@ -1,0 +1,116 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Candidature — {{ candidature.user.get_full_name|default:candidature.user.username }}{% endblock %}
+{% block page_subtitle %}Détails de la candidature{% endblock %}
+
+{% block content_main %}
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+
+    <!-- Left: Details -->
+    <div>
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="card-header">
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-user" style="margin-right: 0.5rem;"></i>Informations du candidat
+                </h3>
+            </div>
+            <div class="card-body">
+                <dl style="display: grid; grid-template-columns: 160px 1fr; gap: 0.75rem;">
+                    <dt style="font-weight: 600; color: #64748b;">Nom complet</dt>
+                    <dd>{{ candidature.user.get_full_name|default:"—" }}</dd>
+
+                    <dt style="font-weight: 600; color: #64748b;">Email</dt>
+                    <dd>{{ candidature.user.email }}</dd>
+
+                    <dt style="font-weight: 600; color: #64748b;">Programme</dt>
+                    <dd>{{ candidature.programme.title|default:"—" }}</dd>
+
+                    <dt style="font-weight: 600; color: #64748b;">Date de dépôt</dt>
+                    <dd>{{ candidature.created_at|date:"d/m/Y H:i" }}</dd>
+
+                    <dt style="font-weight: 600; color: #64748b;">Statut actuel</dt>
+                    <dd>
+                        {% if candidature.status == 'approved' %}
+                            <span class="badge-status badge-success">Approuvé</span>
+                        {% elif candidature.status == 'rejected' %}
+                            <span class="badge-status badge-danger">Rejeté</span>
+                        {% elif candidature.status == 'pending' %}
+                            <span class="badge-status badge-warning">En attente</span>
+                        {% elif candidature.status == 'reviewing' %}
+                            <span class="badge-status badge-draft">En révision</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">{{ candidature.status }}</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if candidature.documents.all %}
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-paperclip" style="margin-right: 0.5rem;"></i>Documents joints
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    {% for doc in candidature.documents.all %}
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                        <a href="{{ doc.file.url }}" target="_blank" style="color: var(--primary);">
+                            {{ doc.name|default:doc.file.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Actions -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-cog" style="margin-right: 0.5rem;"></i>Changer le statut
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'superadmin:candidature_status' candidature.pk %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label" for="id_status">Nouveau statut</label>
+                        <select name="status" id="id_status" class="form-input">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if candidature.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="id_note">Note interne (optionnel)</label>
+                        <textarea id="id_note" name="note" class="form-textarea" rows="3"
+                                  placeholder="Commentaire sur la décision..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-save" style="margin-right: 0.5rem;"></i>Enregistrer
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <a href="{% url 'superadmin:candidature_list' %}" class="btn btn-outline btn-secondary" style="width: 100%; text-align: center;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i>Retour à la liste
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

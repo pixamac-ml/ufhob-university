@@ -1,0 +1,48 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ article.title|truncatechars:50 }}{% endblock %}
+{% block page_subtitle %}Détails de l'article{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-newspaper" style="margin-right: 0.5rem;"></i>{{ article.title }}
+        </h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'superadmin:article_edit' article.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit" style="margin-right: 0.25rem;"></i> Modifier
+            </a>
+            <a href="{% url 'superadmin:article_list' %}" class="btn btn-sm btn-outline">
+                <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
+            {% if article.status == 'published' %}
+                <span class="badge-status badge-success">Publié</span>
+            {% else %}
+                <span class="badge-status badge-draft">Brouillon</span>
+            {% endif %}
+            {% if article.category %}
+                <span class="badge-status badge-draft">{{ article.category.name }}</span>
+            {% endif %}
+            <span style="font-size: 0.85rem; color: #64748b;">
+                <i class="fas fa-user" style="margin-right: 0.25rem;"></i>
+                {{ article.author.get_full_name|default:article.author.username|default:"—" }}
+            </span>
+            <span style="font-size: 0.85rem; color: #64748b;">
+                <i class="fas fa-calendar" style="margin-right: 0.25rem;"></i>
+                {{ article.created_at|date:"d/m/Y H:i" }}
+            </span>
+        </div>
+
+        <div style="line-height: 1.8; color: #374151; white-space: pre-wrap;">{{ article.content }}</div>
+    </div>
+</div>
+
+{% endblock %}

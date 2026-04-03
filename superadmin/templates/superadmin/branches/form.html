@@ -1,0 +1,75 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{% if branch %}Modifier le campus{% else %}Nouveau campus{% endif %}{% endblock %}
+{% block page_subtitle %}{% if branch %}{{ branch.name }}{% else %}Créer un campus{% endif %}{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-building" style="margin-right: 0.5rem;"></i>
+            {% if branch %}Modifier : {{ branch.name }}{% else %}Nouveau campus{% endif %}
+        </h3>
+        <a href="{% url 'superadmin:branch_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="POST" action="">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_name">Nom <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="id_name" name="name" class="form-input"
+                       value="{{ branch.name|default:'' }}" required
+                       placeholder="Ex: Campus Principal de Butembo">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_address">Adresse</label>
+                <input type="text" id="id_address" name="address" class="form-input"
+                       value="{{ branch.address|default:'' }}"
+                       placeholder="Adresse complète">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_phone">Téléphone</label>
+                    <input type="text" id="id_phone" name="phone" class="form-input"
+                           value="{{ branch.phone|default:'' }}"
+                           placeholder="+243...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_email">Email</label>
+                    <input type="email" id="id_email" name="email" class="form-input"
+                           value="{{ branch.email|default:'' }}"
+                           placeholder="campus@exemple.com">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_active" id="id_is_active"
+                           {% if branch.is_active or not branch %}checked{% endif %}
+                           style="width: 1rem; height: 1rem; cursor: pointer;">
+                    <span class="form-label" style="margin: 0;">Campus actif</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {% if branch %}Mettre à jour{% else %}Créer le campus{% endif %}
+                </button>
+                <a href="{% url 'superadmin:branch_list' %}" class="btn btn-outline btn-secondary">Annuler</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

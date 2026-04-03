@@ -1,0 +1,64 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Filières{% endblock %}
+{% block page_subtitle %}Gestion des filières{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Rechercher une filière...">
+        </div>
+        <a href="{% url 'superadmin:filiere_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouvelle filière
+        </a>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Formations</th>
+                    <th>Description</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for filiere in filieres %}
+                <tr>
+                    <td><strong>{{ filiere.name }}</strong></td>
+                    <td>{{ filiere.formations_count|default:0 }}</td>
+                    <td>{{ filiere.description|truncatechars:80|default:"—" }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:filiere_edit' filiere.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:filiere_delete' filiere.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer la filière « {{ filiere.name }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune filière enregistrée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
