@@ -1,0 +1,111 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Articles{% endblock %}
+{% block page_subtitle %}Gestion des articles du blog{% endblock %}
+
+{% block content_main %}
+
+<!-- Filter -->
+<div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+    <form method="GET" action="" style="display: flex; gap: 0.5rem; align-items: center;">
+        <select name="status" class="form-input" style="width: auto;" onchange="this.form.submit()">
+            <option value="">Tous les statuts</option>
+            <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>Publié</option>
+            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Brouillon</option>
+        </select>
+        {% if request.GET.status %}
+        <a href="{% url 'superadmin:article_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-times"></i>
+        </a>
+        {% endif %}
+    </form>
+    <a href="{% url 'superadmin:article_create' %}" class="btn btn-primary" style="margin-left: auto;">
+        <i class="fas fa-plus"></i> Nouvel article
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Auteur</th>
+                    <th>Catégorie</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                <tr>
+                    <td><strong>{{ article.title|truncatechars:50 }}</strong></td>
+                    <td>{{ article.author.get_full_name|default:article.author.username|default:"—" }}</td>
+                    <td>{{ article.category.name|default:"—" }}</td>
+                    <td>
+                        {% if article.status == 'published' %}
+                            <span class="badge-status badge-success">Publié</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">Brouillon</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ article.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:article_detail' article.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'superadmin:article_edit' article.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-secondary" onclick="toggleArticle({{ article.id }})">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun article trouvé
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if articles.has_other_pages %}
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if articles.has_previous %}
+        <a href="?page={{ articles.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        {% for num in articles.paginator.page_range %}
+        {% if articles.number == num %}
+        <span class="btn btn-sm btn-primary">{{ num }}</span>
+        {% elif num > articles.number|add:'-3' and num < articles.number|add:'3' %}
+        <a href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="btn btn-sm btn-outline">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+        {% if articles.has_next %}
+        <a href="?page={{ articles.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleArticle(id) {
+    fetch(`/superadmin/articles/${id}/toggle/`)
+        .then(() => location.reload());
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Frais de scolarité{% endblock %}
+{% block page_subtitle %}Gestion des frais par programme{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Rechercher des frais...">
+        </div>
+        <a href="{% url 'superadmin:fee_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveaux frais
+        </a>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Programme</th>
+                    <th>Montant (CDF)</th>
+                    <th>Année académique</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fee in fees %}
+                <tr>
+                    <td><strong>{{ fee.programme.title|default:"—" }}</strong></td>
+                    <td>{{ fee.amount }}</td>
+                    <td>{{ fee.academic_year|default:"—" }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:fee_edit' fee.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:fee_delete' fee.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer ces frais ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun frais enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

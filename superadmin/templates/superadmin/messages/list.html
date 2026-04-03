@@ -1,0 +1,104 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Messages de contact{% endblock %}
+{% block page_subtitle %}Gestion des messages reçus{% endblock %}
+
+{% block content_main %}
+
+<!-- Stats + Filter -->
+<div style="display: grid; grid-template-columns: auto 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start;">
+    <div class="card" style="margin: 0; min-width: 200px;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(239,68,68,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-envelope" style="color: #ef4444; font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ pending_count|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Messages en attente</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="padding: 1.25rem;">
+            <form method="GET" action="" style="display: flex; gap: 1rem; align-items: flex-end;">
+                <div class="form-group" style="margin: 0; flex: 1;">
+                    <label class="form-label">Filtrer par statut</label>
+                    <select name="status" class="form-input" onchange="this.form.submit()">
+                        <option value="">Tous les messages</option>
+                        <option value="new" {% if request.GET.status == 'new' %}selected{% endif %}>Nouveau</option>
+                        <option value="read" {% if request.GET.status == 'read' %}selected{% endif %}>Lu</option>
+                        <option value="replied" {% if request.GET.status == 'replied' %}selected{% endif %}>Répondu</option>
+                        <option value="archived" {% if request.GET.status == 'archived' %}selected{% endif %}>Archivé</option>
+                    </select>
+                </div>
+                {% if request.GET.status %}
+                <a href="{% url 'superadmin:message_list' %}" class="btn btn-sm btn-outline">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Expéditeur</th>
+                    <th>Email</th>
+                    <th>Sujet / Message</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for message in messages_list %}
+                <tr {% if message.status == 'new' %}style="font-weight: 600;"{% endif %}>
+                    <td>{{ message.full_name|default:message.name|default:"—" }}</td>
+                    <td>{{ message.email }}</td>
+                    <td>
+                        {% if message.subject %}
+                            {{ message.subject|truncatechars:40 }}
+                        {% else %}
+                            {{ message.message|truncatechars:50 }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if message.status == 'new' %}
+                            <span class="badge-status badge-warning">Nouveau</span>
+                        {% elif message.status == 'read' %}
+                            <span class="badge-status badge-draft">Lu</span>
+                        {% elif message.status == 'replied' %}
+                            <span class="badge-status badge-success">Répondu</span>
+                        {% elif message.status == 'archived' %}
+                            <span class="badge-status badge-danger">Archivé</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">{{ message.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ message.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <a href="{% url 'superadmin:message_detail' message.id %}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun message reçu
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

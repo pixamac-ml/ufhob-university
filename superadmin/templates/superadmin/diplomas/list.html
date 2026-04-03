@@ -1,0 +1,68 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Diplômes{% endblock %}
+{% block page_subtitle %}Gestion des diplômes{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Rechercher un diplôme...">
+        </div>
+        <a href="{% url 'superadmin:diploma_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveau diplôme
+        </a>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Abréviation</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for diploma in diplomas %}
+                <tr>
+                    <td><strong>{{ diploma.name }}</strong></td>
+                    <td>
+                        {% if diploma.abbreviation %}
+                            <span class="badge-status badge-draft">{{ diploma.abbreviation }}</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:diploma_edit' diploma.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:diploma_delete' diploma.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer le diplôme « {{ diploma.name }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun diplôme enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

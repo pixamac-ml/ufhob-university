@@ -1,0 +1,41 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ news_item.title|truncatechars:50 }}{% endblock %}
+{% block page_subtitle %}Détails de l'actualité{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-bullhorn" style="margin-right: 0.5rem;"></i>{{ news_item.title }}
+        </h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'superadmin:news_edit' news_item.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit" style="margin-right: 0.25rem;"></i> Modifier
+            </a>
+            <a href="{% url 'superadmin:news_list' %}" class="btn btn-sm btn-outline">
+                <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
+            {% if news_item.is_published %}
+                <span class="badge-status badge-success">Publié</span>
+            {% else %}
+                <span class="badge-status badge-draft">Non publié</span>
+            {% endif %}
+            <span style="font-size: 0.85rem; color: #64748b;">
+                <i class="fas fa-calendar" style="margin-right: 0.25rem;"></i>
+                {{ news_item.published_at|date:"d/m/Y"|default:news_item.created_at|date:"d/m/Y" }}
+            </span>
+        </div>
+
+        <div style="line-height: 1.8; color: #374151; white-space: pre-wrap;">{{ news_item.content }}</div>
+    </div>
+</div>
+
+{% endblock %}

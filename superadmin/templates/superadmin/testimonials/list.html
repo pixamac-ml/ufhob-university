@@ -1,0 +1,75 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Témoignages{% endblock %}
+{% block page_subtitle %}Gestion des témoignages{% endblock %}
+
+{% block content_main %}
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <a href="{% url 'superadmin:testimonial_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouveau témoignage
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Auteur</th>
+                    <th>Extrait</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for testimonial in testimonials %}
+                <tr>
+                    <td>
+                        <strong>
+                            {{ testimonial.author_name|default:testimonial.user.get_full_name|default:"Anonyme" }}
+                        </strong>
+                        {% if testimonial.author_title %}
+                        <div style="font-size: 0.8rem; color: #64748b;">{{ testimonial.author_title }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ testimonial.content|truncatechars:80 }}</td>
+                    <td>
+                        {% if testimonial.is_active %}
+                            <span class="badge-status badge-success">Actif</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ testimonial.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:testimonial_edit' testimonial.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:testimonial_delete' testimonial.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer ce témoignage ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun témoignage enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

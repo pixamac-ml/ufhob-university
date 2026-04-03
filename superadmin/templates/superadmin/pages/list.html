@@ -1,0 +1,67 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Pages{% endblock %}
+{% block page_subtitle %}Gestion des pages légales et statiques{% endblock %}
+
+{% block content_main %}
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <a href="{% url 'superadmin:page_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouvelle page
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Statut</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for page in pages %}
+                <tr>
+                    <td><strong>{{ page.title }}</strong></td>
+                    <td>
+                        {% if page.is_published %}
+                            <span class="badge-status badge-success">Publiée</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">Brouillon</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:page_detail' page.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'superadmin:page_edit' page.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:page_delete' page.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer la page « {{ page.title }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune page enregistrée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
