@@ -1,0 +1,60 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Catégories{% endblock %}
+{% block page_subtitle %}Gestion des catégories d'articles{% endblock %}
+
+{% block content_main %}
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <a href="{% url 'superadmin:category_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouvelle catégorie
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Slug</th>
+                    <th>Articles</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories %}
+                <tr>
+                    <td><strong>{{ category.name }}</strong></td>
+                    <td><code style="background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.85rem;">{{ category.slug|default:"—" }}</code></td>
+                    <td>{{ category.articles_count|default:0 }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:category_edit' category.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:category_delete' category.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer la catégorie « {{ category.name }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune catégorie enregistrée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

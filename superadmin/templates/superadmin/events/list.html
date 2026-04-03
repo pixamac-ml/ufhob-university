@@ -1,0 +1,67 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Événements{% endblock %}
+{% block page_subtitle %}Gestion des événements{% endblock %}
+
+{% block content_main %}
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <a href="{% url 'superadmin:event_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouvel événement
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Début</th>
+                    <th>Fin</th>
+                    <th>Lieu</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>
+                        <strong>{{ event.title|truncatechars:50 }}</strong>
+                    </td>
+                    <td>{{ event.start_date|date:"d/m/Y" }}</td>
+                    <td>{{ event.end_date|date:"d/m/Y"|default:"—" }}</td>
+                    <td>{{ event.location|default:"—"|truncatechars:40 }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:event_detail' event.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'superadmin:event_edit' event.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:event_delete' event.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer l\'événement « {{ event.title }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun événement enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

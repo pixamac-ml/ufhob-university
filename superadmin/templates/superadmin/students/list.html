@@ -1,0 +1,89 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Étudiants{% endblock %}
+{% block page_subtitle %}Gestion des étudiants inscrits{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <form method="GET" action="" style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" value="{{ request.GET.search|default:'' }}"
+                       placeholder="Nom, matricule, email...">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search"></i>
+            </button>
+            {% if request.GET.search %}
+            <a href="{% url 'superadmin:student_list' %}" class="btn btn-sm btn-outline">
+                <i class="fas fa-times"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Matricule</th>
+                    <th>Nom complet</th>
+                    <th>Email</th>
+                    <th>Date d'inscription</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>
+                        <span class="badge-status badge-draft">{{ student.matricule|default:"—" }}</span>
+                    </td>
+                    <td><strong>{{ student.user.get_full_name|default:student.user.username }}</strong></td>
+                    <td>{{ student.user.email }}</td>
+                    <td>{{ student.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <a href="{% url 'superadmin:student_detail' student.id %}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun étudiant trouvé
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if students.has_other_pages %}
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if students.has_previous %}
+        <a href="?page={{ students.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        {% for num in students.paginator.page_range %}
+        {% if students.number == num %}
+        <span class="btn btn-sm btn-primary">{{ num }}</span>
+        {% elif num > students.number|add:'-3' and num < students.number|add:'3' %}
+        <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="btn btn-sm btn-outline">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+        {% if students.has_next %}
+        <a href="?page={{ students.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

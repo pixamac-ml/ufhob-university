@@ -1,0 +1,50 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{% if diploma %}Modifier le diplôme{% else %}Nouveau diplôme{% endif %}{% endblock %}
+{% block page_subtitle %}{% if diploma %}Modifier les informations{% else %}Enregistrer un nouveau diplôme{% endif %}{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-certificate" style="margin-right: 0.5rem;"></i>
+            {% if diploma %}Modifier : {{ diploma.name }}{% else %}Nouveau diplôme{% endif %}
+        </h3>
+        <a href="{% url 'superadmin:diploma_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="POST" action="">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_name">Nom <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="id_name" name="name" class="form-input"
+                       value="{{ diploma.name|default:'' }}" required
+                       placeholder="Ex: Licence en Sciences Informatiques">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_abbreviation">Abréviation</label>
+                <input type="text" id="id_abbreviation" name="abbreviation" class="form-input"
+                       value="{{ diploma.abbreviation|default:'' }}"
+                       placeholder="Ex: L.Sc.Inf.">
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {% if diploma %}Mettre à jour{% else %}Créer le diplôme{% endif %}
+                </button>
+                <a href="{% url 'superadmin:diploma_list' %}" class="btn btn-outline btn-secondary">Annuler</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

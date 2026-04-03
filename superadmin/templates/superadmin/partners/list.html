@@ -1,0 +1,85 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Partenaires{% endblock %}
+{% block page_subtitle %}Gestion des partenaires{% endblock %}
+
+{% block content_main %}
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <a href="{% url 'superadmin:partner_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouveau partenaire
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Site web</th>
+                    <th>Statut</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for partner in partners %}
+                <tr>
+                    <td><strong>{{ partner.name }}</strong></td>
+                    <td>
+                        {% if partner.website %}
+                        <a href="{{ partner.website }}" target="_blank" style="color: var(--primary);">
+                            <i class="fas fa-external-link-alt" style="font-size: 0.75rem; margin-right: 0.25rem;"></i>
+                            {{ partner.website|truncatechars:40 }}
+                        </a>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if partner.is_active %}
+                            <span class="badge-status badge-success">Actif</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:partner_edit' partner.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-secondary" onclick="togglePartner({{ partner.id }})">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                            <form method="POST" action="{% url 'superadmin:partner_delete' partner.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer le partenaire « {{ partner.name }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun partenaire enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function togglePartner(id) {
+    fetch(`/superadmin/partners/${id}/toggle/`)
+        .then(() => location.reload());
+}
+</script>
+
+{% endblock %}

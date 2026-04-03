@@ -1,0 +1,65 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{% if fee %}Modifier les frais{% else %}Nouveaux frais{% endif %}{% endblock %}
+{% block page_subtitle %}{% if fee %}Modifier les frais de scolarité{% else %}Définir de nouveaux frais{% endif %}{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-coins" style="margin-right: 0.5rem;"></i>
+            {% if fee %}Modifier les frais{% else %}Nouveaux frais de scolarité{% endif %}
+        </h3>
+        <a href="{% url 'superadmin:fee_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="POST" action="">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_programme">Programme <span style="color: #ef4444;">*</span></label>
+                <select id="id_programme" name="programme" class="form-input" required>
+                    <option value="">-- Sélectionner un programme --</option>
+                    {% for programme in programmes %}
+                    <option value="{{ programme.id }}"
+                        {% if fee.programme_id == programme.id %}selected{% endif %}>
+                        {{ programme.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_amount">Montant (CDF) <span style="color: #ef4444;">*</span></label>
+                    <input type="number" id="id_amount" name="amount" class="form-input"
+                           value="{{ fee.amount|default:'' }}" required min="0" step="0.01"
+                           placeholder="Ex: 150000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_academic_year">Année académique</label>
+                    <input type="text" id="id_academic_year" name="academic_year" class="form-input"
+                           value="{{ fee.academic_year|default:'' }}"
+                           placeholder="Ex: 2024-2025">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {% if fee %}Mettre à jour{% else %}Enregistrer{% endif %}
+                </button>
+                <a href="{% url 'superadmin:fee_list' %}" class="btn btn-outline btn-secondary">Annuler</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}
