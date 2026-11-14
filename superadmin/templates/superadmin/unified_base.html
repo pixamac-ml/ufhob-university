@@ -1,0 +1,160 @@
+{% extends "portal/staff/director_dashboard.html" %}
+{% load component_tags %}
+
+{#
+The certified management shell is the only SuperAdmin layout.  Every screen
+extends this file, which in turn extends the shared portal shell used by the
+modern role dashboards.  Business-page templates only supply ``content_main``;
+they never own a sidebar, topbar, or autonomous workspace.
+#}
+
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    /* Compatibility aliases keep older business templates visually inside the
+       certified UI Core workspace while their markup is progressively
+       componentized. They deliberately use only shared design tokens. */
+    [data-superadmin-unified-page] .card {
+      overflow: hidden;
+      border: 1px solid var(--ui-border, rgb(226 232 240));
+      border-radius: var(--ui-radius-card, 0.75rem);
+      background: var(--ui-surface, #fff);
+      box-shadow: var(--ui-shadow-card, 0 1px 2px rgb(15 23 42 / 0.05));
+    }
+    [data-superadmin-unified-page] .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--ui-border, rgb(226 232 240));
+      padding: 0.875rem 1rem;
+    }
+    [data-superadmin-unified-page] .card-body { padding: 1rem; }
+    [data-superadmin-unified-page] .btn {
+      display: inline-flex;
+      min-height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border-radius: var(--ui-radius-button, 0.5rem);
+      border: 1px solid var(--ui-border, rgb(226 232 240));
+      background: var(--ui-surface, #fff);
+      padding: 0.5rem 0.875rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--ui-text, #0f172a);
+      text-decoration: none;
+    }
+    [data-superadmin-unified-page] .btn:hover { background: var(--ui-surface-hover, #f8fafc); }
+    [data-superadmin-unified-page] .btn-primary,
+    [data-superadmin-unified-page] .btn-secondary {
+      border-color: var(--ui-primary, #0f4c75);
+      background: var(--ui-primary, #0f4c75);
+      color: var(--ui-on-primary, #fff);
+    }
+    [data-superadmin-unified-page] .btn-danger {
+      border-color: var(--ui-danger, #dc2626);
+      background: var(--ui-danger, #dc2626);
+      color: var(--ui-on-primary, #fff);
+    }
+    [data-superadmin-unified-page] .btn-sm { min-height: 2rem; padding: 0.25rem 0.625rem; font-size: 0.75rem; }
+    [data-superadmin-unified-page] .form-label { display: block; margin-bottom: 0.375rem; font-size: 0.875rem; font-weight: 600; color: var(--ui-text, #0f172a); }
+    [data-superadmin-unified-page] .form-help { margin-top: 0.375rem; font-size: 0.75rem; color: var(--ui-text-muted, #64748b); }
+    [data-superadmin-unified-page] .form-input,
+    [data-superadmin-unified-page] .form-select,
+    [data-superadmin-unified-page] .form-textarea {
+      width: 100%; min-height: 2.5rem; border: 1px solid var(--ui-border, rgb(203 213 225)); border-radius: var(--ui-radius-input, 0.5rem); background: var(--ui-surface, #fff); padding: 0.5rem 0.75rem; color: var(--ui-text, #0f172a);
+    }
+    [data-superadmin-unified-page] .data-table { width: 100%; min-width: 42rem; border-collapse: collapse; font-size: 0.875rem; }
+    [data-superadmin-unified-page] .data-table th { background: var(--ui-surface-muted, #f8fafc); padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--ui-text-muted, #64748b); }
+    [data-superadmin-unified-page] .data-table td { border-top: 1px solid var(--ui-border, rgb(226 232 240)); padding: 0.75rem 1rem; color: var(--ui-text, #0f172a); }
+  </style>
+{% endblock %}
+
+{% block dashboard_content %}
+  <section data-superadmin-unified-page class="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+    {% if messages %}
+      <div class="mb-5 space-y-2" aria-live="polite">
+        {% for message in messages %}
+          {% if message.tags == 'error' %}{% component "ui_core.alert" message=message tone="danger" dismissible=True %}{% endcomponent %}
+          {% elif message.tags == 'warning' %}{% component "ui_core.alert" message=message tone="warning" dismissible=True %}{% endcomponent %}
+          {% elif message.tags == 'success' %}{% component "ui_core.alert" message=message tone="success" dismissible=True %}{% endcomponent %}
+          {% else %}{% component "ui_core.alert" message=message tone="info" dismissible=True %}{% endcomponent %}{% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+    <header class="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-ui-text sm:text-2xl">{% block page_title %}{{ page_title|default:"Super administration" }}{% endblock %}</h1>
+        {% block page_subtitle %}<p class="mt-1 text-sm text-ui-text-muted">{{ page_subtitle|default:"Administration de la plateforme UFHOB" }}</p>{% endblock %}
+      </div>
+    </header>
+    {% if superadmin_subnavigation %}
+      <div class="mb-5">
+        {% component "ui_core.tabs" id=superadmin_subnavigation.id active=superadmin_subnavigation.active items=superadmin_subnavigation.items density="compact" %}{% endcomponent %}
+      </div>
+    {% endif %}
+    {% block content_main %}{% endblock %}
+  </section>
+{% endblock %}
+
+{% block dashboard_overlays %}
+  {{ block.super }}
+  <script>
+    (() => {
+      let pendingForm = null;
+      const dialogId = "superadmin-confirm";
+
+      const openConfirmation = (form, source) => {
+        pendingForm = form;
+        const message = source.dataset.confirmMessage || form.dataset.confirmMessage;
+        if (!message) return false;
+        const title = source.dataset.confirmTitle || form.dataset.confirmTitle || "Confirmer l’action";
+        const label = source.dataset.confirmLabel || form.dataset.confirmLabel || "Confirmer";
+        const titleNode = document.getElementById(`${dialogId}-title`);
+        const messageNode = document.getElementById(`${dialogId}-message`);
+        const button = document.querySelector(`[data-ui-confirm-accept="${dialogId}"]`);
+        if (titleNode) titleNode.textContent = title;
+        if (messageNode) messageNode.textContent = message;
+        if (button) button.textContent = label;
+        window.dispatchEvent(new CustomEvent("ui-overlay-open", { detail: { id: dialogId } }));
+        return true;
+      };
+
+      document.addEventListener("submit", (event) => {
+        const form = event.target.closest("form");
+        if (!form || form.dataset.superadminConfirmed === "true") {
+          if (form) delete form.dataset.superadminConfirmed;
+          return;
+        }
+        if (form.dataset.confirmMessage) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          openConfirmation(form, form);
+        }
+      }, true);
+
+      document.addEventListener("click", (event) => {
+        const source = event.target.closest("[data-confirm-message]");
+        if (!source) return;
+        const form = source.closest("form") || document.getElementById(source.getAttribute("form"));
+        if (!form || form.dataset.superadminConfirmed === "true") return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openConfirmation(form, source);
+      }, true);
+
+      document.addEventListener("click", (event) => {
+        const confirm = event.target.closest(`[data-ui-confirm-accept="${dialogId}"]`);
+        if (!confirm || !pendingForm) return;
+        event.preventDefault();
+        pendingForm.dataset.superadminConfirmed = "true";
+        const form = pendingForm;
+        pendingForm = null;
+        window.dispatchEvent(new CustomEvent("ui-overlay-close", { detail: { id: dialogId } }));
+        form.requestSubmit();
+      }, true);
+    })();
+  </script>
+{% endblock %}

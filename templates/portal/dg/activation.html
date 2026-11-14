@@ -1,0 +1,22 @@
+{% extends "portal/auth_base.html" %}
+{% block auth_title %}Activation de compte | UFHOB{% endblock %}
+{% block content %}
+<main class="mx-auto max-w-md px-4 py-16">
+  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <p class="text-xs font-black uppercase tracking-[.18em] text-emerald-700">UFHOB{% if activation_context.school %} · {{ activation_context.school }}{% endif %}</p>
+    <h1 class="mt-2 text-2xl font-black text-slate-950">Activez votre accès</h1>
+    <p class="mt-2 text-sm font-semibold text-slate-600">{% if activation_context.position %}{{ activation_context.position }} · {% endif %}Identifiant : {{ username }}. Choisissez votre mot de passe personnel.</p>
+    <form method="post" class="mt-6 space-y-4">
+      {% csrf_token %}
+      {% for field in form %}
+      <label class="block">
+        <span class="text-xs font-black text-slate-600">{{ field.label }}</span>
+        {{ field }}
+        {% for error in field.errors %}<span class="mt-1 block text-xs font-semibold text-rose-700">{{ error }}</span>{% endfor %}
+      </label>
+      {% endfor %}
+      <button type="submit" class="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Définir mon mot de passe</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

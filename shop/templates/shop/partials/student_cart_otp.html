@@ -1,0 +1,12 @@
+{% load humanize component_tags %}
+<section class="space-y-4 rounded-ui-card border border-ui-border bg-ui-surface p-5">
+  <div class="flex items-start gap-3"><span class="grid h-10 w-10 shrink-0 place-items-center rounded-ui-button bg-ui-success-soft text-ui-success"><i data-lucide="mail-check" class="h-5 w-5"></i></span><div><p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Confirmation e-mail</p><h3 class="mt-1 text-base font-bold text-ui-text">Saisissez le code recu</h3><p class="mt-1 text-sm text-ui-text-muted">Un code vient d'etre envoye a {{ masked_email }}. Il expire dans 10 minutes et ne confirme pas un paiement.</p></div></div>
+  <div class="rounded-ui-card border border-ui-warning/30 bg-ui-warning-soft p-3 text-sm text-ui-text-muted"><strong class="text-ui-text">Commande :</strong> {{ cart.items.count }} article{{ cart.items.count|pluralize }} · {{ cart.total_amount|intcomma }} FCFA · agent selectionne : {{ confirmation.agent.user.get_full_name|default:confirmation.agent.user.username }}.</div>
+  <form hx-post="{% url 'shop:student_remote_order_confirm' %}" hx-target="#shop-cart-target" hx-swap="innerHTML" class="space-y-4">
+    {% csrf_token %}{{ order_otp_form.confirmation_id }}
+    {% component "ui_core.django_form_field" field=order_otp_form.otp_code %}{% endcomponent %}
+    {% if order_otp_form.non_field_errors %}<p class="text-sm font-semibold text-ui-danger">{{ order_otp_form.non_field_errors|join:", " }}</p>{% endif %}
+    <button class="ui-focus-ring flex h-ui-control w-full items-center justify-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary"><i data-lucide="badge-check" class="h-4 w-4"></i>Confirmer ma commande</button>
+  </form>
+  <p class="text-xs text-ui-text-muted">Le paiement reel et le recu seront etablis par la gestionnaire lors de l'encaissement.</p>
+</section>

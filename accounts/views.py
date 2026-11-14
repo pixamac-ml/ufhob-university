@@ -10,7 +10,7 @@ Vues principales du module accounts.
 
 import csv
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, get_user_model
 from django.contrib import messages
 from django.urls import reverse
@@ -23,17 +23,14 @@ from branches.models import Branch
 from inscriptions.models import Inscription
 from admissions.models import Candidature
 from payments.models import Payment, PaymentAgent, CashPaymentSession
-from .dashboards.helpers import is_manager
+from accounts.access import get_user_position
 
-from .models import Profile
-from .forms import CustomUserCreationForm, ProfileForm, EmailUpdateForm
+from portal.models import AccountSupportState
 
-from .dashboards.permissions import (
-    check_admissions_access,
-    check_finance_access,
-    check_executive_access,
-)
-
+from .models import Profile, UserEmailHistory, UserPreference, PayrollEntry, TeacherHonorariumEntry
+from .forms import CustomUserCreationForm, ProfileForm, SystemProfileForm, EmailUpdateForm, UserPreferenceForm
+from .services.payslip_pdf import build_payroll_pdf, build_honorarium_pdf
+from .authentication import safe_local_redirect_url
 
 User = get_user_model()
 
@@ -67,7 +64,10 @@ def register(request):
                 "Bienvenue ! Votre compte a été créé avec succès."
             )
 
-            return redirect(next_url or reverse("community:topic_list"))
+            return redirect(
+                safe_local_redirect_url(request, next_url)
+                or reverse("community:topic_list")
+            )
 
     else:
         form = CustomUserCreationForm()
@@ -85,33 +85,9 @@ def register(request):
 
 @login_required
 def dashboard_redirect(request):
-    """
-    Redirige l'utilisateur vers le dashboard approprié
-    selon ses permissions.
-    """
+    from accounts.services.redirects import resolve_user_dashboard
 
-    user = request.user
-
-    # Ordre de priorité
-    if check_executive_access(user):
-        return redirect("accounts:executive_dashboard")
-
-    if check_finance_access(user):
-        return redirect("accounts:finance_dashboard")
-
-    if is_manager(user):
-        return redirect("accounts:manager_dashboard")
-
-    if check_admissions_access(user):
-        return redirect("accounts:admissions_dashboard")
-
-    # Aucun dashboard
-    messages.warning(
-        request,
-        "Vous n'avez accès à aucun dashboard."
-    )
-
-    return redirect("accounts:profile")
+    return redirect(resolve_user_dashboard(request.user))
 
 # ==========================================================
 # PROFIL UTILISATEUR
@@ -124,6 +100,10 @@ def profile_detail(request):
     """
 
     user_obj = request.user
+    position = get_user_position(user_obj)
+
+    if position:
+        return redirect("accounts_portal:system_profile")
 
     # Garantie que le profil existe
     profile, created = Profile.objects.get_or_create(user=user_obj)
@@ -176,12 +156,25 @@ def profile_detail(request):
     # Mise à jour de l'activité utilisateur
     Profile.objects.filter(pk=profile.pk).update(last_seen=timezone.now())
 
+    tab = (request.GET.get("tab") or "activity").strip().lower()
+    allowed_tabs = {"activity", "topics", "answers", "badges", "settings"}
+    active_tab = tab if tab in allowed_tabs else "activity"
+    initial_tab_url_map = {
+        "activity": "accounts:profile_activity",
+        "topics": "accounts:profile_topics",
+        "answers": "accounts:profile_answers",
+        "badges": "accounts:profile_badges",
+        "settings": "accounts:profile_settings",
+    }
+
     context = {
         "user_obj": user_obj,
         "profile": profile,
         "stats": stats,
         "recent_topics": recent_topics,
         "recent_answers": recent_answers,
+        "active_tab": active_tab,
+        "initial_tab_url_name": initial_tab_url_map[active_tab],
     }
 
     return render(
@@ -201,18 +194,22 @@ def edit_profile(request):
     Modification du profil utilisateur.
     """
 
-    profile = request.user.profile
+    position = get_user_position(request.user)
+    if position:
+        # Route historique : les comptes SYSTEM sont toujours affiches par Portal.
+        return redirect("accounts_portal:system_profile_edit")
+
+    profile, _created = Profile.objects.get_or_create(user=request.user)
+    is_system_account = False
 
     if request.method == "POST":
-
         form = ProfileForm(
             request.POST,
             request.FILES,
-            instance=profile
+            instance=profile,
         )
 
         if form.is_valid():
-
             form.save()
 
             messages.success(
@@ -220,7 +217,11 @@ def edit_profile(request):
                 "Votre profil a été mis à jour."
             )
 
-            return redirect("accounts:profile")
+            return redirect(
+                "accounts_portal:system_security"
+                if get_user_position(request.user)
+                else "accounts:profile"
+            )
 
     else:
         form = ProfileForm(instance=profile)
@@ -228,7 +229,44 @@ def edit_profile(request):
     return render(
         request,
         "accounts/edit_profile.html",
-        {"form": form}
+        {
+            "form": form,
+            "is_system_account": is_system_account,
+            "profile_position": position,
+        }
+    )
+
+
+@login_required
+def edit_preferences(request):
+    """
+    Modification des preferences utilisateur unifiees.
+    """
+
+    preference, _created = UserPreference.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        form = UserPreferenceForm(request.POST, instance=preference)
+
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                "Vos preferences ont ete mises a jour."
+            )
+            return redirect("accounts:edit_preferences")
+    else:
+        form = UserPreferenceForm(instance=preference)
+
+    support_state = AccountSupportState.objects.filter(user=request.user).first()
+
+    return render(
+        request,
+        "accounts/profile_preferences.html",
+        {
+            "form": form,
+            "support_state": support_state,
+        }
     )
 
 
@@ -246,22 +284,50 @@ def update_email(request):
 
         form = EmailUpdateForm(
             request.POST,
-            instance=request.user
+            instance=request.user,
+            user=request.user,
         )
 
         if form.is_valid():
 
-            form.save()
+            previous_email = request.user.email
+            user = form.save(commit=False)
+            now = timezone.now()
+            if previous_email and previous_email.lower() != user.email.lower():
+                UserEmailHistory.objects.filter(user=user, ended_at__isnull=True).update(ended_at=now)
+                UserEmailHistory.objects.create(
+                    user=user,
+                    email=previous_email,
+                    started_at=user.date_joined,
+                    ended_at=now,
+                    changed_at=now,
+                    changed_by=request.user,
+                    reason="user_requested_change",
+                )
+                from .models import AccountSecurityEvent
+                from .session_policy import log_security_event
+                log_security_event(
+                    user=user,
+                    actor=request.user,
+                    event_type=AccountSecurityEvent.EMAIL_CHANGED,
+                    request=request,
+                    metadata={"previous_email": previous_email, "new_email": user.email},
+                )
+            user.save(update_fields=["email"])
 
             messages.success(
                 request,
                 "Votre email a été mis à jour."
             )
 
-            return redirect("accounts:profile")
+            return redirect(
+                "accounts_portal:system_security"
+                if get_user_position(request.user)
+                else "accounts:profile"
+            )
 
     else:
-        form = EmailUpdateForm(instance=request.user)
+        form = EmailUpdateForm(instance=request.user, user=request.user)
 
     return render(
         request,
@@ -287,6 +353,7 @@ def profile_activity(request):
         Topic.objects
         .filter(author=request.user, is_deleted=False)
         .select_related("category")
+        .annotate(answer_count=Count("answers"))
         .order_by("-created_at")[:5]
     )
 
@@ -454,8 +521,48 @@ def profile_settings(request):
     Onglet Paramètres - Actions rapides.
     """
 
-    return render(
-        request,
-        "accounts/partials/profile_settings.html",
-        {}
-    )
+    preference, _created = UserPreference.objects.get_or_create(user=request.user)
+    support_state = AccountSupportState.objects.filter(user=request.user).first()
+    profile, _profile_created = Profile.objects.get_or_create(user=request.user)
+
+    if request.headers.get("HX-Request") == "true":
+        return render(
+            request,
+            "accounts/partials/profile_settings.html",
+            {
+                "preference": preference,
+                "support_state": support_state,
+                "profile": profile,
+            }
+        )
+    return redirect(f"{reverse('accounts:profile')}?tab=settings")
+
+
+@login_required
+def payslip_download(request, pk):
+    """
+    Telechargement de la fiche de paie (PayrollEntry) de l'utilisateur connecte.
+    """
+
+    entry = get_object_or_404(PayrollEntry, pk=pk, employee=request.user)
+    pdf_bytes = build_payroll_pdf(entry)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    filename = f"fiche-paie-{entry.period_month:%Y-%m}.pdf"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def honorarium_download(request, pk):
+    """
+    Telechargement du bordereau d'honoraires (TeacherHonorariumEntry) de l'enseignant connecte.
+    """
+
+    entry = get_object_or_404(TeacherHonorariumEntry, pk=pk, teacher=request.user)
+    pdf_bytes = build_honorarium_pdf(entry)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    filename = f"honoraires-{entry.period_month:%Y-%m}.pdf"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

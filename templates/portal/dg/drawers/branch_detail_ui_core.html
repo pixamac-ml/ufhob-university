@@ -1,0 +1,79 @@
+{% load component_tags humanize %}
+<section class="space-y-5" data-overlay-title="{{ drawer_branch.name }}">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Fiche campus</p>
+    <p class="mt-1 text-sm text-ui-text-muted">{{ drawer_branch.city|default:"Ville non renseignée" }} · Gestionnaire du campus : {% if drawer_branch.manager %}{{ drawer_branch.manager.get_full_name|default:drawer_branch.manager.username }}{% else %}Non assigné{% endif %}</p>
+  </div>
+
+  {% component "ui_core.panel" title="Identité et responsabilités" density="compact" %}
+    <dl class="grid gap-3 text-sm sm:grid-cols-2">
+      <div><dt class="text-ui-text-muted">Statut</dt><dd class="mt-1 font-semibold text-ui-text">{% if drawer_branch.is_active %}Actif{% else %}Inactif{% endif %}</dd></div>
+      <div><dt class="text-ui-text-muted">Responsable académique</dt><dd class="mt-1 font-semibold text-ui-text">{{ drawer_branch_summary.academic_responsible_names|join:", "|default:"Non assigné" }}</dd></div>
+      <div class="sm:col-span-2"><dt class="text-ui-text-muted">École(s) présente(s)</dt><dd class="mt-1 flex flex-wrap gap-2">{% for presence in drawer_branch_schools %}<span class="rounded-ui-badge bg-ui-primary-soft px-2 py-1 text-xs font-bold text-ui-primary">{{ presence.school.display_name }}</span>{% empty %}<span class="font-semibold text-ui-text">Aucune école active associée</span>{% endfor %}</dd></div>
+    </dl>
+  {% endcomponent %}
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    {% component "ui_core.stat_card" label="Étudiants" value=drawer_branch_summary.student_count|intcomma icon="graduation-cap" tone="primary" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Classes" value=drawer_branch_summary.class_count|intcomma icon="school" tone="info" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Inscriptions" value=drawer_branch_summary.active_inscription_count|intcomma icon="file-check-2" tone="success" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Alertes" value=drawer_branch_summary.open_alert_count|intcomma icon="triangle-alert" tone="warning" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Personnel" value=drawer_branch_staff_count|intcomma icon="users" tone="info" compact=True %}{% endcomponent %}
+  </div>
+
+  {% component "ui_core.panel" title="Situation financière" subtitle="Montants limités à l’année académique et au campus actifs." density="compact" %}
+    <div class="grid gap-3 sm:grid-cols-3">
+      {% component "ui_core.stat_card" label="Revenus" value=drawer_branch_finance.revenue|intcomma unit="FCFA" icon="wallet-cards" tone="success" compact=True %}{% endcomponent %}
+      {% if dg_school_finance %}
+        <p class="p-3 text-sm text-ui-text-muted">Dépenses : non ventilées par école</p>
+        <p class="p-3 text-sm text-ui-text-muted">Solde : non calculable par école seule</p>
+      {% else %}
+        {% component "ui_core.stat_card" label="Dépenses" value=drawer_branch_finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" compact=True %}{% endcomponent %}
+        {% component "ui_core.stat_card" label="Solde" value=drawer_branch_finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" compact=True %}{% endcomponent %}
+      {% endif %}
+    </div>
+  {% endcomponent %}
+
+  {% component "ui_core.panel" title="Actions" subtitle="Accédez directement au bon sous-espace, sans empiler de fenêtres." density="compact" %}
+    <div class="grid gap-2 sm:grid-cols-2">
+      <button type="button" class="inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover" onclick="dgOpenModal('{% url 'accounts_portal:dg_modal' %}?modal=branch_admin&amp;branch_id={{ drawer_branch.id }}')"><i data-lucide="pencil" class="h-4 w-4" aria-hidden="true"></i> Modifier le campus</button>
+      <button type="button" class="inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover" onclick="dgOpenScopedSection('finance', '{{ drawer_branch.id }}')"><i data-lucide="wallet-cards" class="h-4 w-4" aria-hidden="true"></i> Voir la finance</button>
+      <button type="button" class="inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover" onclick="dgOpenScopedSection('students', '{{ drawer_branch.id }}')"><i data-lucide="users-round" class="h-4 w-4" aria-hidden="true"></i> Voir les étudiants</button>
+      <button type="button" class="inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover" onclick="dgOpenScopedSection('rh', '{{ drawer_branch.id }}')"><i data-lucide="users" class="h-4 w-4" aria-hidden="true"></i> Voir le personnel</button>
+    </div>
+  {% endcomponent %}
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    {% component "ui_core.panel" title="Classes principales" density="compact" %}
+      <div class="space-y-2">
+        {% for academic_class in drawer_branch_summary.top_classes|slice:":6" %}
+          <div class="flex items-center justify-between gap-3 rounded-ui-button bg-ui-surface-muted px-3 py-2 text-sm"><span class="font-semibold text-ui-text">{{ academic_class.display_name|default:academic_class }}</span><span class="font-bold text-ui-text-muted">{{ academic_class.student_count|default:0|intcomma }}</span></div>
+        {% empty %}
+          {% component "ui_core.empty_state" title="Aucune classe active" compact=True %}{% endcomponent %}
+        {% endfor %}
+      </div>
+    {% endcomponent %}
+    {% component "ui_core.panel" title="Programmes" density="compact" %}
+      <div class="space-y-2">
+        {% for programme in drawer_branch_summary.top_programmes|slice:":6" %}
+          <div class="flex items-center justify-between gap-3 rounded-ui-button bg-ui-surface-muted px-3 py-2 text-sm"><span class="font-semibold text-ui-text">{{ programme.programme__title|default:"Programme non renseigné" }}</span><span class="font-bold text-ui-text-muted">{{ programme.total|default:0|intcomma }}</span></div>
+        {% empty %}
+          {% component "ui_core.empty_state" title="Aucun programme actif" compact=True %}{% endcomponent %}
+        {% endfor %}
+      </div>
+    {% endcomponent %}
+  </div>
+
+  {% component "ui_core.panel" title="Cours du jour" subtitle="Séances planifiées pour ce campus." density="compact" %}
+    <div class="space-y-2">
+      {% for event in drawer_branch_today_courses %}
+        <div class="flex items-center justify-between gap-3 rounded-ui-button bg-ui-surface-muted px-3 py-2 text-sm">
+          <div class="min-w-0"><p class="truncate font-semibold text-ui-text">{{ event.ec.title|default:event.title }}</p><p class="truncate text-xs text-ui-text-muted">{{ event.academic_class.display_name }} · {{ event.teacher.get_full_name|default:event.teacher.username }}</p></div>
+          <span class="shrink-0 font-bold text-ui-text-muted">{{ event.start_datetime|date:"H:i" }}–{{ event.end_datetime|date:"H:i" }}</span>
+        </div>
+      {% empty %}
+        {% component "ui_core.empty_state" title="Aucun cours planifié aujourd’hui" compact=True %}{% endcomponent %}
+      {% endfor %}
+    </div>
+  {% endcomponent %}
+</section>

@@ -2,7 +2,7 @@
 {% load component_tags static %}
 
 {% block title %}
-{{ article.get_meta_title }} – ESFE
+{{ article.get_meta_title }} – ESFé
 {% endblock %}
 
 {% block meta %}
@@ -14,7 +14,7 @@
 <meta property="og:description" content="{{ article.get_meta_description }}">
 <meta property="og:url" content="{{ absolute_url }}">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="ESFE">
+<meta property="og:site_name" content="ESFé">
 <meta property="og:image" content="{{ absolute_image_url }}">
 
 {% if article.published_at %}
@@ -40,7 +40,7 @@
   },
   "publisher": {
     "@type": "Organization",
-    "name": "ESFE"
+    "name": "ESFé"
   },
   "mainEntityOfPage": {
     "@type": "WebPage",
@@ -110,9 +110,9 @@
       x-transition:enter-end="opacity-100 translate-y-0"
       class="inline-flex items-center gap-3
              bg-white/15 backdrop-blur-sm
-             px-5 sm:px-6 py-2.5 sm:py-3 rounded-full
+             px-5 sm:px-6 py-2.5 sm:py-3 rounded-sm
              text-xs uppercase tracking-wider font-semibold
-             text-white shadow-sm">
+             text-white">
       <span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
       {{ article.category.name }}
     </div>
@@ -194,7 +194,7 @@
     <div class="lg:col-span-9 space-y-12 sm:space-y-16 content-fade-in">
 
       <!-- IMAGE -->
-      <div class="rounded-2xl overflow-hidden shadow-xl aspect-[16/9] bg-gray-100">
+      <div class="rounded-md overflow-hidden border border-slate-200 aspect-[16/9] bg-gray-100">
         {% if article.featured_image %}
         <img src="{{ article.featured_image.url }}"
              alt="{{ article.title }}"
@@ -202,7 +202,7 @@
              loading="eager"
              decoding="async">
         {% else %}
-        <img src="{% static 'images/default-article.jpg' %}"
+        <img src="{% static 'images/students/logo-ubhob.png' %}"
              alt="Image par défaut"
              class="w-full h-full object-cover"
              loading="lazy"
@@ -264,7 +264,7 @@
           {% endif %}
 
           {% if comments_count == 0 %}
-          <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 sm:p-8 text-center">
+          <div class="bg-gray-50 border border-dashed border-slate-300 rounded-md p-6 sm:p-8 text-center">
               <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
               </svg>
@@ -279,7 +279,7 @@
         <div class="mt-6 text-center">
           <button
               @click="open = !open"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-md
                      bg-gray-100 text-gray-700 font-medium
                      hover:bg-gray-200 active:scale-[0.98]
                      transition-all duration-200">
@@ -299,7 +299,7 @@
         {% endif %}
 
         {% if article.allow_comments %}
-        <div class="mt-10 sm:mt-14 bg-white border border-gray-200 rounded-2xl p-6 sm:p-10 shadow-sm">
+        <div class="mt-10 sm:mt-14 bg-white border border-slate-200 rounded-md p-6 sm:p-10 shadow-sm">
           {% component "comment_form" article=article %}
           {% endcomponent %}
         </div>
@@ -316,7 +316,7 @@
         {% component "blog_sidebar" categories=categories %}
         {% endcomponent %}
 
-        <div class="bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl p-6 border border-primary-200">
+        <div class="bg-primary-50 rounded-md p-6 border border-primary-200">
           <h4 class="font-semibold text-primary-700 mb-3 flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -327,8 +327,8 @@
             Contactez-nous pour toute question.
           </p>
           <a href="/contact/"
-             class="inline-block mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                    hover:bg-primary-700 active:scale-[0.98] transition-all duration-200">
+             class="inline-block mt-4 bg-primary-600 text-white px-4 py-2 rounded-sm text-sm font-medium
+                    hover:bg-primary-700 transition-all duration-200">
             Nous contacter
           </a>
         </div>
@@ -336,7 +336,7 @@
         <!-- Bouton retour en haut -->
         <button
           onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
-          class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
+          class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md
                  bg-gray-100 text-gray-600 text-sm font-medium
                  hover:bg-gray-200 active:scale-[0.98] transition-all duration-200">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

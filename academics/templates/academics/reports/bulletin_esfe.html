@@ -1,0 +1,129 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Relevé de notes</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm 11mm 9mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 8px; line-height: 1.16; }
+    .document { width: 100%; }
+    .institution-header { display: table; width: 100%; margin-bottom: 3px; }
+    .institution-identity, .document-heading { display: table-cell; vertical-align: top; }
+    .institution-identity { width: 58%; }
+    .document-heading { width: 42%; text-align: center; padding-top: 9px; }
+    .logo { width: 48px; max-height: 42px; object-fit: contain; margin: 0 7px 0 0; }
+    .logos { display: flex; align-items: center; gap: 7px; float: left; margin-right: 7px; }
+    .institution-name { font-size: 9px; font-weight: 700; text-transform: uppercase; padding-top: 1px; }
+    .institution-meta { font-size: 7px; margin-top: 2px; }
+    h1 { display: inline-block; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+    .identity-lines { margin: 2px 0 5px; font-size: 8px; line-height: 1.35; }
+    .identity-lines p { margin: 0; }
+    .label { font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 6.6px; }
+    th, td { border: .55px solid #000; padding: 2px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; }
+    th { font-weight: 700; line-height: 1.08; }
+    .group-header { font-size: 7px; min-height: 20px; }
+    .subgroup-header { font-size: 6.5px; }
+    .left { text-align: left; }
+    .bottom-area { display: table; width: 100%; margin-top: 10px; font-size: 8px; }
+    .observations, .director-signature { display: table-cell; vertical-align: top; }
+    .observations { width: 60%; }
+    .director-signature { width: 40%; text-align: center; }
+    .observation-line { display: inline-block; width: 77%; border-bottom: .55px dotted #000; height: 10px; vertical-align: bottom; }
+    .signature-space { height: 23px; }
+    .director-signature strong { font-size: 8px; }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <header class="institution-header">
+      <div class="institution-identity">
+        <div class="logos">
+          {% if university_logo %}<img src="{{ university_logo }}" alt="Logo UFHOB" class="logo">{% endif %}
+          {% if school_logo %}<img src="{{ school_logo }}" alt="Logo {{ school_name }}" class="logo">{% endif %}
+          {% if not university_logo and not school_logo %}{% static 'images/students/logo-ubhob.png' as fallback_document_logo %}<img src="{{ fallback_document_logo }}" alt="Logo UFHOB" class="logo">{% endif %}
+        </div>
+        <div class="institution-name">{{ institution_official_name|default:"Université Privée Félix Houphouët-Boigny du Mali" }}</div>
+        <div class="institution-meta">
+          École : {{ school_name|default:"—" }} · Campus : {{ branch_name|default:"—" }}<br>
+          Cycle : {{ cycle_name|default:"—" }} · Programme : {{ programme_name|default:"—" }} · Classe : {{ class_display|default:"—" }}<br>
+          Année académique : {{ academic_year_display|default:"—" }} · Semestre : {% if semester_result %}{{ semester_result.semester.number }}{% endif %}<br>
+          {% if bulletin.branch.address %}{{ bulletin.branch.address }}{% endif %}<br>
+          {% if bulletin.branch.phone %}Tél. : {{ bulletin.branch.phone }}{% endif %}
+        </div>
+      </div>
+      <div class="document-heading"><h1>Relevé de notes</h1></div>
+    </header>
+
+    <section class="identity-lines" aria-label="Identification de l'étudiant">
+      <p><span class="label">Année universitaire :</span> {{ academic_year_display|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Niveau :</span> {{ class_display|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Semestre :</span> {% if semester_result %}{{ semester_result.semester.number }}{% endif %} &nbsp;&nbsp;&nbsp; <span class="label">Département :</span> {{ department_name|default:"" }}</p>
+      <p><span class="label">N° matricule :</span> {{ student_matricule|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Nom :</span> {{ student_last_name|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Prénom :</span> {{ student_first_name|default:student_full_name|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Date et lieu de naissance :</span> {{ student_birth_info|default:"" }}</p>
+      <p><span class="label">Domaine :</span> {{ domain_name|default:"" }} &nbsp;&nbsp;&nbsp; <span class="label">Filière :</span> {{ programme_name|default:"" }}</p>
+    </section>
+
+    {% if bulletin.bulletin_type == "semester" and semester_result %}
+      <table aria-label="Relevé semestriel">
+        <colgroup>
+          <col style="width:5.5%"><col style="width:15.5%"><col style="width:4.5%"><col style="width:3.5%">
+          <col style="width:18%"><col style="width:4.5%"><col style="width:3.5%">
+          <col style="width:4.4%"><col style="width:4.8%"><col style="width:5.2%">
+          <col style="width:4.4%"><col style="width:4.8%"><col style="width:5.2%">
+          <col style="width:8%"><col style="width:6.2%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th colspan="4" class="group-header">UNITÉS D'ENSEIGNEMENT (U.E)</th>
+            <th colspan="3" class="group-header">MATIÈRE(S) CONSTITUTIVE(S) DE L'UNITÉ D'ENSEIGNEMENT</th>
+            <th colspan="8" class="group-header">RÉSULTATS OBTENUS</th>
+          </tr>
+          <tr>
+            <th rowspan="2">Code</th><th rowspan="2">Nature</th><th rowspan="2">Crédits<br>requis</th><th rowspan="2">Coef.</th>
+            <th rowspan="2">Intitulé(s)</th><th rowspan="2">Crédits<br>requis</th><th rowspan="2">Coef.</th>
+            <th colspan="3" class="subgroup-header">Matières</th><th colspan="3" class="subgroup-header">U.E</th><th colspan="2" class="subgroup-header">Semestre {% if semester_result %}{{ semester_result.semester.number }}{% endif %}</th>
+          </tr>
+          <tr>
+            <th>Note</th><th>Note<br>Coef.</th><th>Crédits<br>obtenus</th>
+            <th>Note</th><th>Note<br>Coef.</th><th>Crédits<br>obtenus</th>
+            <th>Moyenne et<br>pourcentage</th><th>Crédits<br>obtenus</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ue_res in semester_result.ue_results %}
+            {% with ue=ue_res.ue rows=ue_res.rows %}
+              {% for ec_row in rows %}
+                <tr>
+                  {% if forloop.first %}
+                    <td rowspan="{{ rows|length }}">{{ ue.code }}</td><td rowspan="{{ rows|length }}" class="left">{{ ue.title }}</td><td rowspan="{{ rows|length }}">{{ ue_res.credit_required_display }}</td><td rowspan="{{ rows|length }}">{{ ue_res.total_coefficients_display }}</td>
+                  {% endif %}
+                  <td class="left">{{ ec_row.ec.title }}</td><td>{{ ec_row.credit_required_display }}</td><td>{{ ec_row.ec_coefficient_display }}</td>
+                  {% if ec_row.note is not None %}
+                    <td>{{ ec_row.note_display }}</td><td>{{ ec_row.note_coefficient_display }}</td><td>{{ ec_row.credit_obtained_display }}</td>
+                  {% else %}
+                    <td></td><td></td><td></td>
+                  {% endif %}
+                  {% if forloop.first %}
+                    {% if ue_res.average is not None %}
+                      <td rowspan="{{ rows|length }}">{{ ue_res.average_display }}</td><td rowspan="{{ rows|length }}">{{ ue_res.total_note_coefficients_display }}</td><td rowspan="{{ rows|length }}">{{ ue_res.credit_obtained_display }}</td><td rowspan="{{ rows|length }}">{{ semester_result.average_display }}{% if semester_result.percentage_display %}<br>({{ semester_result.percentage_display }} %){% endif %}</td><td rowspan="{{ rows|length }}">{{ semester_result.credit_obtained_display }}</td>
+                    {% else %}
+                      <td rowspan="{{ rows|length }}"></td><td rowspan="{{ rows|length }}"></td><td rowspan="{{ rows|length }}"></td><td rowspan="{{ rows|length }}"></td><td rowspan="{{ rows|length }}"></td>
+                    {% endif %}
+                  {% endif %}
+                </tr>
+              {% endfor %}
+            {% endwith %}
+          {% empty %}
+            <tr><td colspan="15">Aucune unité d'enseignement configurée pour ce semestre.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    <footer class="bottom-area">
+      <div class="observations"><span class="label">Observation(s) :</span> <span class="observation-line"></span></div>
+      <div class="director-signature"><div>{{ bulletin.branch.city|default:"Bamako" }}, le ....................................</div><div class="signature-space"></div><strong>Le Directeur Général</strong></div>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,256 @@
+{% if toast %}
+<div class="rounded-2xl border {% if toast.level == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-rose-200 bg-rose-50 text-rose-800{% endif %} px-4 py-3 text-sm font-semibold">
+  {{ toast.message }}
+</div>
+{% endif %}
+
+{% if academic_class %}
+<section class="space-y-6">
+  <div class="glass-card rounded-3xl p-6 shadow-card">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.24em] text-violet-600 dark:text-violet-400">Grille recurrente</p>
+        <h3 class="mt-2 text-2xl font-extrabold text-ui-text dark:text-slate-100">Creneaux hebdomadaires</h3>
+        <p class="mt-2 max-w-3xl text-sm text-ui-text-muted dark:text-slate-400">
+          {{ academic_class.display_name }} · {{ academic_class.programme.title }} — modele par jour de semaine (independant des cours dates dans la semaine courante).
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+          title="Crée les cours datés de la semaine à partir des créneaux hebdomadaires"
+          onclick="document.getElementById('modal-generate-week')?.classList.remove('hidden')"
+        >
+          Générer la semaine
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl bg-violet-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-600/20 hover:bg-violet-700"
+          title="Cree quatre semaines de cours a partir des creneaux hebdomadaires"
+          onclick="document.getElementById('modal-generate-month')?.classList.remove('hidden')"
+        >
+          Générer le mois
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl border border-ui-border bg-ui-surface px-4 py-3 text-sm font-extrabold dark:border-slate-700 dark:bg-slate-900"
+          hx-get="{% url planner_hub_url %}?class_id={{ academic_class.id }}&week_start={{ schedule.week_start|date:'Y-m-d' }}"
+          hx-target="{{ workspace_target_id }}"
+          hx-swap="innerHTML"
+        >
+          Retour aux actions
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <div class="glass-card rounded-3xl p-6 shadow-card xl:col-span-3">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h4 class="text-lg font-extrabold text-ui-text dark:text-slate-100">Creneaux actifs</h4>
+        <span class="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-800 dark:bg-violet-950/50 dark:text-violet-300">{{ weekly_slot_rows|length }} ligne(s)</span>
+      </div>
+      <div class="overflow-x-auto rounded-2xl border border-ui-border dark:border-slate-800">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
+          <thead class="bg-ui-surface-soft text-xs font-bold uppercase tracking-wide text-ui-text-muted dark:bg-slate-900 dark:text-slate-400">
+            <tr>
+              <th class="px-4 py-3">Jour</th>
+              <th class="px-4 py-3">Horaires</th>
+              <th class="px-4 py-3">Matiere</th>
+              <th class="px-4 py-3">Enseignant</th>
+              <th class="px-4 py-3">Salle</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-ui-surface dark:divide-slate-800 dark:bg-slate-950">
+            {% for row in weekly_slot_rows %}
+            <tr class="align-middle">
+              <td class="px-4 py-3 font-semibold text-ui-text dark:text-slate-100">{{ row.weekday_label }}</td>
+              <td class="px-4 py-3 text-ui-text dark:text-slate-300">{{ row.start_time }} – {{ row.end_time }}</td>
+              <td class="px-4 py-3 text-slate-800 dark:text-slate-200">{{ row.ec_title }}</td>
+              <td class="px-4 py-3 text-ui-text dark:text-slate-400">{{ row.teacher_name }}</td>
+              <td class="px-4 py-3 text-ui-text dark:text-slate-400">{{ row.room|default:"—" }}</td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    class="rounded-xl border border-ui-border px-3 py-2 text-xs font-bold text-ui-text hover:bg-ui-surface-soft dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-900"
+                    hx-get="{% url weekly_slots_workspace_url academic_class.id %}?week_start={{ schedule.week_start|date:'Y-m-d' }}&edit={{ row.id }}&drawer_form=1"
+                    hx-target="#supervisor-drawer-content"
+                  >Modifier</button>
+                  <button
+                    type="button"
+                    class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"
+                    onclick="document.getElementById('modal-delete-slot-{{ row.id }}')?.classList.remove('hidden')"
+                  >Retirer</button>
+
+                  {# Modale de confirmation suppression #}
+                  <div id="modal-delete-slot-{{ row.id }}"
+                       class="sg-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 hidden"
+                       role="dialog" aria-modal="true">
+                    <div class="w-full max-w-sm rounded-3xl bg-ui-surface p-6 shadow-2xl">
+                      <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <p class="text-xs font-black uppercase tracking-[0.24em] text-rose-600">Confirmation</p>
+                          <h3 class="mt-1 text-lg font-extrabold text-ui-text">Retirer le créneau</h3>
+                        </div>
+                        <button type="button" data-modal-close="modal-delete-slot-{{ row.id }}"
+                                class="rounded-lg border border-ui-border px-2 py-1 text-sm font-bold text-ui-text-muted hover:bg-ui-surface-soft">✕</button>
+                      </div>
+                      <p class="mb-5 text-sm text-ui-text">
+                        {{ row.weekday_label }} {{ row.start_time }}–{{ row.end_time }} · {{ row.ec_title }} · {{ row.teacher_name }}
+                      </p>
+                      <form method="post"
+                            action="{% url weekly_slot_save_url academic_class.id %}"
+                            hx-post="{% url weekly_slot_save_url academic_class.id %}"
+                            hx-target="{{ workspace_target_id }}"
+                            hx-swap="innerHTML"
+                            hx-on::after-request="document.getElementById('modal-delete-slot-{{ row.id }}')?.classList.add('hidden')"
+                            class="flex flex-wrap items-center justify-end gap-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="week_start" value="{{ schedule.week_start|date:'Y-m-d' }}" />
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="slot_id" value="{{ row.id }}" />
+                        <button type="button" data-modal-close="modal-delete-slot-{{ row.id }}"
+                                class="rounded-xl border border-ui-border px-4 py-2 text-sm font-bold text-ui-text hover:bg-ui-surface-soft">Annuler</button>
+                        <button type="submit"
+                                class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-extrabold text-white hover:bg-rose-700">Confirmer le retrait</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="px-4 py-10 text-center text-sm text-ui-text-muted">Aucun creneau hebdomadaire encore defini pour cette classe.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-3xl p-6 shadow-card xl:col-span-2">
+      <div class="flex flex-col gap-4">
+        <div>
+          <h4 class="text-lg font-extrabold text-ui-text dark:text-slate-100">Actions</h4>
+          <p class="mt-1 text-sm text-ui-text-muted dark:text-slate-400">Ajouter, modifier ou retirer des créneaux récurrents.</p>
+        </div>
+        <button
+          type="button"
+          class="flex items-center gap-3 rounded-2xl bg-violet-600 px-5 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-violet-700"
+          hx-get="{% url weekly_slots_workspace_url academic_class.id %}?week_start={{ schedule.week_start|date:'Y-m-d' }}&drawer_form=1"
+          hx-target="#supervisor-drawer-content"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Créer un nouveau créneau
+        </button>
+        <div class="rounded-2xl border border-ui-border bg-ui-surface-soft p-4 dark:border-slate-700 dark:bg-slate-900">
+          <p class="text-xs font-black uppercase tracking-[0.2em] text-ui-text-muted dark:text-slate-400">Rappel</p>
+          <ul class="mt-3 space-y-2 text-xs text-ui-text dark:text-slate-300">
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-violet-500">•</span>
+              <span>Les créneaux définissent le modèle hebdomadaire récurrent.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-violet-500">•</span>
+              <span>Utilise <strong>"Générer la semaine/mois"</strong> pour créer les cours datés à partir de ce modèle.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-0.5 text-violet-500">•</span>
+              <span>Pour ajouter un cours ponctuel, retourne au planning et utilise <strong>"Programmer un cours"</strong>.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+</section>
+
+{# ── Modale : Générer la semaine ── #}
+<div id="modal-generate-week"
+     class="sg-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 hidden"
+     role="dialog" aria-modal="true">
+  <div class="w-full max-w-md rounded-3xl bg-ui-surface p-6 shadow-2xl">
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.24em] text-emerald-600">Génération</p>
+        <h3 class="mt-1 text-lg font-extrabold text-ui-text">Générer la semaine</h3>
+      </div>
+      <button type="button" data-modal-close="modal-generate-week"
+              class="rounded-lg border border-ui-border px-2 py-1 text-sm font-bold text-ui-text-muted hover:bg-ui-surface-soft">✕</button>
+    </div>
+    <p class="mb-5 text-sm text-ui-text">
+      Créer les cours datés de la semaine à partir des créneaux hebdomadaires existants.
+    </p>
+    <form method="post"
+          action="{% url week_materialize_url academic_class.id %}"
+          hx-post="{% url week_materialize_url academic_class.id %}"
+          hx-target="{{ workspace_target_id }}"
+          hx-swap="innerHTML"
+          hx-on::after-request="document.getElementById('modal-generate-week')?.classList.add('hidden')"
+          class="flex flex-wrap items-center justify-end gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="week_start" value="{{ schedule.week_start|date:'Y-m-d' }}" />
+      <button type="button" data-modal-close="modal-generate-week"
+              class="rounded-xl border border-ui-border px-4 py-2 text-sm font-bold text-ui-text hover:bg-ui-surface-soft">Annuler</button>
+      <button type="submit"
+              class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-extrabold text-white hover:bg-emerald-700">Générer</button>
+    </form>
+  </div>
+</div>
+
+{# ── Modale : Générer le mois ── #}
+<div id="modal-generate-month"
+     class="sg-modal fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 hidden"
+     role="dialog" aria-modal="true">
+  <div class="w-full max-w-md rounded-3xl bg-ui-surface p-6 shadow-2xl">
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.24em] text-violet-600">Génération</p>
+        <h3 class="mt-1 text-lg font-extrabold text-ui-text">Générer le mois</h3>
+      </div>
+      <button type="button" data-modal-close="modal-generate-month"
+              class="rounded-lg border border-ui-border px-2 py-1 text-sm font-bold text-ui-text-muted hover:bg-ui-surface-soft">✕</button>
+    </div>
+    <p class="mb-5 text-sm text-ui-text">
+      Créer quatre semaines de cours à partir des créneaux hebdomadaires.
+    </p>
+    <form method="post"
+          action="{% url month_materialize_url academic_class.id %}"
+          hx-post="{% url month_materialize_url academic_class.id %}"
+          hx-target="{{ workspace_target_id }}"
+          hx-swap="innerHTML"
+          hx-on::after-request="document.getElementById('modal-generate-month')?.classList.add('hidden')"
+          class="flex flex-wrap items-center justify-end gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="week_start" value="{{ schedule.week_start|date:'Y-m-d' }}" />
+      <button type="button" data-modal-close="modal-generate-month"
+              class="rounded-xl border border-ui-border px-4 py-2 text-sm font-bold text-ui-text hover:bg-ui-surface-soft">Annuler</button>
+      <button type="submit"
+              class="rounded-xl bg-violet-600 px-4 py-2 text-sm font-extrabold text-white hover:bg-violet-700">Générer le mois</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    document.addEventListener('click', function(e) {
+      if (e.target.matches('[data-modal-close]')) {
+        const modalId = e.target.getAttribute('data-modal-close');
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('hidden');
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.sg-modal:not(.hidden)').forEach(function(m) {
+          m.classList.add('hidden');
+        });
+      }
+    });
+  })();
+</script>
+
+{% endif %}

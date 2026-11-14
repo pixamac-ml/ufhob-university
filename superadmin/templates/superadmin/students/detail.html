@@ -1,0 +1,149 @@
+{% extends "superadmin/unified_base.html" %}
+{% load humanize %}
+
+{% block page_title %}Profil Étudiant{% endblock %}
+{% block page_subtitle %}Vue 360°: identité, parcours académique et paiements{% endblock %}
+
+{% block content_main %}
+<div class="space-y-6" x-data="{ tab: 'infos' }">
+    <div class="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center gap-5">
+            <div class="h-20 w-20 rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)] text-2xl font-bold flex items-center justify-center">
+                {{ student.user.first_name|slice:":1" }}{{ student.user.last_name|slice:":1" }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-2xl font-bold tracking-tight text-slate-900 mb-0">{{ student.user.get_full_name|default:student.user.username }}</h2>
+                    <span class="badge-status {% if student.is_active %}badge-success{% else %}badge-draft{% endif %}">{% if student.is_active %}Actif{% else %}Inactif{% endif %}</span>
+                </div>
+                <p class="text-sm text-slate-500 mb-0 mt-1">{{ student.user.email|default:"-" }}</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">Matricule: {{ student.matricule }}</span>
+                    <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">Programme: {{ candidature.programme.title }}</span>
+                    <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">Campus: {{ candidature.branch.name }}</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'superadmin:student_edit' student.pk %}" class="btn btn-outline"><i data-lucide="pencil" class="h-4 w-4"></i>Modifier</a>
+                <a href="{% url 'superadmin:student_list' %}" class="btn btn-outline"><i data-lucide="arrow-left" class="h-4 w-4"></i>Retour</a>
+            </div>
+        </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-4 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Montant dû</p>
+            <p class="text-2xl font-bold text-slate-900">{{ amount_due|intcomma }}</p>
+            <p class="text-xs text-slate-500">FCFA</p>
+        </div>
+        <div class="card p-4 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Montant payé</p>
+            <p class="text-2xl font-bold text-emerald-700">{{ amount_paid|intcomma }}</p>
+            <p class="text-xs text-slate-500">FCFA validés</p>
+        </div>
+        <div class="card p-4 rounded-xl shadow-sm border border-slate-100">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Solde restant</p>
+            <p class="text-2xl font-bold {% if balance > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ balance|intcomma }}</p>
+            <p class="text-xs text-slate-500">FCFA</p>
+        </div>
+    </section>
+
+    <div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-100 p-3">
+            <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <button type="button" @click="tab = 'infos'" :class="tab === 'infos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="rounded-lg px-4 py-2 text-sm font-medium transition">Infos</button>
+                <button type="button" @click="tab = 'parcours'" :class="tab === 'parcours' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="rounded-lg px-4 py-2 text-sm font-medium transition">Parcours</button>
+                <button type="button" @click="tab = 'paiements'" :class="tab === 'paiements' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'" class="rounded-lg px-4 py-2 text-sm font-medium transition">Paiements</button>
+            </div>
+        </div>
+
+        <div class="p-5" x-show="tab === 'infos'" x-transition>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Nom complet</p>
+                    <p class="font-semibold text-slate-900 mb-0">{{ student.user.get_full_name|default:"-" }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Email</p>
+                    <p class="font-semibold text-slate-900 mb-0">{{ student.user.email|default:"-" }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Téléphone</p>
+                    <p class="font-semibold text-slate-900 mb-0">{{ candidature.phone|default:"-" }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Statut compte</p>
+                    <p class="font-semibold text-slate-900 mb-0">{{ student.user.is_active|yesno:"Actif,Inactif" }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4 md:col-span-2">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Adresse</p>
+                    <p class="font-semibold text-slate-900 mb-0">{{ candidature.address|default:"-" }}, {{ candidature.city|default:"-" }}, {{ candidature.country|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5" x-show="tab === 'parcours'" x-transition style="display: none;">
+            <div class="rounded-xl border border-slate-100 p-4 mb-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Inscription liée</p>
+                        <p class="font-semibold text-slate-900 mb-0">{{ inscription.public_token }}</p>
+                    </div>
+                    <a href="{% url 'superadmin:inscription_detail' inscription.pk %}" class="btn btn-outline btn-sm"><i data-lucide="contact" class="h-4 w-4"></i>Voir dossier</a>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                {% for h in status_history %}
+                <div class="flex items-start gap-3">
+                    <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[var(--primary)]"><i data-lucide="clock-3" class="h-4 w-4 text-xs"></i></span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-slate-800 mb-0">{{ h.previous_status }} -> {{ h.new_status }}</p>
+                        <p class="text-xs text-slate-500 mb-0">{{ h.created_at|date:"d/m/Y H:i" }}</p>
+                        {% if h.comment %}<p class="text-xs text-slate-600 mt-1">{{ h.comment }}</p>{% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">Aucun historique de statut disponible.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="p-5" x-show="tab === 'paiements'" x-transition style="display: none;">
+            <div class="overflow-x-auto rounded-xl border border-slate-100">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th class="text-right">Montant</th>
+                            <th>Méthode</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                            <th class="text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>
+                                <p class="font-medium text-slate-800 mb-0">{{ payment.reference|default:payment.pk }}</p>
+                                <p class="text-xs text-slate-500 mb-0">{{ payment.receipt_number|default:"Sans reçu" }}</p>
+                            </td>
+                            <td class="text-right font-semibold text-slate-900">{{ payment.amount|intcomma }} FCFA</td>
+                            <td>{{ payment.get_method_display }}</td>
+                            <td>{{ payment.paid_at|date:"d/m/Y H:i" }}</td>
+                            <td><span class="badge-status badge-{% if payment.status == 'validated' %}success{% elif payment.status == 'pending' %}warning{% else %}danger{% endif %}">{{ payment.get_status_display }}</span></td>
+                            <td class="text-right"><a href="{% url 'superadmin:payment_detail' payment.pk %}" class="btn btn-sm btn-outline"><i data-lucide="eye" class="h-4 w-4"></i></a></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-10 text-center text-slate-500">Aucun paiement enregistré pour cet étudiant.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

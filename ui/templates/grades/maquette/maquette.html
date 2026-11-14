@@ -1,0 +1,101 @@
+{% load component_tags l10n %}
+{# Grille active Informaticien : Tabulator. Les notes restent validées côté serveur. #}
+<div
+  class="maq-root"
+  x-data="notesGrid()"
+  data-notes-tabulator-root
+  data-notes-tabulator-key="notes-tabulator-{{ academic_class.id }}-{{ semester.id }}-{{ active_session_type }}"
+  data-grid-url="{% url 'accounts_portal:it_notes_grid' %}"
+  data-import-url="{% url 'academics:upload_grades' %}"
+  data-session="{{ active_session_type }}"
+>
+  <style>
+    .notes-tabulator-shell { min-width: 0; overflow: hidden; border: 1px solid #d9e2ef; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+    .notes-tabulator-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid #d9e2ef; background: #fff; padding: 14px 18px; }
+    .notes-tabulator-viewport { display: flex; flex-direction: column; height: min(72vh, 980px); min-height: 440px; overflow: hidden; }
+    .notes-academic-header { position: relative; z-index: 4; display: flex; flex: 0 0 auto; overflow: hidden; border-bottom: 1px solid #8f3f05; background: #fff; }
+    .notes-academic-students { position: relative; z-index: 2; flex: 0 0 var(--notes-students-width, 374px); box-shadow: 2px 0 0 rgba(143,63,5,.45); }
+    .notes-academic-scroller { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+    .notes-academic-track { display: grid; width: max-content; min-width: 100%; grid-template-rows: 40px 140px 28px 28px 76px; transform: translateX(0); will-change: transform; }
+    .notes-academic-students .notes-academic-track { width: 100%; min-width: 0; grid-template-columns: 54px minmax(160px, 1fr) minmax(160px, 1fr); }
+    .notes-academic-cell { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; border-right: 1px solid #8f3f05; border-bottom: 1px solid #8f3f05; padding: 4px 6px; text-align: center; font-size: 11px; font-weight: 700; }
+    .notes-academic-cell--ue { background: #fff3cf; color: #0f4c81; font-size: 13px; }
+    .notes-academic-cell--ec { background: #c95c07; color: #fff; writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed; line-height: 1.15; }
+    .notes-academic-cell--unit { background: #f6c8a9; color: #111827; writing-mode: vertical-rl; transform: rotate(180deg); font-family: Georgia, serif; font-size: 16px; }
+    .notes-academic-cell--metric { background: #d86c13; color: #fff; font-size: 10px; }
+    .notes-academic-cell--metric strong { font-size: 12px; }
+    .notes-academic-cell--leaf { background: #c95c07; color: #fff; writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed; }
+    .notes-academic-cell--result { background: #c95c07; color: #fff; writing-mode: vertical-rl; transform: rotate(180deg); text-orientation: mixed; }
+    .notes-academic-cell--students-top { background: #fff3cf; color: #0f4c81; letter-spacing: .02em; }
+    .notes-academic-cell--students-label { background: #c95c07; color: #fff; }
+    .notes-academic-cell--student-leaf { background: #c95c07; color: #fff; }
+    .notes-tabulator-viewport .tabulator { height: 100%; border: 0; background: #fff; font-size: 12px; color: #1e293b; }
+    .notes-tabulator-viewport > [data-notes-tabulator] { min-height: 0; flex: 1 1 auto; }
+    .notes-tabulator-viewport .tabulator-header { display: none; }
+    .notes-tabulator-viewport .tabulator-tableholder { height: 100% !important; }
+    .notes-tabulator-viewport .tabulator-col { background: #eef3ff; border-right: 1px solid #cbd8ec; }
+    .notes-tabulator-viewport .tabulator-col-group { background: #dbeafe; }
+    .notes-tabulator-viewport .tabulator-col-group .tabulator-col-group { background: #eef3ff; }
+    .notes-tabulator-viewport .tabulator-col-title { white-space: normal; line-height: 1.25; }
+    .notes-tabulator-viewport .tabulator-row { min-height: 52px; background: #fff; }
+    .notes-tabulator-viewport .tabulator-row:nth-child(even) { background: #fbfdff; }
+    .notes-tabulator-viewport .tabulator-row .tabulator-cell { display: inline-block !important; border-right: 1px solid #d9e2ef; border-bottom: 1px solid #d9e2ef; font-variant-numeric: tabular-nums; }
+    .notes-tabulator-viewport .tabulator-cell[tabulator-field="lastName"],
+    .notes-tabulator-viewport .tabulator-cell[tabulator-field="firstName"] { justify-content: flex-start; font-weight: 700; }
+    .notes-tabulator-viewport .tabulator-cell.notes-unit { background: #f1edff; color: #4c1d95; font-weight: 700; }
+    .notes-tabulator-viewport .tabulator-cell.notes-result { background: #f8fafc; font-weight: 700; }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--saving { background: #eff6ff; outline: 2px solid #2563eb; outline-offset: -2px; }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--saved { background: #f0fdf4; outline: 2px solid #16a34a; outline-offset: -2px; }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--error { background: #fff1f2; outline: 2px solid #be123c; outline-offset: -2px; }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--attention { background: #fffbeb; outline: 2px solid #d97706; outline-offset: -2px; }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--error::after,
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--attention::after { content: attr(data-error); position: absolute; z-index: 30; top: calc(100% - 2px); left: 2px; max-width: 220px; border-radius: 4px; padding: 3px 5px; background: #fff1f2; color: #9f1239; font-size: 10px; line-height: 1.2; white-space: normal; box-shadow: 0 3px 9px rgba(15,23,42,.12); }
+    .notes-tabulator-viewport .tabulator-cell.notes-cell--attention::after { background: #fffbeb; color: #92400e; }
+    .notes-tabulator-viewport .tabulator-cell .tabulator-edit-select-list,
+    .notes-tabulator-viewport .tabulator-cell input { width: 100%; text-align: center; font-weight: 700; }
+    .notes-tabulator-viewport .tabulator-frozen { background: inherit; }
+    @media (max-width: 1200px) { .notes-tabulator-viewport { height: min(70vh, 760px); min-height: 400px; } .notes-academic-track { grid-template-rows: 34px 112px 26px 26px 66px; } }
+  </style>
+
+  <section class="notes-tabulator-shell" aria-label="Gestion des notes">
+    <div class="notes-tabulator-toolbar">
+      {% component "notes_header" academic_class=academic_class semester=semester rows=rows active_session_label=active_session_label workflow_badge=workflow_badge %}{% endcomponent %}
+      {% component "notes_actions_bar" academic_class=academic_class semester=semester active_session_type=active_session_type workflow_permissions=workflow_permissions first_enrollment=first_enrollment publish_ready=publish_ready embedded_in_dashboard=embedded_in_dashboard %}{% endcomponent %}
+    </div>
+    <div class="notes-tabulator-viewport">
+      <div class="notes-academic-header" data-notes-academic-header aria-label="En-tête académique de la grille">
+        <div class="notes-academic-students" data-notes-academic-students></div>
+        <div class="notes-academic-scroller"><div class="notes-academic-track" data-notes-academic-track></div></div>
+      </div>
+      <div data-notes-tabulator aria-label="Grille de saisie des notes"></div>
+    </div>
+  </section>
+
+  <script>
+    window.ESFENotesTabulatorPayloads = window.ESFENotesTabulatorPayloads || {};
+    window.ESFENotesTabulatorPayloads["notes-tabulator-{{ academic_class.id }}-{{ semester.id }}-{{ active_session_type }}"] = {
+      saveUrl: "{% url 'accounts_portal:save_grade' %}",
+      sessionType: "{{ active_session_type }}",
+      canEdit: {% if active_session_type == "retake" %}{% if workflow_permissions.can_enter_retake %}true{% else %}false{% endif %}{% else %}{% if workflow_permissions.can_enter_normal %}true{% else %}false{% endif %}{% endif %},
+      structure: [
+        {% localize off %}{% for ue in ues %}{ id: {{ ue.id }}, code: "{{ ue.code|escapejs }}", title: "{{ ue.title|escapejs }}", coefficient: {{ ue.coefficient }}, creditRequired: {{ ue.credit_required }}, ecs: [
+          {% for ec in ue.ecs.all %}{ id: {{ ec.id }}, title: "{{ ec.title|escapejs }}", coefficient: {{ ec.coefficient }}, creditRequired: {{ ec.credit_required }} }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ] }{% if not forloop.last %},{% endif %}{% endfor %}{% endlocalize %}
+      ],
+      rows: [
+        {% for row in rows %}{
+          rowIndex: {{ row.index }}, enrollmentId: {{ row.enrollment.id }}, sequence: {{ forloop.counter }},
+          lastName: "{{ row.student_last_name|default:''|escapejs }}", firstName: "{{ row.student_first_name|default:''|escapejs }}",
+          {% for ue_block in row.ue_blocks %}{% for ec_row in ue_block.rows %}
+          note_{{ ec_row.ec.id }}: "{{ ec_row.note_input_value|default_if_none:''|escapejs }}", notecoef_{{ ec_row.ec.id }}: "{{ ec_row.note_coefficient_display|default:'0,00'|escapejs }}", credit_{{ ec_row.ec.id }}: "{{ ec_row.credit_obtained_display|default:'0,00'|escapejs }}", editable_{{ ec_row.ec.id }}: {% if active_session_type == "retake" and not ec_row.is_retake_editable %}false{% else %}true{% endif %},
+          {% endfor %}
+          ueavg_{{ ue_block.ue.id }}: "{{ ue_block.average_display|default:'0,00'|escapejs }}", uenotecoef_{{ ue_block.ue.id }}: "{{ ue_block.total_note_coefficients_display|default:'0,00'|escapejs }}", uecredit_{{ ue_block.ue.id }}: "{{ ue_block.credit_obtained_display|default:'0,00'|escapejs }}",
+          {% endfor %}
+          semavg: "{{ row.semester_average_display|default:'0,00'|escapejs }}", sempct: "{{ row.semester_percentage_display|default:'0,00'|escapejs }}%", semcredit: "{{ row.semester_credits_display|default:'0,00'|escapejs }}"
+        }{% if not forloop.last %},{% endif %}{% endfor %}
+      ]
+    };
+    if (window.ESFENotesTabulator) window.ESFENotesTabulator.mount(document.currentScript.closest("[data-notes-tabulator-root]"));
+  </script>
+</div>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 16mm 15mm 20mm; @bottom-center { content: "UFHOB-Mali · Calendrier académique · " counter(page) "/" counter(pages); color: #64748b; font-size: 8pt; } }
+    body { font-family: Arial, sans-serif; color: #172033; font-size: 9.5pt; line-height: 1.45; }
+    .identity { display: table; width: 100%; border-bottom: 2px solid #163b68; padding-bottom: 10px; }
+    .logo { width: 58px; height: 58px; object-fit: contain; vertical-align: middle; }
+    .school-logo { width: 26px; height: 26px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+    .institution { display: table-cell; vertical-align: middle; padding-left: 10px; }
+    .institution strong, .note-title, .section { color: #163b68; }
+    .institution strong { font-size: 13pt; }.ref, .muted { color: #64748b; font-size: 8pt; }
+    .note-title { text-align: center; margin: 18px 0 8px; font-size: 15pt; }.object { border-left: 4px solid #163b68; background: #f1f5f9; padding: 9px 11px; }
+    .draft { margin: 12px 0; padding: 8px 10px; border: 1px solid #f3b45a; background: #fff7ed; color: #9a4a08; font-weight: bold; }
+    .context { margin: 16px 0; white-space: pre-line; }.section { margin-top: 20px; font-size: 11pt; font-weight: bold; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 8.2pt; } th { background: #dce8f5; color: #112f54; text-align: left; } th, td { border: 1px solid #b8c6d6; padding: 6px; vertical-align: top; }
+    .signature { margin-top: 28px; text-align: right; page-break-inside: avoid; }.signature-space { height: 42px; }
+  </style>
+</head>
+<body>
+  <header class="identity">{% if branding.university_logo %}<img class="logo" src="{{ branding.university_logo }}" alt="Logo UFHOB">{% endif %}<div class="institution"><strong>{{ branding.institution_official_name }}</strong><br>{% if document_school %}École : {{ document_school.display_name }}<br>{% endif %}Campus : {{ calendar.branch.name }}<br><span class="ref">Réf. {{ document_reference }} · Version {{ calendar.version }}</span></div></header>
+  <h1 class="note-title">NOTE DE SERVICE — CALENDRIER ACADÉMIQUE</h1>
+  <div class="object"><strong>Objet :</strong> Calendrier académique de l’année {{ calendar.academic_year.name }} — {{ calendar.branch.name }}.</div>
+  {% if is_draft %}<div class="draft">BROUILLON DE TRAVAIL — ce document n’est pas encore le calendrier officiel.</div>{% endif %}
+  <p class="context">{% if calendar.general_observations %}{{ calendar.general_observations }}{% else %}La présente note fixe les périodes et dates importantes du fonctionnement académique de l’annexe pour l’année indiquée.{% endif %}</p>
+  <h2 class="section">Périodes et dates académiques</h2>
+  <table><thead><tr><th>Activité</th><th>Début</th><th>Fin</th><th>École / public concerné</th><th>Observations</th></tr></thead><tbody>
+    {% for period in projection %}<tr><td><strong>{{ period.entry.title }}</strong><br><span class="muted">{{ period.entry.get_event_type_display }}{% if period.is_cancelled %} · Annulé{% endif %}</span></td><td>{{ period.start_datetime|date:"d/m/Y" }}</td><td>{% if period.is_single_day %}—{% else %}{{ period.end_datetime|date:"d/m/Y" }}{% endif %}</td><td>{% if period.entry.school %}{{ period.entry.school.display_name }}<br>{% elif period.entry.programme %}{{ period.entry.programme.school.display_name }}<br>{% elif period.entry.academic_class %}{{ period.entry.academic_class.programme.school.display_name }}<br>{% endif %}{{ period.entry.get_target_scope_display }}{% if period.entry.academic_class %}<br>{{ period.entry.academic_class.display_name }}{% endif %}{% for semester in period.entry.target_semesters.all %}<br>Semestre {{ semester.number }}{% empty %}{% if period.entry.semester %}<br>Semestre {{ period.entry.semester.number }}{% endif %}{% endfor %}{% if period.entry.programme %}<br>{{ period.entry.programme.title }}{% endif %}</td><td>{{ period.entry.description|default:"—" }}{% if period.details %}<br><span class="muted"><strong>Épreuves programmées :</strong>{% for detail in period.details %}<br>{{ detail.start_datetime|date:"d/m/Y H:i" }} · {{ detail.event.title }}{% if detail.event.ec %} — {{ detail.event.ec.title }}{% endif %}{% endfor %}</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">Aucune période applicable n’est configurée.</td></tr>{% endfor %}
+  </tbody></table>
+  <div class="signature">Fait à {{ calendar.branch.name }}, le {{ generated_on|date:"d/m/Y" }}.<br><strong>Le Directeur des études</strong><div class="signature-space"></div></div>
+</body>
+</html>

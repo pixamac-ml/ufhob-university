@@ -1,0 +1,2229 @@
+from collections import defaultdict
+from datetime import timedelta
+from decimal import Decimal
+from pathlib import Path
+from types import SimpleNamespace
+
+from django.core.exceptions import ValidationError
+from django.db import OperationalError, ProgrammingError, transaction
+from django.db.models import Count, Prefetch, Q
+from django.urls import reverse
+from django.utils import timezone
+
+from academics.models import AcademicClass, AcademicScheduleEvent, EC, ECChapter, ECContent, ECResource, LessonLog, OnlineClassRecording, WeeklyScheduleSlot
+from academics.services.lesson_log_service import get_teacher_lesson_logs
+from academics.services.online_class_service import get_online_session_access_state
+from academics.services.recording_service import recording_status_presentation
+from academics.services.schedule_service import get_teacher_next_events, get_teacher_week_schedule
+from accounts.models import BranchCashMovement, TeacherHonorariumEntry, UserPreference
+from notification_center.selectors import get_user_in_app_messages, get_user_unread_count
+from portal.models import AccountSupportState
+from students.models import Student, StudentAttendance, TeacherAttendance
+from portal.models import TeacherDashboardPreference
+from portal.services.director.exam_session_service import get_upcoming_exam_sessions_for_class
+
+WEEKDAY_LABELS = [
+    "Lundi",
+    "Mardi",
+    "Mercredi",
+    "Jeudi",
+    "Vendredi",
+    "Samedi",
+    "Dimanche",
+]
+
+TEACHER_EXCLUDED_NOTIFICATION_SOURCES = ("admissions", "inscriptions")
+
+
+def _teacher_dashboard_preference_defaults():
+    return {
+        "dark_mode": False,
+        "sidebar_collapsed": False,
+        "compact_mode": False,
+        "default_section": TeacherDashboardPreference.DEFAULT_OVERVIEW,
+        "notify_lesson_reminders": True,
+        "notify_schedule_changes": True,
+        "notify_support_messages": True,
+    }
+
+
+def get_teacher_dashboard_preference(*, teacher, branch):
+    if branch is None:
+        return SimpleNamespace(**_teacher_dashboard_preference_defaults())
+    try:
+        preference, _created = TeacherDashboardPreference.objects.get_or_create(
+            teacher=teacher,
+            branch=branch,
+            defaults=_teacher_dashboard_preference_defaults(),
+        )
+        return preference
+    except (OperationalError, ProgrammingError):
+        return SimpleNamespace(**_teacher_dashboard_preference_defaults())
+
+
+def serialize_teacher_dashboard_preference(preference):
+    if preference is None:
+        preference = SimpleNamespace(**_teacher_dashboard_preference_defaults())
+    return {
+        "dark_mode": preference.dark_mode,
+        "sidebar_collapsed": preference.sidebar_collapsed,
+        "compact_mode": preference.compact_mode,
+        "default_section": preference.default_section,
+        "notify_lesson_reminders": preference.notify_lesson_reminders,
+        "notify_schedule_changes": preference.notify_schedule_changes,
+        "notify_support_messages": preference.notify_support_messages,
+    }
+
+
+def update_teacher_dashboard_preference(
+    *,
+    actor,
+    teacher,
+    branch,
+    dark_mode,
+    sidebar_collapsed,
+    compact_mode,
+    default_section,
+    notify_lesson_reminders,
+    notify_schedule_changes,
+    notify_support_messages,
+):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    preference = get_teacher_dashboard_preference(teacher=teacher, branch=branch)
+    allowed_sections = {choice[0] for choice in TeacherDashboardPreference.DEFAULT_SECTION_CHOICES}
+    default_section = (default_section or TeacherDashboardPreference.DEFAULT_OVERVIEW).strip()
+    if default_section not in allowed_sections:
+        raise ValidationError("La section d'ouverture selectionnee est invalide.")
+
+    preference.dark_mode = bool(dark_mode)
+    preference.sidebar_collapsed = bool(sidebar_collapsed)
+    preference.compact_mode = bool(compact_mode)
+    preference.default_section = default_section
+    preference.notify_lesson_reminders = bool(notify_lesson_reminders)
+    preference.notify_schedule_changes = bool(notify_schedule_changes)
+    preference.notify_support_messages = bool(notify_support_messages)
+    preference.updated_by = actor
+    if hasattr(preference, "full_clean"):
+        preference.full_clean()
+        preference.save()
+    return preference
+
+
+def _serialize_class_focus(academic_class, *, event_count, slot_count, subjects, next_event):
+    return {
+        "class_id": academic_class.id,
+        "class_name": academic_class.display_name,
+        "programme_title": getattr(academic_class.programme, "title", ""),
+        "school_code": getattr(academic_class.programme.school, "code", ""),
+        "school_name": getattr(academic_class.programme.school, "display_name", ""),
+        "branch_name": getattr(academic_class.branch, "name", ""),
+        "branch_id": academic_class.branch_id,
+        "academic_year_name": getattr(academic_class.academic_year, "name", ""),
+        "student_count": getattr(academic_class, "student_count", 0),
+        "event_count": event_count,
+        "slot_count": slot_count,
+        "subjects": sorted(subjects),
+        "subjects_count": len(subjects),
+        "next_event": next_event,
+    }
+
+
+def _get_teacher_director_assignments(*, teacher, branch, academic_class=None):
+    from portal.services.teaching_scope import teaching_assignments
+
+    if branch is None:
+        return []
+
+    assignments_qs = teaching_assignments(teacher).select_related(
+        "academic_class__programme", "academic_class__academic_year", "academic_class__branch",
+        "semester__academic_class", "ue__semester__academic_class", "ec__ue__semester__academic_class",
+    ).filter(branch=branch)
+    if academic_class is not None:
+        assignments_qs = assignments_qs.filter(teaching_class_id=academic_class.pk)
+    return list(assignments_qs)
+
+
+def _lesson_log_hours_minutes(log):
+    """Retourne la durée en minutes d'un cahier de texte."""
+    from datetime import datetime
+
+    if not log.start_time or not log.end_time or log.end_time <= log.start_time:
+        return 0
+    start = datetime.combine(log.date, log.start_time)
+    end = datetime.combine(log.date, log.end_time)
+    return int((end - start).total_seconds() // 60)
+
+
+def _build_teacher_volume_context(*, teacher, branch, today):
+    """Calcule le volume horaire prévu et les heures effectuées/soumises/validées."""
+    from datetime import date
+    if branch is None:
+        return {
+            "planned_hours": Decimal("0"),
+            "remaining_hours": Decimal("0"),
+            "month": {"submitted_hours": Decimal("0"), "validated_hours": Decimal("0"), "absent_hours": Decimal("0")},
+            "total": {"submitted_hours": Decimal("0"), "validated_hours": Decimal("0"), "absent_hours": Decimal("0")},
+            "assignment_count": 0,
+        }
+
+    assignments = _get_teacher_director_assignments(teacher=teacher, branch=branch)
+    planned_hours = Decimal(
+        sum(
+            (assignment.planned_hours or Decimal("0"))
+            for assignment in assignments
+        )
+    )
+
+    month_logs = LessonLog.objects.filter(
+        teacher=teacher,
+        branch=branch,
+        date__year=today.year,
+        date__month=today.month,
+    )
+    all_logs = LessonLog.objects.filter(
+        teacher=teacher,
+        branch=branch,
+    )
+
+    def sum_hours(queryset):
+        total_minutes = 0
+        for log in queryset:
+            total_minutes += _lesson_log_hours_minutes(log)
+        return Decimal(total_minutes) / Decimal(60)
+
+    submitted_month_hours = sum_hours(month_logs.filter(status=LessonLog.STATUS_DONE, validated_by__isnull=True))
+    validated_month_hours = sum_hours(month_logs.filter(status=LessonLog.STATUS_DONE, validated_by__isnull=False))
+    absent_month_hours = sum_hours(month_logs.filter(status=LessonLog.STATUS_ABSENT_TEACHER))
+
+    submitted_total_hours = sum_hours(all_logs.filter(status=LessonLog.STATUS_DONE, validated_by__isnull=True))
+    validated_total_hours = sum_hours(all_logs.filter(status=LessonLog.STATUS_DONE, validated_by__isnull=False))
+    absent_total_hours = sum_hours(all_logs.filter(status=LessonLog.STATUS_ABSENT_TEACHER))
+
+    return {
+        "planned_hours": planned_hours,
+        "remaining_hours": max(planned_hours - validated_total_hours, Decimal("0")),
+        "month": {
+            "submitted_hours": submitted_month_hours,
+            "validated_hours": validated_month_hours,
+            "absent_hours": absent_month_hours,
+        },
+        "total": {
+            "submitted_hours": submitted_total_hours,
+            "validated_hours": validated_total_hours,
+            "absent_hours": absent_total_hours,
+        },
+        "assignment_count": len(assignments),
+    }
+
+
+def _resolve_teacher_class(*, teacher, branch, class_id):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    academic_class = (
+        AcademicClass.objects.select_related(
+            "programme__school",
+            "academic_year",
+            "branch",
+        )
+        .annotate(student_count=Count("enrollments", filter=Q(enrollments__is_active=True), distinct=True))
+        .filter(pk=class_id, is_active=True)
+        .first()
+    )
+    if academic_class is None:
+        raise ValidationError("Classe introuvable.")
+    if academic_class.branch_id != branch.id:
+        raise ValidationError("Cette classe n'appartient pas a votre annexe.")
+
+    has_assignment = AcademicScheduleEvent.objects.filter(
+        academic_class=academic_class,
+        teacher=teacher,
+        is_active=True,
+    ).exclude(status=AcademicScheduleEvent.STATUS_CANCELLED).exists() or WeeklyScheduleSlot.objects.filter(
+        academic_class=academic_class,
+        teacher=teacher,
+        is_active=True,
+    ).exists()
+    if not has_assignment:
+        has_assignment = bool(
+            _get_teacher_director_assignments(
+                teacher=teacher,
+                branch=branch,
+                academic_class=academic_class,
+            )
+        )
+    if not has_assignment:
+        raise ValidationError("Cette classe n'est pas rattachee a cet enseignant.")
+    return academic_class
+
+
+def _content_prefetch():
+    return Prefetch(
+        "contents",
+        queryset=ECContent.objects.select_related("chapter").prefetch_related(
+            Prefetch(
+                "resources",
+                queryset=ECResource.objects.filter(is_active=True).order_by("order", "id"),
+            )
+        ).order_by("order", "id"),
+    )
+
+
+def _chapter_prefetch():
+    return Prefetch(
+        "chapters",
+        queryset=ECChapter.objects.prefetch_related(_content_prefetch()).order_by("order", "id"),
+    )
+
+
+def _get_teacher_class_queryset(*, teacher, branch):
+    if branch is None:
+        return AcademicClass.objects.none()
+
+    event_class_ids = list(
+        AcademicScheduleEvent.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            is_active=True,
+        )
+        .exclude(
+            status__in=[
+                AcademicScheduleEvent.STATUS_DRAFT,
+                AcademicScheduleEvent.STATUS_CANCELLED,
+            ]
+        )
+        .values_list("academic_class_id", flat=True)
+    )
+    slot_class_ids = list(
+        WeeklyScheduleSlot.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            is_active=True,
+        ).values_list("academic_class_id", flat=True)
+    )
+    assignment_class_ids = [
+        assignment.teaching_class_id
+        for assignment in _get_teacher_director_assignments(teacher=teacher, branch=branch)
+        if assignment.teaching_class_id
+    ]
+    class_ids = {class_id for class_id in [*event_class_ids, *slot_class_ids, *assignment_class_ids] if class_id}
+    queryset = AcademicClass.objects.select_related(
+        "programme__school",
+        "academic_year",
+        "branch",
+    ).annotate(
+        student_count=Count("enrollments", filter=Q(enrollments__is_active=True), distinct=True),
+    ).filter(
+        pk__in=class_ids,
+        is_active=True,
+    )
+    queryset = queryset.filter(branch=branch)
+    return queryset.order_by("programme__title", "level", "id")
+
+
+def _get_teacher_ecs_for_class(*, teacher, branch, academic_class):
+    if branch is None or academic_class.branch_id != branch.id:
+        return []
+
+    event_ec_ids = list(
+        AcademicScheduleEvent.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+            is_active=True,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .values_list("ec_id", flat=True)
+    )
+    slot_ec_ids = list(
+        WeeklyScheduleSlot.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+            is_active=True,
+        ).values_list("ec_id", flat=True)
+    )
+    assignment_scope = Q(pk__in=[])
+    for assignment in _get_teacher_director_assignments(teacher=teacher, branch=branch, academic_class=academic_class):
+        if assignment.ec_id:
+            assignment_scope |= Q(pk=assignment.ec_id)
+        elif assignment.ue_id:
+            assignment_scope |= Q(ue_id=assignment.ue_id)
+        elif assignment.semester_id:
+            assignment_scope |= Q(ue__semester_id=assignment.semester_id)
+        else:
+            assignment_scope |= Q(ue__semester__academic_class=academic_class)
+    assignment_ec_ids = EC.objects.filter(assignment_scope, ue__semester__academic_class=academic_class).values_list("pk", flat=True)
+    ec_ids = {ec_id for ec_id in [*event_ec_ids, *slot_ec_ids, *assignment_ec_ids] if ec_id}
+
+    queryset = (
+        EC.objects.select_related(
+            "ue",
+            "ue__semester",
+            "ue__semester__academic_class",
+        )
+        .prefetch_related(_chapter_prefetch())
+        .filter(
+            pk__in=ec_ids,
+            ue__semester__academic_class=academic_class,
+        )
+        .order_by("ue__code", "title", "id")
+    )
+    queryset = queryset.filter(ue__semester__academic_class__branch=branch)
+    return list(queryset)
+
+
+def _resolve_teacher_ec(*, teacher, branch, academic_class, ec_id):
+    for ec in _get_teacher_ecs_for_class(
+        teacher=teacher,
+        branch=branch,
+        academic_class=academic_class,
+    ):
+        if ec.id == ec_id:
+            return ec
+    raise ValidationError("Cette matiere n'est pas rattachee a cet enseignant pour la classe choisie.")
+
+
+def _build_today_event_rows(*, teacher, branch, today_events):
+    """Enrichit les cours du jour avec le statut de completion et les actions rapides."""
+    if not today_events:
+        return []
+
+    event_ids = [event.id for event in today_events]
+    ec_ids = {event.ec_id for event in today_events if event.ec_id}
+
+    lesson_logs_by_event = {
+        lesson_log.schedule_event_id: lesson_log
+        for lesson_log in LessonLog.objects.filter(
+            schedule_event_id__in=event_ids,
+            teacher=teacher,
+            branch=branch,
+        ).exclude(schedule_event__isnull=True)
+    }
+    attendance_map = {
+        att.schedule_event_id: att
+        for att in TeacherAttendance.objects.filter(
+            schedule_event_id__in=event_ids,
+            teacher=teacher,
+            branch=branch,
+        )
+    }
+    support_ec_ids = set(
+        ECContent.objects.filter(
+            chapter__ec_id__in=ec_ids,
+            is_active=True,
+        ).values_list("chapter__ec_id", flat=True)
+    )
+
+    rows = []
+    now = timezone.now()
+    for event in today_events:
+        online_access = get_online_session_access_state(event=event) if event.is_online else None
+        attendance = attendance_map.get(event.id)
+        attendance_status = attendance.status if attendance else None
+        lesson_log = lesson_logs_by_event.get(event.id)
+        lesson_log_status = lesson_log.status if lesson_log else None
+        has_lesson_log = lesson_log is not None
+        has_attendance = bool(attendance and attendance.checked_in_at)
+        is_absent = attendance_status == TeacherAttendance.STATUS_ABSENT
+        if is_absent:
+            status = "absent"
+        elif (
+            lesson_log_status == LessonLog.STATUS_DONE
+            and lesson_log.validated_by_id
+        ):
+            status = "validated"
+        elif lesson_log_status == LessonLog.STATUS_DONE:
+            # Historical or administratively imported logs can be marked done
+            # before a DE/supervisor validation exists.  They are evidence of
+            # a declared course, not a validated service or payable time.
+            status = "submitted"
+        elif lesson_log_status == LessonLog.STATUS_SUBMITTED:
+            status = "submitted"
+        elif lesson_log_status == LessonLog.STATUS_RETURNED:
+            status = "returned"
+        elif lesson_log_status == LessonLog.STATUS_PLANNED:
+            status = "draft"
+        else:
+            status = "pending"
+
+        rows.append({
+            "event": event,
+            "has_lesson_log": has_lesson_log,
+            "lesson_log_status": lesson_log_status,
+            "has_attendance": has_attendance,
+            "is_absent": is_absent,
+            "has_started": event.start_datetime <= now,
+            "has_ended": event.end_datetime < now,
+            "has_checked_in": has_attendance,
+            "checked_in_at": attendance.checked_in_at if attendance else None,
+            "late_minutes": attendance.late_minutes if attendance else 0,
+            "has_support": event.ec_id in support_ec_ids,
+            "status": status,
+            "lesson_log_url": reverse("accounts_portal:teacher_lesson_log_panel", args=[event.id]),
+            "support_url": (
+                f"{reverse('accounts_portal:teacher_course_studio')}"
+                f"?class_id={event.academic_class_id}&ec_id={event.ec_id or ''}"
+            ),
+            "declare_absence_url": reverse("accounts_portal:teacher_declare_absence", args=[event.id]),
+            "check_in_url": reverse("academics:course_session_check_in", args=[event.id]),
+            "end_session_url": reverse("academics:course_session_end", args=[event.id]),
+            "online_start_url": (
+                reverse("accounts_portal:teacher_online_session_prepare", args=[event.id])
+                if event.is_online and online_access["is_available"]
+                else ""
+            ),
+            "online_access": online_access,
+        })
+    return rows
+
+
+def _build_teacher_next_action(today_event_rows):
+    """Return the one pedagogical action that deserves attention first."""
+    if not today_event_rows:
+        return None
+
+    now = timezone.now()
+    current_rows = [
+        row for row in today_event_rows
+        if row["event"].start_datetime <= now <= row["event"].end_datetime
+        and not row["is_absent"]
+    ]
+    overdue_rows = [
+        row for row in today_event_rows
+        if row["has_started"]
+        and row["status"] in {"pending", "draft", "returned"}
+        and not row["is_absent"]
+    ]
+    upcoming_rows = [
+        row for row in today_event_rows
+        if not row["has_started"] and not row["is_absent"]
+    ]
+    row = (current_rows or overdue_rows or upcoming_rows or [None])[0]
+    if row is None:
+        return None
+
+    if row["status"] == "returned":
+        label, detail, action_label, action_url = (
+            "Correction demandée",
+            "Le surveillant a demandé une correction avant validation.",
+            "Corriger et signer",
+            row["lesson_log_url"],
+        )
+    elif row["status"] == "draft":
+        label, detail, action_label, action_url = (
+            "Brouillon à signer",
+            "Votre déclaration est enregistrée, mais elle n'est pas encore transmise.",
+            "Reprendre le brouillon",
+            row["lesson_log_url"],
+        )
+    elif row["status"] == "pending" and row["has_started"]:
+        label, detail, action_label, action_url = (
+            "Cahier à compléter",
+            "Déclarez le cours réalisé puis signez-le pour le transmettre au surveillant.",
+            "Ouvrir le cahier",
+            row["lesson_log_url"],
+        )
+    elif row["status"] == "submitted":
+        label, detail, action_label, action_url = (
+            "Cahier signé · à contrôler",
+            "Votre déclaration est transmise au surveillant académique.",
+            "Voir le cahier signé",
+            row["lesson_log_url"],
+        )
+    elif row["status"] == "validated":
+        label, detail, action_label, action_url = (
+            "Cours validé",
+            "La chaîne pédagogique de cette séance est terminée.",
+            "Voir le cahier validé",
+            row["lesson_log_url"],
+        )
+    else:
+        label, detail, action_label, action_url = (
+            "Prochain cours à préparer",
+            "Préparez les ressources utiles avant le début de la séance.",
+            "Préparer les ressources",
+            row["support_url"],
+        )
+
+    return {
+        "event": row["event"],
+        "status": row["status"],
+        "label": label,
+        "detail": detail,
+        "action_label": action_label,
+        "action_url": action_url,
+    }
+
+
+def _parse_positive_int(raw_value, *, field_label, default=0, allow_zero=True):
+    value = (raw_value or "").strip()
+    if not value:
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f"{field_label} invalide.")
+    minimum = 0 if allow_zero else 1
+    if parsed < minimum:
+        raise ValidationError(f"{field_label} invalide.")
+    return parsed
+
+
+def _validate_content_file_extension(*, content_type, uploaded_file):
+    if not uploaded_file:
+        return
+    extension = Path(uploaded_file.name or "").suffix.lower()
+    allowed_extensions = {
+        ECContent.CONTENT_TYPE_PDF: {".pdf"},
+        ECContent.CONTENT_TYPE_DOC: {".doc", ".docx"},
+        ECContent.CONTENT_TYPE_EXCEL: {".xls", ".xlsx", ".csv"},
+        ECContent.CONTENT_TYPE_PPT: {".ppt", ".pptx"},
+        ECContent.CONTENT_TYPE_VIDEO: {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"},
+        ECContent.CONTENT_TYPE_IMAGE: {".png", ".jpg", ".jpeg", ".gif", ".webp"},
+        ECContent.CONTENT_TYPE_AUDIO: {".mp3", ".wav", ".ogg", ".m4a"},
+    }.get(content_type)
+    if allowed_extensions and extension not in allowed_extensions:
+        raise ValidationError("Le format du fichier ne correspond pas au type de contenu choisi.")
+
+    allowed_mimes = {
+        ECContent.CONTENT_TYPE_PDF: {"application/pdf"},
+        ECContent.CONTENT_TYPE_DOC: {"application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+        ECContent.CONTENT_TYPE_EXCEL: {"application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "text/csv"},
+        ECContent.CONTENT_TYPE_PPT: {"application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+        ECContent.CONTENT_TYPE_VIDEO: {"video/mp4", "video/quicktime", "video/x-msvideo", "video/x-matroska", "video/webm"},
+        ECContent.CONTENT_TYPE_IMAGE: {"image/png", "image/jpeg", "image/gif", "image/webp"},
+        ECContent.CONTENT_TYPE_AUDIO: {"audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4"},
+    }.get(content_type)
+    if allowed_mimes and uploaded_file.content_type not in allowed_mimes:
+        raise ValidationError("Le type MIME du fichier ne correspond pas au type de contenu choisi.")
+
+
+def _serialize_support_content(content):
+    file_name = Path(content.file.name).name if content.file else ""
+    text_content = (content.text_content or "").strip()
+    video_url = (content.video_url or "").strip()
+    return {
+        "id": content.id,
+        "title": content.title,
+        "content_type": content.content_type,
+        "content_type_label": content.get_content_type_display(),
+        "file_name": file_name,
+        "file_url": content.file.url if content.file else "",
+        "video_url": video_url,
+        "text_content": text_content,
+        "text_excerpt": f"{text_content[:140]}..." if len(text_content) > 140 else text_content,
+        "order": content.order,
+        "status": content.status,
+        "status_label": "Publié" if content.status == ECContent.STATUS_PUBLISHED else "Brouillon",
+        "chapter_id": content.chapter_id,
+        "ec_id": content.chapter.ec_id,
+        "is_video": content.content_type == ECContent.CONTENT_TYPE_VIDEO,
+        "is_file_based": bool(content.file),
+        "has_video_url": bool(video_url),
+        "has_text_content": bool(text_content),
+        "resources": [
+            {
+                "id": resource.id,
+                "title": resource.title,
+                "resource_type_label": resource.get_resource_type_display(),
+                "status_label": resource.get_status_display(),
+                "original_filename": resource.original_filename,
+                "size_label": (
+                    f"{resource.size_bytes / (1024 * 1024):.1f} Mo"
+                    if resource.size_bytes >= 1024 * 1024
+                    else f"{max(1, round(resource.size_bytes / 1024))} Ko"
+                ) if resource.size_bytes else "",
+            }
+            for resource in content.resources.all()
+        ],
+    }
+
+
+def _serialize_support_chapter(chapter):
+    contents = [_serialize_support_content(content) for content in chapter.contents.all()]
+    return {
+        "id": chapter.id,
+        "title": chapter.title,
+        "order": chapter.order,
+        "content_count": len(contents),
+        "contents": contents,
+    }
+
+
+def get_teacher_content_for_edit(*, teacher, branch, content_id):
+    content = (
+        ECContent.objects.select_related(
+            "chapter__ec",
+            "chapter__ec__ue__semester__academic_class",
+        )
+        .filter(
+            pk=content_id,
+            is_active=True,
+            chapter__ec__ue__semester__academic_class__is_active=True,
+        )
+        .first()
+    )
+    if content is None:
+        raise ValidationError("Contenu introuvable.")
+    academic_class = content.chapter.ec.ue.semester.academic_class
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+        )
+    }
+    if content.chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce contenu ne vous appartient pas.")
+    serialized = _serialize_support_content(content)
+    serialized["class_id"] = academic_class.id
+    return serialized
+
+
+@transaction.atomic
+def update_teacher_content(*, teacher, branch, content_id, title, content_type, chapter_id, file, video_url, text_content, publication_status=None):
+    content = (
+        ECContent.objects.select_related(
+            "chapter__ec",
+            "chapter__ec__ue__semester__academic_class",
+        )
+        .filter(pk=content_id, is_active=True)
+        .first()
+    )
+    if content is None:
+        raise ValidationError("Contenu introuvable.")
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=content.chapter.ec.ue.semester.academic_class,
+        )
+    }
+    if content.chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce contenu ne vous appartient pas.")
+
+    title = (title or "").strip()
+    if not title:
+        raise ValidationError("Le titre du support est obligatoire.")
+    video_url = (video_url or "").strip() or None
+    text_content = (text_content or "").strip()
+
+    allowed_types = {choice[0] for choice in ECContent.CONTENT_TYPE_CHOICES}
+    if content_type not in allowed_types:
+        raise ValidationError("Type de contenu invalide.")
+
+    file_based_types = {
+        ECContent.CONTENT_TYPE_PDF,
+        ECContent.CONTENT_TYPE_DOC,
+        ECContent.CONTENT_TYPE_EXCEL,
+        ECContent.CONTENT_TYPE_PPT,
+        ECContent.CONTENT_TYPE_IMAGE,
+        ECContent.CONTENT_TYPE_AUDIO,
+    }
+    video_type = ECContent.CONTENT_TYPE_VIDEO
+
+    if content_type in file_based_types:
+        if file:
+            content.file = file
+            _validate_content_file_extension(content_type=content_type, uploaded_file=file)
+        elif not content.file:
+            raise ValidationError("Un fichier est requis pour ce type de contenu.")
+        content.video_url = None
+    elif content_type == video_type:
+        if file:
+            content.file = file
+            _validate_content_file_extension(content_type=content_type, uploaded_file=file)
+        content.video_url = video_url
+        if not content.file and not content.video_url:
+            raise ValidationError("Ajoutez un fichier video ou une URL YouTube.")
+    else:
+        content.file = None
+        content.video_url = None
+
+    if content_type == ECContent.CONTENT_TYPE_TEXT:
+        if not text_content:
+            raise ValidationError("Un texte est requis pour ce type de contenu.")
+        content.text_content = text_content
+    else:
+        content.text_content = ""
+
+    if chapter_id is not None:
+        chapter = ECChapter.objects.filter(pk=chapter_id, ec=content.chapter.ec).first()
+        if chapter is None:
+            raise ValidationError("Chapitre invalide.")
+        content.chapter = chapter
+
+    content.title = title
+    content.content_type = content_type
+    if publication_status is not None:
+        if publication_status not in {ECContent.STATUS_DRAFT, ECContent.STATUS_PUBLISHED}:
+            raise ValidationError("Statut de publication invalide.")
+        content.status = publication_status
+        content.published_at = timezone.now() if publication_status == ECContent.STATUS_PUBLISHED else None
+    content.full_clean()
+    content.save()
+    return content
+
+
+@transaction.atomic
+def create_teacher_resource(*, teacher, branch, lesson_id, title, resource_type, uploaded_file):
+    lesson = (
+        ECContent.objects.select_related("chapter__ec__ue__semester__academic_class")
+        .filter(pk=lesson_id, is_active=True)
+        .first()
+    )
+    if lesson is None:
+        raise ValidationError("Leçon introuvable.")
+    teacher_ec_ids = {
+        ec.id for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=lesson.chapter.ec.ue.semester.academic_class,
+        )
+    }
+    if lesson.chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Cette leçon ne vous appartient pas.")
+    if not uploaded_file:
+        raise ValidationError("Ajoutez le fichier de la ressource.")
+    allowed_types = {choice[0] for choice in ECResource.RESOURCE_TYPE_CHOICES}
+    if resource_type not in allowed_types:
+        raise ValidationError("Type de ressource invalide.")
+    mapped_content_type = {
+        ECResource.RESOURCE_TYPE_PDF: ECContent.CONTENT_TYPE_PDF,
+        ECResource.RESOURCE_TYPE_DOC: ECContent.CONTENT_TYPE_DOC,
+        ECResource.RESOURCE_TYPE_EXCEL: ECContent.CONTENT_TYPE_EXCEL,
+        ECResource.RESOURCE_TYPE_PPT: ECContent.CONTENT_TYPE_PPT,
+        ECResource.RESOURCE_TYPE_IMAGE: ECContent.CONTENT_TYPE_IMAGE,
+    }.get(resource_type)
+    if mapped_content_type:
+        _validate_content_file_extension(content_type=mapped_content_type, uploaded_file=uploaded_file)
+    title = (title or "").strip() or Path(uploaded_file.name).stem
+    return ECResource.objects.create(
+        lesson=lesson,
+        title=title,
+        resource_type=resource_type,
+        file=uploaded_file,
+        original_filename=Path(uploaded_file.name).name,
+        mime_type=uploaded_file.content_type or "",
+        size_bytes=getattr(uploaded_file, "size", 0) or 0,
+        order=lesson.resources.count() + 1,
+        status=ECResource.STATUS_READY,
+    )
+
+
+@transaction.atomic
+def delete_teacher_content(*, teacher, branch, content_id):
+    content = (
+        ECContent.objects.select_related(
+            "chapter__ec",
+            "chapter__ec__ue__semester__academic_class",
+        )
+        .filter(pk=content_id, is_active=True)
+        .first()
+    )
+    if content is None:
+        raise ValidationError("Contenu introuvable.")
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=content.chapter.ec.ue.semester.academic_class,
+        )
+    }
+    if content.chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce contenu ne vous appartient pas.")
+    # Preserve the author's place in the course plan after a local deletion:
+    # first prefer the following lesson, then the preceding one.
+    sibling_queryset = content.chapter.contents.filter(is_active=True).exclude(pk=content.pk)
+    next_content = (
+        sibling_queryset.filter(order__gte=content.order).order_by("order", "id").first()
+        or sibling_queryset.filter(order__lt=content.order).order_by("-order", "-id").first()
+    )
+    content.next_content_id = next_content.id if next_content else None
+    content.is_active = False
+    content.save(update_fields=["is_active", "updated_at"])
+    return content
+
+
+def _get_teacher_owned_content(*, teacher, branch, content_id):
+    content = (
+        ECContent.objects.select_related(
+            "chapter__ec",
+            "chapter__ec__ue__semester__academic_class",
+        )
+        .filter(pk=content_id, is_active=True)
+        .first()
+    )
+    if content is None:
+        raise ValidationError("Leçon introuvable.")
+    academic_class = content.chapter.ec.ue.semester.academic_class
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+        )
+    }
+    if content.chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Cette leçon ne vous appartient pas.")
+    return content
+
+
+@transaction.atomic
+def set_teacher_content_publication(*, teacher, branch, content_id, publication_status):
+    content = _get_teacher_owned_content(
+        teacher=teacher,
+        branch=branch,
+        content_id=content_id,
+    )
+    if publication_status not in {ECContent.STATUS_DRAFT, ECContent.STATUS_PUBLISHED}:
+        raise ValidationError("Statut de publication invalide.")
+    content.status = publication_status
+    content.published_at = timezone.now() if publication_status == ECContent.STATUS_PUBLISHED else None
+    content.save(update_fields=["status", "published_at", "updated_at"])
+    return content
+
+
+@transaction.atomic
+def delete_teacher_resource(*, teacher, branch, resource_id):
+    resource = (
+        ECResource.objects.select_related(
+            "lesson__chapter__ec",
+            "lesson__chapter__ec__ue__semester__academic_class",
+        )
+        .filter(pk=resource_id, is_active=True)
+        .first()
+    )
+    if resource is None:
+        raise ValidationError("Ressource introuvable.")
+    _get_teacher_owned_content(
+        teacher=teacher,
+        branch=branch,
+        content_id=resource.lesson_id,
+    )
+    resource.is_active = False
+    resource.save(update_fields=["is_active", "updated_at"])
+    return resource
+
+
+@transaction.atomic
+def delete_teacher_chapter(*, teacher, branch, chapter_id):
+    chapter = (
+        ECChapter.objects.select_related("ec__ue__semester__academic_class")
+        .filter(pk=chapter_id)
+        .first()
+    )
+    if chapter is None:
+        raise ValidationError("Chapitre introuvable.")
+    academic_class = chapter.ec.ue.semester.academic_class
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+        )
+    }
+    if chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce chapitre ne vous appartient pas.")
+    if chapter.contents.exists():
+        raise ValidationError(
+            "Ce chapitre contient encore des leçons. Supprimez ou déplacez d'abord ses leçons."
+        )
+    adjacent_chapter = (
+        ECChapter.objects.filter(ec_id=chapter.ec_id, order__gte=chapter.order)
+        .exclude(pk=chapter.pk).order_by("order", "id").first()
+        or ECChapter.objects.filter(ec_id=chapter.ec_id, order__lt=chapter.order)
+        .exclude(pk=chapter.pk).order_by("-order", "-id").first()
+    )
+    chapter.next_chapter_id = adjacent_chapter.id if adjacent_chapter else None
+    chapter.delete()
+    return chapter
+
+
+def _get_teacher_owned_chapter(*, teacher, branch, chapter_id):
+    """Lock and validate a chapter in the teacher's current academic scope."""
+    chapter = (
+        ECChapter.objects.select_for_update()
+        .select_related("ec__ue__semester__academic_class")
+        .filter(pk=chapter_id)
+        .first()
+    )
+    if chapter is None:
+        raise ValidationError("Chapitre introuvable.")
+    academic_class = chapter.ec.ue.semester.academic_class
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+        )
+    }
+    if chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce chapitre ne vous appartient pas.")
+    return chapter
+
+
+@transaction.atomic
+def move_teacher_chapter_contents(*, teacher, branch, source_chapter_id, destination_chapter_id):
+    """Move existing lessons to a sibling chapter, then remove the empty source."""
+    source = _get_teacher_owned_chapter(
+        teacher=teacher, branch=branch, chapter_id=source_chapter_id
+    )
+    destination = _get_teacher_owned_chapter(
+        teacher=teacher, branch=branch, chapter_id=destination_chapter_id
+    )
+    if source.pk == destination.pk:
+        raise ValidationError("Choisissez un autre chapitre de destination.")
+    if source.ec_id != destination.ec_id:
+        raise ValidationError("Le chapitre de destination doit appartenir à la même matière.")
+
+    contents = list(source.contents.select_for_update().order_by("order", "id"))
+    destination_last_order = (
+        destination.contents.select_for_update().order_by("-order", "-id")
+        .values_list("order", flat=True).first()
+        or 0
+    )
+    for index, content in enumerate(contents, start=1):
+        content.chapter = destination
+        content.order = destination_last_order + index
+        # The lesson primary key is unchanged: its CKEditor content, media,
+        # resources and student progress relations remain attached to it.
+        content.save(update_fields=["chapter", "order", "updated_at"])
+
+    moved_count = len(contents)
+    source_title = source.title
+    source.delete()
+    return {
+        "destination_chapter_id": destination.id,
+        "destination_title": destination.title,
+        "moved_count": moved_count,
+        "source_title": source_title,
+    }
+
+
+@transaction.atomic
+def delete_teacher_chapter_with_contents(*, teacher, branch, chapter_id):
+    """Delete a chapter using the model's established CASCADE relationships."""
+    chapter = _get_teacher_owned_chapter(teacher=teacher, branch=branch, chapter_id=chapter_id)
+    contents = list(chapter.contents.select_for_update().order_by("order", "id"))
+    adjacent_chapter = (
+        ECChapter.objects.filter(ec_id=chapter.ec_id, order__gte=chapter.order)
+        .exclude(pk=chapter.pk).order_by("order", "id").first()
+        or ECChapter.objects.filter(ec_id=chapter.ec_id, order__lt=chapter.order)
+        .exclude(pk=chapter.pk).order_by("-order", "-id").first()
+    )
+    result = {
+        "next_chapter_id": adjacent_chapter.id if adjacent_chapter else None,
+        "deleted_count": len(contents),
+        "chapter_title": chapter.title,
+    }
+    # ECContent -> ECResource / StudentContentProgress are CASCADE relations
+    # in the existing model; no files or lessons are recreated here.
+    chapter.delete()
+    return result
+
+
+@transaction.atomic
+def rename_teacher_chapter(*, teacher, branch, chapter_id, title):
+    chapter = (
+        ECChapter.objects.select_related("ec__ue__semester__academic_class")
+        .filter(pk=chapter_id)
+        .first()
+    )
+    if chapter is None:
+        raise ValidationError("Chapitre introuvable.")
+    academic_class = chapter.ec.ue.semester.academic_class
+    teacher_ec_ids = {
+        ec.id
+        for ec in _get_teacher_ecs_for_class(
+            teacher=teacher,
+            branch=branch,
+            academic_class=academic_class,
+        )
+    }
+    if chapter.ec_id not in teacher_ec_ids:
+        raise ValidationError("Ce chapitre ne vous appartient pas.")
+    title = (title or "").strip()
+    if not title:
+        raise ValidationError("Le titre du chapitre est obligatoire.")
+    chapter.title = title
+    chapter.full_clean()
+    chapter.save(update_fields=["title"])
+    return chapter
+
+
+def _serialize_support_ec(ec):
+    chapters = [_serialize_support_chapter(chapter) for chapter in ec.chapters.all()]
+    return {
+        "id": ec.id,
+        "title": ec.title,
+        "ue_code": getattr(getattr(ec, "ue", None), "code", ""),
+        "chapters": chapters,
+        "chapter_count": len(chapters),
+        "content_count": sum(chapter["content_count"] for chapter in chapters),
+    }
+
+
+def build_teacher_support_workspace_context(request, *, branch, class_id=None, ec_id=None, chapter_id=None, toast=None):
+    from academics.forms import LessonContentForm
+    teacher = request.user
+    class_queryset = list(_get_teacher_class_queryset(teacher=teacher, branch=branch))
+    if not class_queryset:
+        return {
+            "branch": branch,
+            "toast": toast,
+            "teacher_support_classes": [],
+            "selected_class": None,
+            "selected_ec": None,
+            "selected_ec_summary": None,
+            "selected_chapter": None,
+            "teacher_support_ecs": [],
+            "teacher_support_chapters": [],
+            "teacher_support_contents": [],
+            "content_type_choices": ECContent.CONTENT_TYPE_CHOICES,
+            "file_content_type_choices": [
+                choice for choice in ECContent.CONTENT_TYPE_CHOICES
+                if choice[0] != ECContent.CONTENT_TYPE_TEXT
+            ],
+            "lesson_content_form": LessonContentForm(),
+        }
+
+    selected_class = None
+    if class_id is not None:
+        selected_class = _resolve_teacher_class(teacher=teacher, branch=branch, class_id=class_id)
+    else:
+        selected_class = class_queryset[0]
+
+    teacher_support_classes = [
+        _serialize_class_focus(
+            academic_class,
+            event_count=AcademicScheduleEvent.objects.filter(
+                teacher=teacher,
+                academic_class=academic_class,
+                is_active=True,
+            ).exclude(status=AcademicScheduleEvent.STATUS_CANCELLED).count(),
+            slot_count=WeeklyScheduleSlot.objects.filter(
+                teacher=teacher,
+                academic_class=academic_class,
+                is_active=True,
+            ).count(),
+            subjects={ec.title for ec in _get_teacher_ecs_for_class(teacher=teacher, branch=branch, academic_class=academic_class)},
+            next_event=None,
+        )
+        for academic_class in class_queryset
+    ]
+
+    teacher_support_ecs = _get_teacher_ecs_for_class(teacher=teacher, branch=branch, academic_class=selected_class)
+    selected_ec = None
+    if teacher_support_ecs:
+        if ec_id is not None:
+            selected_ec = _resolve_teacher_ec(teacher=teacher, branch=branch, academic_class=selected_class, ec_id=ec_id)
+        else:
+            selected_ec = teacher_support_ecs[0]
+
+    teacher_support_chapters = []
+    selected_chapter = None
+    teacher_support_contents = []
+    if selected_ec is not None:
+        teacher_support_chapters = [_serialize_support_chapter(chapter) for chapter in selected_ec.chapters.all()]
+        if chapter_id is not None:
+            for chapter in selected_ec.chapters.all():
+                if chapter.id == chapter_id:
+                    selected_chapter = chapter
+                    break
+            if selected_chapter is None:
+                raise ValidationError("Ce chapitre n'est pas rattache a la matiere selectionnee.")
+        elif teacher_support_chapters:
+            selected_chapter = selected_ec.chapters.all()[0]
+        if selected_chapter is not None:
+            teacher_support_contents = [_serialize_support_content(content) for content in selected_chapter.contents.all()]
+
+    return {
+        "branch": branch,
+        "toast": toast,
+        "teacher_support_classes": teacher_support_classes,
+        "selected_class": selected_class,
+        "teacher_support_ecs": [_serialize_support_ec(ec) for ec in teacher_support_ecs],
+        "selected_ec": selected_ec,
+        "selected_ec_summary": _serialize_support_ec(selected_ec) if selected_ec is not None else None,
+        "teacher_support_chapters": teacher_support_chapters,
+        "selected_chapter": selected_chapter,
+        "teacher_support_contents": teacher_support_contents,
+        "content_type_choices": ECContent.CONTENT_TYPE_CHOICES,
+        "file_content_type_choices": [
+            choice for choice in ECContent.CONTENT_TYPE_CHOICES
+            if choice[0] != ECContent.CONTENT_TYPE_TEXT
+        ],
+        "lesson_content_form": LessonContentForm(),
+    }
+
+
+def build_teacher_dashboard_context(
+    request,
+    *,
+    branch,
+    base_context_builder,
+    include_honoraria=True,
+    section="overview",
+):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    teacher = request.user
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+    now = timezone.now()
+    needs_class_data = section in {"overview", "classes", "supports", "schedule"}
+    needs_schedule = section in {"overview", "schedule"}
+    needs_logs = section in {"overview", "logs"}
+    needs_supports = section in {"overview", "supports"}
+
+    teacher_events_qs = (
+        AcademicScheduleEvent.objects.select_related(
+            "academic_class",
+            "academic_class__programme__school",
+            "academic_class__branch",
+            "academic_class__academic_year",
+            "teacher",
+            "ec",
+            "ec__ue",
+            "branch",
+            "academic_year",
+        )
+        .filter(
+            teacher=teacher,
+            is_active=True,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+    )
+    teacher_events_qs = teacher_events_qs.filter(branch=branch)
+
+    today_events = list(
+        teacher_events_qs.filter(start_datetime__date=today).order_by("start_datetime", "id")
+    ) if needs_schedule or section == "overview" else []
+    today_event_rows = _build_today_event_rows(
+        teacher=teacher,
+        branch=branch,
+        today_events=today_events,
+    ) if section == "overview" else []
+    teacher_next_action = _build_teacher_next_action(today_event_rows) if section == "overview" else None
+    week_events = list(
+        teacher_events_qs
+        .filter(start_datetime__date__gte=week_start, start_datetime__date__lt=week_end)
+        .order_by("start_datetime", "id")
+    )
+    # "Aujourd'hui" is intentionally date-bound.  The published planning also
+    # retains recent online sessions so a teacher can find a just-finished
+    # class (and, in local test mode, use the time-only bypass) after midnight.
+    recent_online_events = list(
+        teacher_events_qs.filter(
+            is_online=True,
+            end_datetime__lt=now,
+            end_datetime__gte=now - timedelta(days=30),
+        )
+        .order_by("-end_datetime", "-id")[:12]
+    ) if needs_schedule else []
+    recent_online_rows = [
+        {
+            "event": event,
+            "online_start_url": reverse("accounts_portal:teacher_online_session_prepare", args=[event.id]),
+            "online_access": get_online_session_access_state(event=event),
+        }
+        for event in recent_online_events
+    ]
+    teacher_recordings = []
+    if needs_schedule:
+        recordings = OnlineClassRecording.objects.select_related(
+            "event__academic_class", "event__ec"
+        ).filter(
+            event__teacher=teacher,
+            event__branch=branch,
+            event__is_online=True,
+        ).order_by("-event__end_datetime", "-id")[:20]
+        teacher_recordings = [
+            {
+                "recording": recording,
+                "state": recording_status_presentation(recording),
+                "can_access_media": bool(
+                    recording.status == OnlineClassRecording.STATUS_TRANSFERRED
+                    and recording.object_key
+                ),
+            }
+            for recording in recordings
+        ]
+        recordings_by_event = {}
+        for row in teacher_recordings:
+            recordings_by_event.setdefault(row["recording"].event_id, []).append(row)
+        for row in recent_online_rows:
+            row["recordings"] = recordings_by_event.get(row["event"].id, [])
+            row["recording_state"] = (
+                row["recordings"][0]["state"]
+                if row["recordings"]
+                else {"label": "Traitement en cours", "tone": "warning"}
+            )
+    upcoming_events = get_teacher_next_events(teacher, limit=8, branch=branch) if section == "overview" else []
+
+    teacher_class_ids = list(
+        AcademicScheduleEvent.objects.filter(teacher=teacher, branch=branch, is_active=True)
+        .values_list("academic_class_id", flat=True).distinct()
+    ) if section == "overview" else []
+    upcoming_exam_sessions = []
+    if section == "overview" and teacher_class_ids:
+        from academics.models import AcademicCalendarEntry
+        now_dt = timezone.now()
+        exam_entries = list(
+            AcademicCalendarEntry.objects.select_related("academic_class", "semester")
+            .filter(
+                academic_class_id__in=teacher_class_ids,
+                event_type__in={AcademicCalendarEntry.EVENT_EXAM_SESSION, AcademicCalendarEntry.EVENT_RETAKE_SESSION},
+                end_datetime__gte=now_dt,
+                status=AcademicCalendarEntry.STATUS_PUBLISHED,
+            )
+            .order_by("start_datetime")[:4]
+        )
+        from portal.services.director.exam_session_service import _session_row
+        upcoming_exam_sessions = [_session_row(e) for e in exam_entries]
+
+    week_schedule = get_teacher_week_schedule(teacher, week_start, branch=branch) if needs_schedule else {"events": [], "days": []}
+    week_events_by_id = {event.id: event for event in week_events}
+    for serialized_event in week_schedule.get("events", []):
+        event = week_events_by_id.get(serialized_event.get("id"))
+        if event is not None and serialized_event.get("is_online"):
+            # Keep the dashboard contract close to the server-side BBB gate.
+            serialized_event["online_access"] = get_online_session_access_state(event=event)
+
+    weekly_slots_qs = (
+        WeeklyScheduleSlot.objects.select_related(
+            "academic_class",
+            "academic_class__programme",
+            "academic_class__academic_year",
+            "teacher",
+            "ec",
+        )
+        .filter(teacher=teacher, is_active=True)
+        .order_by("academic_class__level", "academic_class__programme__title", "weekday", "start_time")
+    )
+    weekly_slots_qs = weekly_slots_qs.filter(branch=branch)
+    weekly_slots = list(weekly_slots_qs) if needs_class_data else []
+    director_assignments = _get_teacher_director_assignments(teacher=teacher, branch=branch) if needs_class_data else []
+
+    class_map = {}
+    next_event_by_class = {}
+    for event in week_events:
+        class_entry = class_map.setdefault(
+            event.academic_class_id,
+            {
+                "academic_class": event.academic_class,
+                "event_count": 0,
+                "slot_count": 0,
+                "subjects": set(),
+                "ec_ids": set(),
+            },
+        )
+        class_entry["event_count"] += 1
+        if event.ec_id:
+            class_entry["subjects"].add(event.ec.title)
+            class_entry["ec_ids"].add(event.ec_id)
+        if event.academic_class_id not in next_event_by_class and event.start_datetime >= now:
+            next_event_by_class[event.academic_class_id] = event
+
+    for slot in weekly_slots:
+        class_entry = class_map.setdefault(
+            slot.academic_class_id,
+            {
+                "academic_class": slot.academic_class,
+                "event_count": 0,
+                "slot_count": 0,
+                "subjects": set(),
+                "ec_ids": set(),
+            },
+        )
+        class_entry["slot_count"] += 1
+        if slot.ec_id:
+            class_entry["subjects"].add(slot.ec.title)
+            class_entry["ec_ids"].add(slot.ec_id)
+
+    for assignment in director_assignments:
+        assignment_class = assignment.academic_class
+        if assignment_class is None and assignment.semester_id:
+            assignment_class = assignment.semester.academic_class
+        if assignment_class is None and assignment.ue_id:
+            assignment_class = assignment.ue.semester.academic_class
+        if assignment_class is None and assignment.ec_id:
+            assignment_class = assignment.ec.ue.semester.academic_class
+        if assignment_class is None:
+            continue
+        class_entry = class_map.setdefault(
+            assignment_class.pk,
+            {
+                "academic_class": assignment_class,
+                "event_count": 0,
+                "slot_count": 0,
+                "subjects": set(),
+                "ec_ids": set(),
+            },
+        )
+        if assignment.ec_id:
+            class_entry["subjects"].add(assignment.ec.title)
+            class_entry["ec_ids"].add(assignment.ec_id)
+
+    class_records = {
+        row.pk: row
+        for row in AcademicClass.objects.filter(pk__in=class_map.keys())
+        .select_related("programme__school", "branch", "academic_year")
+        .annotate(student_count=Count("enrollments", filter=Q(enrollments__is_active=True), distinct=True))
+    }
+    for class_id, item in class_map.items():
+        item["academic_class"] = class_records[class_id]
+
+    class_focus_rows = [
+        _serialize_class_focus(
+            item["academic_class"],
+            event_count=item["event_count"],
+            slot_count=item["slot_count"],
+            subjects=item["subjects"],
+            next_event=next_event_by_class.get(class_id),
+        )
+        for class_id, item in class_map.items()
+    ]
+    class_focus_rows.sort(key=lambda row: (row["class_name"].lower(), row["programme_title"].lower()))
+    subject_titles = sorted(
+        {
+            subject
+            for row in class_focus_rows
+            for subject in row["subjects"]
+        }
+    )
+    teacher_ec_ids = {
+        ec_id
+        for item in class_map.values()
+        for ec_id in item.get("ec_ids", set())
+        if ec_id
+    }
+
+    lesson_logs = get_teacher_lesson_logs(teacher, branch=branch, limit=6) if needs_logs else []
+    lesson_logs_this_week = [
+        log for log in lesson_logs
+        if week_start <= log.date < week_end
+    ]
+
+    completed_or_past_week_events = [event for event in week_events if event.start_datetime <= now] if needs_logs else []
+    pending_lesson_logs = []
+    monthly_done_logs_count = 0
+    if needs_logs:
+        logged_event_ids = set(
+            LessonLog.objects.filter(
+                teacher=teacher,
+                branch=branch,
+                schedule_event__isnull=False,
+                schedule_event__start_datetime__date__gte=week_start,
+                schedule_event__start_datetime__date__lt=week_end,
+            ).values_list("schedule_event_id", flat=True)
+        )
+        pending_lesson_logs = [
+            event for event in completed_or_past_week_events if event.id not in logged_event_ids
+        ]
+        monthly_done_logs_count = LessonLog.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            date__year=today.year,
+            date__month=today.month,
+            status=LessonLog.STATUS_DONE,
+        ).count()
+
+    support_chapters_count = ECChapter.objects.filter(ec_id__in=teacher_ec_ids).count() if needs_supports and teacher_ec_ids else 0
+    support_contents_qs = ECContent.objects.filter(chapter__ec_id__in=teacher_ec_ids, is_active=True)
+    support_contents_count = support_contents_qs.count() if needs_supports and teacher_ec_ids else 0
+    support_file_count = (
+        support_contents_qs.exclude(file="").filter(file__isnull=False).count()
+        if needs_supports and teacher_ec_ids
+        else 0
+    )
+    support_video_count = (
+        support_contents_qs.exclude(video_url="").filter(video_url__isnull=False).count()
+        if needs_supports and teacher_ec_ids
+        else 0
+    )
+    support_text_count = support_contents_qs.filter(content_type=ECContent.CONTENT_TYPE_TEXT).count() if needs_supports and teacher_ec_ids else 0
+
+    teacher_attendance_summary = {
+        "present": 0,
+        "late": 0,
+        "absent": 0,
+        "total": 0,
+    }
+    if section == "overview":
+        teacher_attendance_month_qs = TeacherAttendance.objects.filter(
+            teacher=teacher,
+            branch=branch,
+            date__year=today.year,
+            date__month=today.month,
+        )
+        teacher_attendance_summary = {
+            "present": teacher_attendance_month_qs.filter(status=TeacherAttendance.STATUS_PRESENT).count(),
+            "late": teacher_attendance_month_qs.filter(status=TeacherAttendance.STATUS_LATE).count(),
+            "absent": teacher_attendance_month_qs.filter(status=TeacherAttendance.STATUS_ABSENT).count(),
+            "total": teacher_attendance_month_qs.count(),
+        }
+
+    preference = get_teacher_dashboard_preference(teacher=teacher, branch=branch)
+    status_summary = {
+        "employment_status": getattr(getattr(teacher, "profile", None), "get_employment_status_display", lambda: "Inconnu")(),
+        "employee_code": getattr(getattr(teacher, "profile", None), "employee_code", "") or "Non renseigne",
+        "branch_name": getattr(branch, "name", "Non rattache"),
+        "hire_date": getattr(getattr(teacher, "profile", None), "hire_date", None),
+    }
+
+    day_buckets = defaultdict(list)
+    for event in week_schedule.get("events", []):
+        day_buckets[event["weekday_index"]].append(event)
+    scheduled_days_count = len([events for events in day_buckets.values() if events])
+    weekly_rooms = {
+        location.strip()
+        for location in [
+            *[event.location or "" for event in week_events],
+            *[slot.room or "" for slot in weekly_slots],
+        ]
+        if location and location.strip()
+    }
+
+    teaching_days = []
+    for offset, day in enumerate(week_schedule.get("days", [])):
+        teaching_days.append(
+            {
+                "label": day["label"],
+                "date": day["date"],
+                "is_today": day["is_today"],
+                "events": day_buckets.get(offset, []),
+            }
+        )
+
+    completed_or_past_count = len(completed_or_past_week_events)
+    lesson_completion_rate = round(
+        ((completed_or_past_count - len(pending_lesson_logs)) / completed_or_past_count) * 100
+    ) if completed_or_past_count else 100
+    total_students_visible = sum(row.get("student_count", 0) for row in class_focus_rows)
+    next_event_focus = upcoming_events[0] if upcoming_events else None
+    teacher_insights = []
+    if pending_lesson_logs:
+        teacher_insights.append(
+            {
+                "tone": "danger",
+                "label": "Cahiers en attente",
+                "message": f"{len(pending_lesson_logs)} seance(s) terminee(s) attendent un cahier de texte.",
+                "section": "logs",
+            }
+        )
+    if today_events:
+        teacher_insights.append(
+            {
+                "tone": "primary",
+                "label": "Cours aujourd'hui",
+                "message": f"{len(today_events)} cours programme(s) aujourd'hui.",
+                "section": "schedule",
+            }
+        )
+    if support_contents_count == 0 and class_focus_rows:
+        teacher_insights.append(
+            {
+                "tone": "warning",
+                "label": "Supports",
+                "message": "Aucun support actif n'est encore visible pour vos matieres.",
+                "section": "supports",
+            }
+        )
+    if not teacher_insights:
+        teacher_insights.append(
+            {
+                "tone": "success",
+                "label": "Situation stable",
+                "message": "Aucune action urgente detectee sur le perimetre enseignant.",
+                "section": "overview",
+            }
+        )
+
+    # Honoraires data
+    teacher_hours = {"month_hours": Decimal("0"), "total_hours": Decimal("0")}
+    teacher_payments = {"pending_count": 0, "paid_count": 0, "recent_payments": []}
+    teacher_hour_rows = []
+    if include_honoraria and getattr(getattr(teacher, "profile", None), "position", "") != "moniteur":
+        current_month_start = today.replace(day=1)
+        year_start = today.replace(month=1, day=1)
+
+        honorarium_entries = TeacherHonorariumEntry.objects.filter(
+            branch=branch,
+            teacher=teacher,
+        ).order_by("-period_month")
+
+        for entry in honorarium_entries:
+            if entry.period_month == current_month_start:
+                teacher_hours["month_hours"] = entry.validated_hours
+            if entry.period_month >= year_start:
+                teacher_hours["total_hours"] += entry.validated_hours
+
+            status_map = {
+                TeacherHonorariumEntry.STATUS_DRAFT: ("pending", "A verifier"),
+                TeacherHonorariumEntry.STATUS_READY: ("pending", "Disponible"),
+                TeacherHonorariumEntry.STATUS_PARTIAL: ("partial", "Retrait partiel"),
+                TeacherHonorariumEntry.STATUS_PAID: ("paid", "Paye"),
+            }
+            status_slug, status_label = status_map.get(entry.status, ("draft", "Brouillon"))
+
+            teacher_hour_rows.append({
+                "month_label": entry.period_month.strftime("%B %Y"),
+                "hours": entry.validated_hours,
+                "tarif": entry.hourly_rate,
+                "gross_amount": entry.gross_amount,
+                "status": status_slug,
+                "status_display": status_label,
+                "entry_id": entry.pk,
+            })
+
+            if entry.status in (TeacherHonorariumEntry.STATUS_READY, TeacherHonorariumEntry.STATUS_DRAFT):
+                teacher_payments["pending_count"] += 1
+            elif entry.status in (TeacherHonorariumEntry.STATUS_PAID, TeacherHonorariumEntry.STATUS_PARTIAL):
+                teacher_payments["paid_count"] += 1
+
+        # Cash movements for this teacher's honoraria
+        teacher_entry_pks = list(honorarium_entries.values_list("pk", flat=True))
+        if teacher_entry_pks:
+            ref_pattern = "|".join(f"^HON-{pk}-" for pk in teacher_entry_pks)
+            recent_cash = BranchCashMovement.objects.filter(
+                branch=branch,
+                source=BranchCashMovement.SOURCE_HONORARIUM,
+                source_reference__regex=ref_pattern,
+                movement_date__gte=year_start,
+            ).order_by("-movement_date", "-created_at")[:10]
+            for cm in recent_cash:
+                teacher_payments["recent_payments"].append({
+                    "label": cm.label,
+                    "date": cm.movement_date,
+                    "montant": cm.amount,
+                })
+
+    teacher_volume = _build_teacher_volume_context(teacher=teacher, branch=branch, today=today)
+
+    context = {
+        **base_context_builder(
+            request,
+            page_title="Dashboard enseignant",
+            module_cards=[
+                "Mes cours",
+                "Mes classes",
+                "Mon journal de cours",
+                "Mon planning",
+            ],
+        ),
+        "dashboard_kind": "Enseignant",
+        "branch": branch,
+        "teacher_dashboard_preference": serialize_teacher_dashboard_preference(preference) if preference is not None else _teacher_dashboard_preference_defaults(),
+        "status_summary": status_summary,
+        "today": today,
+        "week_start": week_start,
+        "week_end": week_end - timedelta(days=1),
+        "today_events": today_events,
+        "today_event_rows": today_event_rows,
+        "teacher_next_action": teacher_next_action,
+        "upcoming_events": upcoming_events,
+        "teaching_days": teaching_days,
+        "recent_online_rows": recent_online_rows,
+        "teacher_recordings": teacher_recordings,
+        "class_focus_rows": class_focus_rows,
+        "recent_lesson_logs": lesson_logs,
+        "week_lesson_logs_count": len(lesson_logs_this_week),
+        "pending_lesson_logs_count": len(pending_lesson_logs),
+        "pending_lesson_log_rows": pending_lesson_logs[:6],
+        "has_teacher_activity": bool(
+            today_events
+            or upcoming_events
+            or class_focus_rows
+            or lesson_logs
+            or pending_lesson_logs
+        ),
+        "teacher_kpis": {
+            "today_courses": len(today_events),
+            "week_courses": len(week_events),
+            "active_classes": len(class_focus_rows),
+            "visible_students": total_students_visible,
+            "month_done_logs": monthly_done_logs_count,
+            "subjects_count": len(subject_titles),
+            "scheduled_days": scheduled_days_count,
+            "weekly_rooms": len(weekly_rooms),
+            "support_chapters": support_chapters_count,
+            "support_contents": support_contents_count,
+            "lesson_completion_rate": lesson_completion_rate,
+        },
+        "teacher_support_stats": {
+            "chapters": support_chapters_count,
+            "contents": support_contents_count,
+            "files": support_file_count,
+            "videos": support_video_count,
+            "texts": support_text_count,
+        },
+        "teacher_attendance_summary": teacher_attendance_summary,
+        "next_event_focus": next_event_focus,
+        "teacher_insights": teacher_insights,
+        "teacher_hours": teacher_hours,
+        "teacher_payments": teacher_payments,
+        "teacher_hour_rows": teacher_hour_rows,
+        "teacher_volume": teacher_volume,
+        "notifications_count": 0,
+        "teacher_notifications": {"unread_count": 0, "items": []},
+        "upcoming_exam_sessions": upcoming_exam_sessions,
+    }
+    return context
+
+
+def build_teacher_overview_context(request, *, branch, base_context_builder):
+    """Build the overview payload without loading section-specific honoraria data."""
+    return build_teacher_dashboard_context(
+        request,
+        branch=branch,
+        base_context_builder=base_context_builder,
+        include_honoraria=False,
+        section="overview",
+    )
+
+
+def _build_teacher_standard_section_context(request, *, branch, base_context_builder, section):
+    return build_teacher_dashboard_context(
+        request,
+        branch=branch,
+        base_context_builder=base_context_builder,
+        include_honoraria=False,
+        section=section,
+    )
+
+
+def build_teacher_classes_context(request, *, branch, base_context_builder):
+    return _build_teacher_standard_section_context(request, branch=branch, base_context_builder=base_context_builder, section="classes")
+
+
+def build_teacher_supports_context(request, *, branch, base_context_builder):
+    return _build_teacher_standard_section_context(request, branch=branch, base_context_builder=base_context_builder, section="supports")
+
+
+def build_teacher_schedule_context(request, *, branch, base_context_builder):
+    return _build_teacher_standard_section_context(request, branch=branch, base_context_builder=base_context_builder, section="schedule")
+
+
+def build_teacher_logs_context(request, *, branch, base_context_builder):
+    return _build_teacher_standard_section_context(request, branch=branch, base_context_builder=base_context_builder, section="logs")
+
+
+def build_teacher_salary_context(request, *, branch, base_context_builder):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachée pour le compte enseignant.")
+
+    if getattr(getattr(request.user, "profile", None), "position", "") == "moniteur":
+        return {
+            **base_context_builder(request, page_title="Mon salaire", module_cards=[]),
+            "branch": branch, "active_section": "salary", "is_monitor": True,
+        }
+    teacher = request.user
+    profile = getattr(teacher, "profile", None)
+    today = timezone.localdate()
+    current_month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+    entries = list(
+        TeacherHonorariumEntry.objects.filter(branch=branch, teacher=teacher)
+        .order_by("-period_month")
+    )
+    teacher_hours = {"month_hours": Decimal("0"), "total_hours": Decimal("0")}
+    teacher_payments = {"pending_count": 0, "paid_count": 0, "recent_payments": []}
+    teacher_hour_rows = []
+    status_map = {
+        TeacherHonorariumEntry.STATUS_DRAFT: ("pending", "À vérifier"),
+        TeacherHonorariumEntry.STATUS_READY: ("pending", "Disponible"),
+        TeacherHonorariumEntry.STATUS_PARTIAL: ("partial", "Retrait partiel"),
+        TeacherHonorariumEntry.STATUS_PAID: ("paid", "Payé"),
+    }
+    for entry in entries:
+        if entry.period_month == current_month_start:
+            teacher_hours["month_hours"] = entry.validated_hours
+        if entry.period_month >= year_start:
+            teacher_hours["total_hours"] += entry.validated_hours
+        status_slug, status_label = status_map.get(entry.status, ("draft", "Brouillon"))
+        teacher_hour_rows.append({
+            "month_label": entry.period_month.strftime("%B %Y"),
+            "hours": entry.validated_hours,
+            "tarif": entry.hourly_rate,
+            "gross_amount": entry.gross_amount,
+            "status": status_slug,
+            "status_display": status_label,
+            "entry_id": entry.pk,
+        })
+        if entry.status in (TeacherHonorariumEntry.STATUS_READY, TeacherHonorariumEntry.STATUS_DRAFT):
+            teacher_payments["pending_count"] += 1
+        elif entry.status in (TeacherHonorariumEntry.STATUS_PAID, TeacherHonorariumEntry.STATUS_PARTIAL):
+            teacher_payments["paid_count"] += 1
+
+    entry_ids = [entry.pk for entry in entries]
+    if entry_ids:
+        ref_pattern = "|".join(f"^HON-{pk}-" for pk in entry_ids)
+        recent_cash = BranchCashMovement.objects.filter(
+            branch=branch,
+            source=BranchCashMovement.SOURCE_HONORARIUM,
+            source_reference__regex=ref_pattern,
+            movement_date__gte=year_start,
+        ).order_by("-movement_date", "-created_at")[:10]
+        teacher_payments["recent_payments"] = [
+            {"label": movement.label, "date": movement.movement_date, "montant": movement.amount}
+            for movement in recent_cash
+        ]
+
+    preference = get_teacher_dashboard_preference(teacher=teacher, branch=branch)
+    return {
+        **base_context_builder(request, page_title="Dashboard enseignant", module_cards=[]),
+        "dashboard_kind": "Enseignant",
+        "branch": branch,
+        "status_summary": {
+            "employment_status": getattr(profile, "get_employment_status_display", lambda: "Inconnu")(),
+            "employee_code": getattr(profile, "employee_code", "") or "Non renseigné",
+            "branch_name": branch.name,
+            "hire_date": getattr(profile, "hire_date", None),
+        },
+        "teacher_dashboard_preference": serialize_teacher_dashboard_preference(preference),
+        "teacher_hours": teacher_hours,
+        "teacher_payments": teacher_payments,
+        "teacher_hour_rows": teacher_hour_rows,
+        "pending_lesson_logs_count": 0,
+        "notifications_count": 0,
+    }
+
+
+def build_teacher_notifications_context(request, *, branch, base_context_builder):
+    teacher = request.user
+    profile = getattr(teacher, "profile", None)
+    preference = get_teacher_dashboard_preference(teacher=teacher, branch=branch)
+    messages = list(
+        get_user_in_app_messages(
+            teacher,
+            limit=30,
+            exclude_sources=TEACHER_EXCLUDED_NOTIFICATION_SOURCES,
+        )
+    )
+    notification_items = [
+        {
+            "id": message.pk,
+            "title": message.title,
+            "message": message.body,
+            "created_at": message.created_at,
+            "is_read": message.read_at is not None,
+            "priority": message.priority,
+            "url": (message.metadata or {}).get("url", ""),
+        }
+        for message in messages
+    ]
+    unread_count = get_user_unread_count(
+        teacher,
+        exclude_sources=TEACHER_EXCLUDED_NOTIFICATION_SOURCES,
+    )
+    return {
+        **base_context_builder(request, page_title="Dashboard enseignant", module_cards=[]),
+        "dashboard_kind": "Enseignant",
+        "branch": branch,
+        "status_summary": {
+            "employment_status": getattr(profile, "get_employment_status_display", lambda: "Inconnu")(),
+            "employee_code": getattr(profile, "employee_code", "") or "Non renseigne",
+            "branch_name": getattr(branch, "name", "Non rattache"),
+            "hire_date": getattr(profile, "hire_date", None),
+        },
+        "teacher_dashboard_preference": serialize_teacher_dashboard_preference(preference),
+        "notifications_count": unread_count,
+        "teacher_notifications": {
+            "unread_count": unread_count,
+            "items": notification_items,
+        },
+        "pending_lesson_logs_count": 0,
+    }
+
+
+def build_teacher_settings_context(request, *, branch, base_context_builder):
+    teacher = request.user
+    preference = get_teacher_dashboard_preference(teacher=teacher, branch=branch)
+    profile = getattr(teacher, "profile", None)
+    account_preference, _account_preference_created = UserPreference.objects.get_or_create(user=teacher)
+    support_state = AccountSupportState.objects.filter(user=teacher).first()
+    status_summary = {
+        "employment_status": getattr(profile, "get_employment_status_display", lambda: "Inconnu")(),
+        "employee_code": getattr(profile, "employee_code", "") or "Non renseigne",
+        "branch_name": getattr(branch, "name", "Non rattache"),
+        "hire_date": getattr(profile, "hire_date", None),
+    }
+    class_ids = set(
+        AcademicScheduleEvent.objects.filter(teacher=teacher, branch=branch, is_active=True)
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .values_list("academic_class_id", flat=True)
+    )
+    class_ids.update(
+        WeeklyScheduleSlot.objects.filter(teacher=teacher, branch=branch, is_active=True).values_list("academic_class_id", flat=True)
+    )
+    class_ids.update(
+        assignment.teaching_class_id
+        for assignment in _get_teacher_director_assignments(teacher=teacher, branch=branch)
+        if assignment.teaching_class_id
+    )
+    return {
+        **base_context_builder(
+            request,
+            page_title="Dashboard enseignant",
+            module_cards=[
+                "Mes cours",
+                "Mes classes",
+                "Mon journal de cours",
+                "Mon planning",
+            ],
+        ),
+        "dashboard_kind": "Enseignant",
+        "branch": branch,
+        "status_summary": status_summary,
+        "account_profile_summary": {
+            "phone": getattr(profile, "phone", "") or "Non renseigne",
+            "location": getattr(profile, "location", "") or "Non renseignee",
+            "address": getattr(profile, "address", "") or "Non renseignee",
+            "main_domain": getattr(profile, "main_domain", "") or "Non renseigne",
+            "bio": getattr(profile, "bio", "") or "",
+        },
+        "account_preference_summary": {
+            "notify_email": account_preference.notify_email,
+            "notify_in_app": account_preference.notify_in_app,
+            "notify_sms": account_preference.notify_sms,
+            "ui_compact_mode": account_preference.ui_compact_mode,
+            "ui_sidebar_collapsed": account_preference.ui_sidebar_collapsed,
+            "ui_autorefresh": account_preference.ui_autorefresh,
+        },
+        "account_security_summary": {
+            "is_suspended": getattr(support_state, "is_suspended", False),
+            "is_blocked": getattr(support_state, "is_blocked", False),
+            "must_change_password": getattr(support_state, "must_change_password", False),
+        },
+        "teacher_dashboard_preference": serialize_teacher_dashboard_preference(preference),
+        "teacher_preferences_choices": TeacherDashboardPreference.DEFAULT_SECTION_CHOICES,
+        "teacher_settings_stats": {
+            "active_classes": len({class_id for class_id in class_ids if class_id}),
+            "display_mode": "Compact" if preference.compact_mode else "Standard",
+        },
+    }
+
+
+def build_teacher_class_detail_context(request, *, branch, class_id, week_start=None):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    teacher = request.user
+    anchor_date = week_start or timezone.localdate()
+    normalized_week_start = anchor_date - timedelta(days=anchor_date.weekday())
+    week_end = normalized_week_start + timedelta(days=7)
+    now = timezone.now()
+
+    academic_class = _resolve_teacher_class(
+        teacher=teacher,
+        branch=branch,
+        class_id=class_id,
+    )
+
+    events_qs = (
+        AcademicScheduleEvent.objects.select_related(
+            "academic_class",
+            "academic_class__programme",
+            "academic_class__academic_year",
+            "ec",
+            "ec__ue",
+            "teacher",
+            "branch",
+        )
+        .filter(
+            academic_class=academic_class,
+            teacher=teacher,
+            is_active=True,
+            start_datetime__date__gte=normalized_week_start,
+            start_datetime__date__lt=week_end,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .order_by("start_datetime", "id")
+    )
+    events_qs = events_qs.filter(branch=branch)
+    week_events = list(events_qs)
+
+    weekly_slots_qs = WeeklyScheduleSlot.objects.select_related("ec", "teacher").filter(
+        academic_class=academic_class,
+        teacher=teacher,
+        is_active=True,
+    )
+    weekly_slots_qs = weekly_slots_qs.filter(branch=branch)
+    weekly_slots = list(weekly_slots_qs.order_by("weekday", "start_time", "id"))
+
+    students = list(
+        Student.objects.select_related("user", "inscription__candidature")
+        .filter(
+            is_active=True,
+            user__academic_enrollments__academic_class=academic_class,
+            user__academic_enrollments__is_active=True,
+        )
+        .distinct()
+        .order_by(
+            "inscription__candidature__last_name",
+            "inscription__candidature__first_name",
+            "matricule",
+        )[:80]
+    )
+
+    logs_qs = LessonLog.objects.select_related("ec", "schedule_event").filter(
+        teacher=teacher,
+        academic_class=academic_class,
+    )
+    logs_qs = logs_qs.filter(branch=branch)
+    recent_logs = list(logs_qs.order_by("-date", "-start_time", "-id")[:6])
+
+    next_event = (
+        AcademicScheduleEvent.objects.select_related("ec")
+        .filter(
+            academic_class=academic_class,
+            teacher=teacher,
+            is_active=True,
+            start_datetime__gte=now,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .order_by("start_datetime", "id")
+        .first()
+    )
+    if next_event is not None and next_event.branch_id != branch.id:
+        next_event = None
+
+    subject_rows = []
+    subjects_seen = set()
+    for event in week_events:
+        if event.ec_id in subjects_seen:
+            continue
+        subjects_seen.add(event.ec_id)
+        subject_rows.append(
+            {
+                "title": event.ec.title,
+                "ue_code": event.ec.ue.code,
+                "room": event.location or "Salle non precisee",
+                "event_count": sum(1 for item in week_events if item.ec_id == event.ec_id),
+            }
+        )
+    for slot in weekly_slots:
+        if slot.ec_id in subjects_seen:
+            continue
+        subjects_seen.add(slot.ec_id)
+        subject_rows.append(
+            {
+                "title": slot.ec.title,
+                "ue_code": slot.ec.ue.code,
+                "room": slot.room or "Salle a definir",
+                "event_count": 0,
+            }
+        )
+
+    weekly_slot_rows = [
+        {
+            "weekday_label": WEEKDAY_LABELS[slot.weekday] if 0 <= slot.weekday < len(WEEKDAY_LABELS) else f"Jour {slot.weekday + 1}",
+            "time_range": f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}",
+            "room": slot.room or "Salle a definir",
+            "ec_title": slot.ec.title,
+            "ue_code": slot.ec.ue.code,
+        }
+        for slot in weekly_slots
+    ]
+
+    current_class_event = next(
+        (event for event in week_events if event.start_datetime <= now <= event.end_datetime),
+        None,
+    )
+    next_class_event = next((event for event in week_events if event.start_datetime > now), None)
+    attendance_by_student_id = {}
+    if current_class_event is not None:
+        attendance_by_student_id = {
+            attendance.student_id: attendance
+            for attendance in StudentAttendance.objects.filter(
+                branch=branch,
+                schedule_event=current_class_event,
+                student__in=students,
+            )
+        }
+
+    def event_snapshot(event):
+        if event is None:
+            return None
+        return {
+            "title": event.ec.title,
+            "time_range": f"{event.start_datetime:%H:%M} - {event.end_datetime:%H:%M}",
+            "start_datetime": event.start_datetime,
+            "location": event.location or "Salle non précisée",
+            "teacher_name": teacher.get_full_name() or teacher.username,
+        }
+
+    student_status_rows = []
+    for student in students:
+        attendance = attendance_by_student_id.get(student.id)
+        if current_class_event is None:
+            presence_state = {"label": "Hors cours", "ui_tone": "neutral"}
+        elif attendance is None:
+            presence_state = {"label": "Présence non pointée", "ui_tone": "warning"}
+        elif attendance.status == StudentAttendance.STATUS_PRESENT:
+            presence_state = {"label": "Présent", "ui_tone": "success"}
+        elif attendance.status == StudentAttendance.STATUS_LATE:
+            presence_state = {"label": "En retard", "ui_tone": "warning"}
+        else:
+            presence_state = {"label": attendance.get_status_display(), "ui_tone": "danger"}
+        current_event = event_snapshot(current_class_event)
+        if current_event is not None:
+            current_event["attendance_label"] = attendance.get_status_display() if attendance else "Présence non pointée"
+        student_status_rows.append(
+            {
+                "student_id": student.id,
+                "full_name": student.full_name,
+                "matricule": student.matricule,
+                "academic_class": academic_class.display_name,
+                "current_event": current_event,
+                "next_event": event_snapshot(next_class_event),
+                "presence_state": presence_state,
+            }
+        )
+
+    return {
+        "branch": branch,
+        "academic_class": academic_class,
+        "week_start": normalized_week_start,
+        "week_end": week_end - timedelta(days=1),
+        "prev_week_start": normalized_week_start - timedelta(days=7),
+        "next_week_start": normalized_week_start + timedelta(days=7),
+        "students": students,
+        "teacher_class_student_status_rows": student_status_rows,
+        "teacher_class_week_events": week_events,
+        "teacher_class_weekly_slots": weekly_slots,
+        "teacher_class_weekly_slot_rows": weekly_slot_rows,
+        "teacher_class_recent_logs": recent_logs,
+        "teacher_class_subject_rows": subject_rows,
+        "teacher_class_next_event": next_event,
+    }
+
+
+def build_teacher_lesson_log_context(request, *, branch, event_id, toast=None):
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    teacher = request.user
+    event_qs = AcademicScheduleEvent.objects.select_related(
+        "academic_class",
+        "academic_class__programme",
+        "ec",
+        "ec__ue",
+        "branch",
+        "teacher",
+    ).filter(
+        pk=event_id,
+        teacher=teacher,
+        event_type=AcademicScheduleEvent.EVENT_TYPE_COURSE,
+        is_active=True,
+    )
+    event_qs = event_qs.filter(branch=branch)
+    event_qs = event_qs.exclude(
+        status__in={
+            AcademicScheduleEvent.STATUS_DRAFT,
+            AcademicScheduleEvent.STATUS_CANCELLED,
+        }
+    )
+    schedule_event = event_qs.first()
+    if schedule_event is None:
+        raise ValidationError("Cours introuvable pour cet enseignant.")
+
+    if timezone.now() < schedule_event.start_datetime:
+        raise ValidationError("Le cahier ne peut être déclaré qu'à partir du début de la séance.")
+
+    log_qs = LessonLog.objects.select_related("schedule_event").filter(
+        teacher=teacher,
+        schedule_event=schedule_event,
+        date=timezone.localdate(schedule_event.start_datetime),
+    )
+    log_qs = log_qs.filter(branch=branch)
+    lesson_log = log_qs.first()
+
+    now = timezone.now()
+    if now < schedule_event.start_datetime:
+        lesson_log_session_state = {"label": "Séance à venir", "tone": "info"}
+    elif now > schedule_event.end_datetime:
+        lesson_log_session_state = {"label": "Séance terminée", "tone": "neutral"}
+    else:
+        lesson_log_session_state = {"label": "Séance en cours", "tone": "success"}
+
+    return {
+        "branch": branch,
+        "schedule_event": schedule_event,
+        "lesson_log": lesson_log,
+        "toast": toast,
+        "lesson_log_session_state": lesson_log_session_state,
+        "lesson_log_status_choices": [
+            (LessonLog.STATUS_DONE, "Fait"),
+            (LessonLog.STATUS_CANCELLED, "Annule"),
+            (LessonLog.STATUS_PLANNED, "Planifie"),
+        ],
+    }
+
+
+def build_lesson_log_signature_snapshot(lesson_log):
+    """Immutable teaching declaration bound to the teacher's signature."""
+
+    return {
+        "kind": "lesson_log",
+        "lesson_log_id": lesson_log.pk,
+        "branch_id": lesson_log.branch_id,
+        "schedule_event_id": lesson_log.schedule_event_id,
+        "teacher_id": lesson_log.teacher_id,
+        "academic_class_id": lesson_log.academic_class_id,
+        "ec_id": lesson_log.ec_id,
+        "date": lesson_log.date.isoformat() if lesson_log.date else "",
+        "start_time": lesson_log.start_time.isoformat() if lesson_log.start_time else "",
+        "end_time": lesson_log.end_time.isoformat() if lesson_log.end_time else "",
+        "content": lesson_log.content or "",
+        "chapter_progress": lesson_log.chapter_progress or "",
+        "homework": lesson_log.homework or "",
+        "observations": lesson_log.observations or "",
+        "session_outcome": lesson_log.session_outcome,
+    }
+
+
+@transaction.atomic
+def declare_teacher_absence_for_event(*, teacher, branch, event_id):
+    """Déclare une absence enseignant pour une séance planifiée."""
+    if branch is None:
+        raise ValidationError("Aucune annexe rattachee pour le compte enseignant.")
+
+    event = (
+        AcademicScheduleEvent.objects.select_related("academic_class", "ec")
+        .filter(
+            pk=event_id,
+            teacher=teacher,
+            branch=branch,
+            is_active=True,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .first()
+    )
+    if event is None:
+        raise ValidationError("Cours introuvable pour cet enseignant.")
+
+    TeacherAttendance.objects.update_or_create(
+        teacher=teacher,
+        schedule_event=event,
+        branch=branch,
+        defaults={
+            "date": timezone.localdate(event.start_datetime),
+            "status": TeacherAttendance.STATUS_ABSENT,
+            "recorded_by": teacher,
+        },
+    )
+    return event

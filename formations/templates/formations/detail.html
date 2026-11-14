@@ -1,563 +1,216 @@
-{% extends "base.html" %}
-{% load component_tags %}
+{% extends "public/base.html" %}
 {% load humanize %}
-
-{% block title %}{{ programme.title }} – UFHOB{% endblock %}
 
 {% block content %}
 
-
-<!-- ========================================================= -->
-<!-- HERO -->
-<!-- ========================================================= -->
-
-{% component "formation_hero" programme=programme %}
-{% endcomponent %}
-
-
-
-<!-- ========================================================= -->
-<!-- PRESENTATION + INFOS CLES -->
-<!-- ========================================================= -->
-
-<section id="presentation" class="py-20 bg-soft">
-
-<div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-10 items-start">
-
-
-<!-- PRESENTATION (2/3) -->
-
-<div class="lg:col-span-2">
-
-<div class="bg-white rounded-3xl border border-gray-100 p-10 shadow-sm">
-
-<h2 class="text-3xl font-bold text-primary-800 mb-2">
-Présentation
-</h2>
-
-<p class="text-gray-400 text-sm mb-6">
-{{ programme.title }}{% if programme.school %} — {{ programme.school.short_name }}{% endif %}
-</p>
-
-<div class="prose prose-lg max-w-none text-gray-600 leading-relaxed">
-{{ programme.description|linebreaks }}
-</div>
-
-<!-- DATE MISE A JOUR -->
-<p class="text-xs text-gray-400 mt-8 pt-6 border-t border-gray-100">
-Dernière mise à jour : {{ programme.updated_at|date:"d F Y"|default:programme.created_at|date:"d F Y" }}
-</p>
-
-</div>
-
-</div>
-
-
-
-<!-- INFOS CLES (1/3) -->
-
-<div>
-
-<div class="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm sticky top-6">
-
-<h3 class="text-lg font-bold text-primary-800 mb-6">
-Infos clés
-</h3>
-
-<ul class="space-y-5">
-
-<!-- ÉCOLE -->
-{% if programme.school %}
-<li class="flex items-center justify-between">
-
-<span class="flex items-center gap-3 text-gray-600">
-<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-</svg>
-</div>
-École
-</span>
-
-<span class="font-semibold text-primary-800">{{ programme.school.short_name }}</span>
-
-</li>
-{% endif %}
-
-<!-- RENTREE -->
-<li class="flex items-center justify-between">
-
-<span class="flex items-center gap-3 text-gray-600">
-<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-</svg>
-</div>
-Rentrée
-</span>
-
-<span class="font-semibold text-primary-800">Septembre</span>
-
-</li>
-
-
-<!-- DUREE -->
-<li class="flex items-center justify-between">
-
-<span class="flex items-center gap-3 text-gray-600">
-<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-</svg>
-</div>
-Durée
-</span>
-
-<span class="font-semibold text-primary-800">{{ programme.duration_years }} an{{ programme.duration_years|pluralize }}</span>
-
-</li>
-
-
-<!-- LANGUE -->
-<li class="flex items-center justify-between">
-
-<span class="flex items-center gap-3 text-gray-600">
-<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
-</svg>
-</div>
-Langue
-</span>
-
-<span class="font-semibold text-primary-800">Français</span>
-
-</li>
-
-
-<!-- CAMPUS -->
-<li class="flex items-center justify-between">
-
-<span class="flex items-center gap-3 text-gray-600">
-<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-</svg>
-</div>
-Campus
-</span>
-
-<span class="font-semibold text-primary-800">Bamako</span>
-
-</li>
-
-</ul>
-
-</div>
-
-</div>
-
-
-</div>
-
+<section class="border-b border-ufhob-border bg-gradient-to-br from-ufhob-ivory to-ufhob-primary-soft/30">
+  <div class="mx-auto max-w-ufhob-container px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+    <p class="text-sm font-semibold uppercase tracking-wider text-ufhob-secondary-dark">
+      {% if programme.school %}{{ programme.school.display_name }}{% else %}UFHOB{% endif %} · {{ programme.cycle.name }}
+    </p>
+    <h1 class="mt-2 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">
+      {{ programme.title }}
+    </h1>
+    <p class="mt-2 text-lg text-ufhob-muted">{{ programme.diploma_awarded.name }}</p>
+    <div class="mt-6 flex flex-wrap items-center gap-4">
+      <a href="{% url 'formations:list' %}{% if programme.school %}?school={{ programme.school.code|lower }}{% endif %}" class="text-sm font-semibold text-ufhob-primary hover:underline">Retour aux formations</a>
+      {% if can_apply %}
+      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="bg-ufhob-accent px-6 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-accent/80">Candidater</a>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
-
-
-<!-- OBJECTIFS DE LA FORMATION -->
-{% if learning_objectives %}
-<section id="objectifs" class="py-20 bg-white">
-<div class="max-w-7xl mx-auto px-6">
-
-<div class="mb-12">
-<h2 class="text-3xl font-bold text-primary-800">Objectifs de la formation</h2>
-<p class="text-gray-500 mt-3">Les compétences clés développées tout au long de ce programme</p>
-</div>
-
-<div class="grid md:grid-cols-2 gap-6">
-{% for obj in learning_objectives %}
-<div class="bg-soft rounded-2xl p-8 flex items-start gap-5 hover:shadow-md transition">
-
-<div class="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0
-    {% if obj.color == 'secondary' %}bg-secondary/20{% elif obj.color == 'accent' %}bg-accent/20{% else %}bg-primary-100{% endif %}">
-<svg class="w-7 h-7 {% if obj.color == 'secondary' %}text-secondary{% elif obj.color == 'accent' %}text-accent{% else %}text-primary-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-{% if obj.icon == 'chart' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-{% elif obj.icon == 'users' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-{% elif obj.icon == 'trending' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-{% elif obj.icon == 'lightbulb' %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-{% else %}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-{% endif %}
-</svg>
-</div>
-
-<div>
-<h3 class="font-bold text-primary-800 mb-2">{{ obj.title }}</h3>
-<p class="text-gray-600 text-sm leading-relaxed">{{ obj.desc }}</p>
-</div>
-
-</div>
-{% endfor %}
-</div>
-
-</div>
+<section class="border-b border-ufhob-border bg-white py-4">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <dl class="flex flex-wrap items-baseline gap-x-8 gap-y-3">
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">École</dt>
+          <dd class="text-sm font-semibold text-ufhob-primary">{% if programme.school %}{{ programme.school.short_name }}{% else %}UFHOB{% endif %}</dd>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">Durée</dt>
+          <dd class="text-sm font-semibold text-ufhob-primary">{{ programme.duration_years }} ans</dd>
+        </div>
+      </div>
+      {% if programme.school.code == 'ESMED' %}
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">Semestres</dt>
+          {% for fact in programme.quick_facts.all %}{% if fact.label == 'Semestres' %}<dd class="text-sm font-semibold text-ufhob-primary">{{ fact.value }}</dd>{% endif %}{% endfor %}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">Crédits</dt>
+          {% for fact in programme.quick_facts.all %}{% if fact.label == 'Crédits' %}<dd class="text-sm font-semibold text-ufhob-primary">{{ fact.value }}</dd>{% endif %}{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">Diplôme</dt>
+          <dd class="text-sm font-semibold text-ufhob-primary">{{ programme.diploma_awarded.name }}</dd>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wide text-ufhob-muted">Campus</dt>
+          <dd class="text-sm font-semibold text-ufhob-primary">{{ campuses|length }} disponible{{ campuses|length|pluralize }}</dd>
+        </div>
+      </div>
+    </dl>
+  </div>
 </section>
 
+<section class="bg-ufhob-ivory py-12 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8 space-y-12">
+    {% if programme.illustration %}<figure class="overflow-hidden border border-ufhob-border"><img src="{{ programme.illustration.url }}" alt="{{ programme.title }}" class="h-64 w-full object-cover sm:h-80" loading="lazy"></figure>{% endif %}
+    <article>
+      <h2 class="text-2xl font-bold text-ufhob-primary">Présentation de la formation</h2>
+      <div class="prose mt-4 max-w-none leading-7 text-ufhob-muted">{{ programme.description|safe }}</div>
+    </article>
 
-{% endif %}
-
-<!-- ========================================================= -->
-<!-- ORGANISATION DE LA FORMATION -->
-<!-- ========================================================= -->
-
-{% if has_fees %}
-
-<section id="organisation" class="py-20 bg-soft">
-
-<div class="max-w-7xl mx-auto px-6">
-
-<!-- TITRE + DROPDOWN -->
-<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-6">
-
-<div>
-<h2 class="text-3xl font-bold text-primary-800">
-Organisation de la formation
-</h2>
-<p class="text-gray-500 mt-2">
-Détail des frais par année d'études
-</p>
-</div>
-
-</div>
-
-
-<!-- GRILLE 2 COLONNES CÔTE À CÔTE -->
-<div class="grid md:grid-cols-2 gap-6">
-
-{% for item in years_with_totals %}
-
-<div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-
-<!-- HEADER ANNÉE -->
-<div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-
-<span class="inline-flex items-center gap-2 bg-primary-800 text-white px-5 py-2 rounded-full text-sm font-semibold">
-    {% if item.year.year_number == 1 %}
-    1<sup>ère</sup> année
-    {% else %}
-    {{ item.year.year_number }}<sup>ème</sup> année
+    {% if learning_objectives or career_points %}
+    <div class="grid gap-8 lg:grid-cols-2">
+      {% if learning_objectives %}
+      <article>
+        <h2 class="text-xl font-bold text-ufhob-primary">Objectifs</h2>
+        <ul class="mt-4 grid gap-3">
+          {% for objective in learning_objectives %}
+          <li class="flex gap-3 text-ufhob-muted">
+            <span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span>
+            <span>{{ objective.desc|default:objective }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endif %}
+      {% if career_points %}
+      <article>
+        <h2 class="text-xl font-bold text-ufhob-primary">Débouchés</h2>
+        <ul class="mt-4 grid gap-3">
+          {% for point in career_points %}
+          <li class="flex gap-3 text-ufhob-muted">
+            <span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span>
+            <span>{{ point }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endif %}
+    </div>
     {% endif %}
-</span>
 
-<!-- HEURES (si disponible) -->
-{% if item.year.hours %}
-<span class="flex items-center gap-2 text-gray-500 text-sm">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    {{ item.year.hours }} heures
-</span>
-{% endif %}
+    {% for block in programme.competence_blocks.all %}
+    <article>
+      <h2 class="text-xl font-bold text-ufhob-primary">{{ block.title }}</h2>
+      {% if block.description %}<p class="mt-3 text-ufhob-muted">{{ block.description }}</p>{% endif %}
+      <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+        {% for skill in block.items.all %}<li class="border border-ufhob-border bg-white p-4 text-ufhob-muted">{{ skill.title }}{% if skill.description %}<p class="mt-2 text-sm">{{ skill.description }}</p>{% endif %}</li>{% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+    {% if structure_points %}
+    <article><h2 class="text-xl font-bold text-ufhob-primary">Organisation de la formation</h2>
+      {% for point in structure_points %}<p class="mt-3 text-ufhob-muted">{{ point }}</p>{% endfor %}
+    </article>
+    {% endif %}
 
-</div>
+    <div class="grid gap-8 lg:grid-cols-2">
+      <article>
+        <h2 class="text-xl font-bold text-ufhob-primary">Conditions d’admission</h2>
+        <ul class="mt-4 space-y-2 text-sm text-ufhob-muted">
+          {% if programme.school.code == 'ESMED' %}
+          <li class="flex gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span><span>Baccalauréat ou diplôme équivalent</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span><span>Résultats académiques satisfaisants</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span><span>Lettre de motivation</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span><span>Références académiques</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 bg-ufhob-secondary"></span><span>Entretien d’inscription</span></li>
+          {% else %}
+            <li>Les conditions d’accès sont à vérifier auprès de l’école pour le parcours choisi.</li>
+          {% endif %}
+        </ul>
+      </article>
 
-<!-- LIGNES DE FRAIS -->
-<div class="divide-y divide-gray-100">
-
-{% for fee in item.fees %}
-<div class="px-6 py-4 flex justify-between items-center">
-    <span class="flex items-center gap-3 text-gray-600">
-        <span class="w-2 h-2 rounded-full bg-gray-300"></span>
-        {{ fee.label }}
-    </span>
-    <span class="font-semibold text-primary-800">{{ fee.amount|intcomma }} FCFA</span>
-</div>
-{% endfor %}
-
-</div>
-
-<!-- TOTAL ANNUEL -->
-<div class="px-6 py-4 bg-soft flex justify-between items-center border-t border-gray-100">
-    <span class="font-semibold text-primary-800">Total annuel</span>
-    <span class="font-bold text-secondary text-lg">{{ item.year_total|intcomma }} FCFA</span>
-</div>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-</div>
-
+      {% if required_documents %}
+      <article>
+        <h2 class="text-xl font-bold text-ufhob-primary">Pièces à fournir</h2>
+        <ul class="mt-4 space-y-2 text-sm text-ufhob-muted">
+          {% for document in required_documents %}
+          <li class="flex gap-3">
+            <svg class="mt-0.5 h-4 w-4 shrink-0 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+            <span>{{ document.name }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
-{% endif %}
+{% include "formations/fragments/_fees.html" %}
 
-
-
-<!-- ========================================================= -->
-<!-- FINANCEMENT -->
-<!-- ========================================================= -->
-
-<section id="financement" class="py-20 bg-white">
-
-<div class="max-w-7xl mx-auto px-6">
-
-<h2 class="text-3xl font-bold text-primary-800 mb-10">
-Financement
-</h2>
-
-<div class="grid md:grid-cols-3 gap-6">
-
-<!-- CARTE 1 : COÛT DE LA FORMATION -->
-<div class="bg-soft rounded-2xl p-8 border border-gray-100">
-
-<div class="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mb-5">
-<svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-</svg>
-</div>
-
-<h3 class="font-bold text-primary-800 text-lg mb-3">
-Coût de la formation
-</h3>
-
-<p class="text-2xl font-bold text-secondary mb-2">
-{% if total_programme_cost %}
-{{ total_programme_cost|intcomma }} FCFA
-{% else %}
-—
-{% endif %}
-</p>
-
-<p class="text-gray-500 text-sm">
-sur {{ programme.duration_years }} an{{ programme.duration_years|pluralize }}
-</p>
-
-</div>
-
-
-<!-- CARTE 2 : MODALITÉS DE PAIEMENT -->
-<div class="bg-soft rounded-2xl p-8 border border-gray-100">
-
-<div class="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center mb-5">
-<svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-</svg>
-</div>
-
-<h3 class="font-bold text-primary-800 text-lg mb-4">
-Modalités de paiement
-</h3>
-
-<ul class="space-y-3">
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-    Paiement échelonné en plusieurs fois
-</li>
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-    Virement bancaire ou mobile money
-</li>
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-    Financement par un tiers
-</li>
-</ul>
-
-</div>
-
-
-<!-- CARTE 3 : AIDES & BOURSES -->
-<div class="bg-soft rounded-2xl p-8 border border-gray-100">
-
-<div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mb-5">
-<svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-</svg>
-</div>
-
-<h3 class="font-bold text-primary-800 text-lg mb-4">
-Aides & bourses
-</h3>
-
-<ul class="space-y-3">
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0"></span>
-    Bourses d'excellence
-</li>
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0"></span>
-    Bourses sociales
-</li>
-<li class="flex items-start gap-2 text-gray-600 text-sm">
-    <span class="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0"></span>
-    Accès à un prêt étudiant
-</li>
-</ul>
-
-</div>
-
-</div>
-
-</div>
-
+<section class="border-t border-ufhob-border bg-white py-12 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <h2 class="text-2xl font-bold text-ufhob-primary flex items-center gap-2">
+      <svg class="h-5 w-5 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Où suivre cette formation ?
+    </h2>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for campus in campuses %}
+      <div class="border border-ufhob-border p-4">
+        <p class="font-semibold text-ufhob-primary flex items-center gap-2">
+          <svg class="h-4 w-4 text-ufhob-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {{ campus.name }}
+        </p>
+        <p class="text-sm text-ufhob-muted">{{ campus.city }}</p>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ufhob-muted">Aucun campus compatible n’est actuellement publié pour cette formation.</p>
+      {% endfor %}
+    </div>
+  </div>
 </section>
 
-
-<!-- ========================================================= -->
-<!-- ADMISSIONS -->
-<!-- ========================================================= -->
-
-<section id="admissions" class="py-20 bg-soft">
-
-<div class="max-w-4xl mx-auto px-6">
-
-<div class="text-center mb-12">
-<h2 class="text-3xl font-bold text-primary-800 mb-3">
-Procédure d'admission
-</h2>
-<p class="text-gray-500">
-La procédure d'admission se fait entièrement en ligne
-</p>
-</div>
-
-
-<!-- ETAPES -->
-<div class="space-y-4">
-
-<!-- ETAPE 1 -->
-<div class="bg-white rounded-2xl p-6 flex items-center gap-6 shadow-sm border border-gray-100 hover:shadow-md transition">
-
-<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-1
-</div>
-
-<div class="flex-1">
-<h3 class="font-semibold text-primary-800">Dépôt de la candidature en ligne</h3>
-<p class="text-gray-500 text-sm">Remplissez le formulaire et soumettez vos documents</p>
-</div>
-
-<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-</svg>
-
-</div>
-
-
-<!-- ETAPE 2 -->
-<div class="bg-white rounded-2xl p-6 flex items-center gap-6 shadow-sm border border-gray-100 hover:shadow-md transition">
-
-<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-2
-</div>
-
-<div class="flex-1">
-<h3 class="font-semibold text-primary-800">Étude du dossier</h3>
-<p class="text-gray-500 text-sm">Notre équipe pédagogique examine votre candidature</p>
-</div>
-
-<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-</svg>
-
-</div>
-
-
-<!-- ETAPE 3 -->
-<div class="bg-white rounded-2xl p-6 flex items-center gap-6 shadow-sm border border-gray-100 hover:shadow-md transition">
-
-<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-3
-</div>
-
-<div class="flex-1">
-<h3 class="font-semibold text-primary-800">Entretien de motivation</h3>
-<p class="text-gray-500 text-sm">Échange avec un membre du jury d'admission</p>
-</div>
-
-<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-</svg>
-
-</div>
-
-
-<!-- ETAPE 4 -->
-<div class="bg-white rounded-2xl p-6 flex items-center gap-6 shadow-sm border border-gray-100 hover:shadow-md transition">
-
-<div class="w-12 h-12 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-4
-</div>
-
-<div class="flex-1">
-<h3 class="font-semibold text-primary-800">Résultat et inscription</h3>
-<p class="text-gray-500 text-sm">Notification de la décision et finalisation de l'inscription</p>
-</div>
-
-<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-</svg>
-
-</div>
-
-</div>
-
-
-<!-- CTA -->
 {% if can_apply %}
-<div class="text-center mt-10">
-
-<a href="{% url 'admissions:apply' programme.slug %}"
-   class="inline-flex items-center gap-2 bg-secondary text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-secondary-dark transition shadow-lg">
-
-Candidater maintenant
-
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-</svg>
-
-</a>
-
-</div>
+<section class="bg-ufhob-primary py-12 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 text-center sm:px-6 lg:px-8">
+    <p class="text-sm font-semibold uppercase tracking-wider text-white/70">Prêt à rejoindre cette formation ?</p>
+    <h2 class="mt-2 text-2xl font-bold text-white">{{ programme.title }}</h2>
+    <p class="mt-1 text-white/80">{% if programme.school %}{{ programme.school.short_name }}{% else %}UFHOB{% endif %}</p>
+    <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="mt-6 inline-block bg-ufhob-accent px-8 py-3 text-sm font-bold text-ufhob-primary">Candidater</a>
+  </div>
+</section>
 {% endif %}
 
-</div>
-
+{% if related_programmes %}
+<section class="border-t border-ufhob-border bg-ufhob-ivory py-12 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <h2 class="text-2xl font-bold text-ufhob-primary">Autres programmes de cette école</h2>
+    <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {% for related in related_programmes %}
+      <div class="border border-ufhob-border bg-white p-4">
+        <h3 class="font-bold text-ufhob-primary">
+          {{ related.title }}
+        </h3>
+        <p class="mt-1 text-sm text-ufhob-muted">{{ related.duration_years }} ans · {{ related.diploma_awarded.name }}</p>
+        <a href="{{ related.get_absolute_url }}" class="mt-3 inline-block text-sm font-semibold text-ufhob-primary hover:underline">Découvrir &rarr;</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
-
-
-
-<!-- ========================================================= -->
-<!-- DOCUMENTS REQUIS -->
-<!-- ========================================================= -->
-
-{% if has_documents %}
-
-<section class="py-20 bg-white">
-
-<div class="max-w-4xl mx-auto px-6">
-
-{% component "formation_documents"
-required_documents=required_documents
-%}
-{% endcomponent %}
-
-</div>
-
-</section>
-
 {% endif %}
-
 
 {% endblock %}

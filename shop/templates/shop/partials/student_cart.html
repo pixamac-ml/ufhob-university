@@ -1,0 +1,24 @@
+{% load humanize component_tags %}
+<section class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div><p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Panier</p><h3 class="text-base font-bold text-ui-text">Votre selection</h3></div>
+    {% if cart %}<span class="rounded-ui-badge bg-ui-primary-soft px-2 py-1 text-xs font-semibold text-ui-primary">{{ cart.items.count }} article{{ cart.items.count|pluralize }}</span>{% endif %}
+  </div>
+  {% if cart_error %}{% component "ui_core.alert" message=cart_error tone="danger" %}{% endcomponent %}{% endif %}
+  {% if cart and cart.items.exists %}
+    <div class="divide-y divide-ui-border rounded-ui-card border border-ui-border bg-ui-surface">
+      {% for item in cart.items.all %}
+        <article class="flex gap-3 p-3"><div class="h-14 w-14 shrink-0 overflow-hidden rounded-ui-button bg-ui-surface-muted">{% if item.product.image %}<img src="{{ item.product.image.url }}" alt="" class="h-full w-full object-cover">{% else %}<i data-lucide="package" class="m-4 h-6 w-6 text-ui-text-muted"></i>{% endif %}</div><div class="min-w-0 flex-1"><p class="truncate text-sm font-bold text-ui-text">{{ item.product.name }}{% if item.variant %} · {{ item.variant.label }}{% endif %}</p><p class="mt-1 text-xs text-ui-text-muted">{{ item.unit_price|intcomma }} FCFA / unite</p><div class="mt-2 flex items-center justify-between gap-2"><div class="inline-flex overflow-hidden rounded-ui-button border border-ui-border"><form hx-post="{% url 'shop:student_cart_update' %}" hx-target="#shop-cart-target" hx-swap="innerHTML">{% csrf_token %}<input type="hidden" name="product_id" value="{{ item.product_id }}">{% if item.variant_id %}<input type="hidden" name="variant_id" value="{{ item.variant_id }}">{% endif %}<input type="hidden" name="quantity" value="{{ item.quantity|add:'-1' }}"><button class="grid h-8 w-8 place-items-center" aria-label="Diminuer">−</button></form><span class="grid h-8 min-w-8 place-items-center text-xs font-semibold">{{ item.quantity }}</span><form hx-post="{% url 'shop:student_cart_update' %}" hx-target="#shop-cart-target" hx-swap="innerHTML">{% csrf_token %}<input type="hidden" name="product_id" value="{{ item.product_id }}">{% if item.variant_id %}<input type="hidden" name="variant_id" value="{{ item.variant_id }}">{% endif %}<input type="hidden" name="quantity" value="{{ item.quantity|add:'1' }}"><button class="grid h-8 w-8 place-items-center" aria-label="Augmenter">+</button></form></div><strong class="text-sm text-ui-text">{{ item.line_total|intcomma }} FCFA</strong></div></div></article>
+      {% endfor %}
+    </div>
+    <form hx-post="{% url 'shop:student_cart_checkout' %}" hx-target="#shop-cart-target" hx-swap="innerHTML" class="space-y-4 rounded-ui-card border border-ui-border bg-ui-surface p-4">
+      {% csrf_token %}
+      <div class="flex items-center justify-between"><span class="font-semibold text-ui-text-muted">Total</span><strong class="text-lg text-ui-text">{{ cart.total_amount|intcomma }} FCFA</strong></div>
+      <div class="rounded-ui-card border border-ui-info/20 bg-ui-info-soft p-3 text-sm text-ui-text-muted"><strong class="block text-ui-text">Paiement en especes</strong>La commande sera confirmee par e-mail, puis restera a encaisser. Aucun paiement ni recu ne sera cree maintenant.</div>
+      {% component "ui_core.django_form_field" field=order_request_form.agent %}{% endcomponent %}
+      {% if order_request_form.non_field_errors %}<p class="text-sm font-semibold text-ui-danger">{{ order_request_form.non_field_errors|join:", " }}</p>{% endif %}
+      <button class="ui-focus-ring flex h-ui-control w-full items-center justify-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary"><i data-lucide="mail-check" class="h-4 w-4"></i>Recevoir mon code e-mail</button>
+      <p class="text-xs text-ui-text-muted">Le code est envoye uniquement a l'adresse associee a votre compte. Le stock et le montant sont reverifies par le serveur.</p>
+    </form>
+  {% else %}<div class="rounded-ui-card border border-dashed border-ui-border p-8 text-center text-sm text-ui-text-muted"><i data-lucide="shopping-cart" class="mx-auto mb-3 h-8 w-8"></i>Votre panier est vide.</div>{% endif %}
+</section>

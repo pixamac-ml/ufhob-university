@@ -1,0 +1,16 @@
+{% extends "superadmin/unified_base.html" %}
+{% load component_tags %}
+
+{% block page_title %}Filières{% endblock %}
+{% block page_subtitle %}Gérez les filières qui structurent les programmes UFHOB.{% endblock %}
+
+{% block content_main %}
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface" data-ui-core="data-table">
+    <header class="flex flex-wrap items-center justify-between gap-3 border-b border-ui-border px-4 py-3"><div><h2 class="text-sm font-bold text-ui-text">Filières</h2><p class="mt-1 text-sm text-ui-text-muted">{{ filieres|length }} filière{{ filieres|length|pluralize }} configurée{{ filieres|length|pluralize }}.</p></div><a href="{% url 'superadmin:filiere_create' %}" class="inline-flex min-h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus"><i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i> Nouvelle filière</a></header>
+    {% if filieres %}
+      <div class="overflow-x-auto"><table class="w-full min-w-ui-table text-left text-sm"><thead class="bg-ui-surface-muted text-xs uppercase text-ui-text-muted"><tr><th scope="col" class="px-4 py-3 font-bold">Filière</th><th scope="col" class="px-4 py-3 font-bold">Description</th><th scope="col" class="px-4 py-3 font-bold">Programmes</th><th scope="col" class="px-4 py-3 font-bold">Statut</th><th scope="col" class="px-4 py-3 text-right font-bold">Actions</th></tr></thead><tbody class="divide-y divide-ui-border">{% for filiere in filieres %}<tr class="hover:bg-ui-surface-hover"><td class="px-4 py-3 font-semibold text-ui-text">{{ filiere.name }}</td><td class="max-w-xl px-4 py-3 text-ui-text-muted"><span class="block truncate">{{ filiere.description|default:"—" }}</span></td><td class="px-4 py-3">{% component "ui_core.status_badge" label=filiere.formations_count tone="info" %}{% endcomponent %}</td><td class="px-4 py-3">{% if filiere.is_active %}{% component "ui_core.status_badge" label="Active" tone="success" dot=True %}{% endcomponent %}{% else %}{% component "ui_core.status_badge" label="Inactive" tone="neutral" dot=True %}{% endcomponent %}{% endif %}</td><td class="px-4 py-3"><div class="flex justify-end gap-2"><a href="{% url 'superadmin:filiere_edit' filiere.pk %}" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-border px-3 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Modifier</a><form method="post" action="{% url 'superadmin:filiere_delete' filiere.pk %}" data-confirm-message="Supprimer cette filière ? Cette action est irréversible." data-confirm-title="Supprimer la filière" data-confirm-label="Supprimer">{% csrf_token %}<button type="submit" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-danger px-3 py-2 text-sm font-semibold text-ui-danger hover:bg-ui-danger-soft">Supprimer</button></form></div></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}
+      {% component "ui_core.empty_state" icon="book-open" title="Aucune filière" message="Les filières que vous créez apparaîtront ici." %}{% endcomponent %}
+    {% endif %}
+  </section>
+{% endblock %}

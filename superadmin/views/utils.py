@@ -1,0 +1,47 @@
+# superadmin/views/utils.py
+# Fonctions utilitaires, décorateurs, helpers transverses
+
+from django.contrib import messages
+from django.http import HttpResponse
+from django.db.models.deletion import ProtectedError
+from .models import SuperadminCockpitPreference
+from inscriptions.models import StatusHistory
+
+# Décorateur superuser_required
+def superuser_required(user):
+    from accounts.scoping import permits_university_operations
+    return bool(user.is_authenticated and user.is_superuser and permits_university_operations(user))
+
+# Safe delete avec gestion ProtectedError
+def _safe_delete(request, instance, *, success_message, protected_message, hx_redirect=None):
+    try:
+        instance.delete()
+        messages.success(request, success_message)
+    except ProtectedError:
+        messages.error(request, protected_message)
+    if request.headers.get('HX-Request') and hx_redirect:
+        return HttpResponse(status=200, headers={'HX-Redirect': hx_redirect})
+    return None
+
+# Log d'historique d'inscription
+def _log_inscription_history(inscription, previous_status, new_status, comment=''):
+    StatusHistory.objects.create(
+        inscription=inscription,
+        previous_status=previous_status,
+        new_status=new_status,
+        comment=comment,
+    )
+
+# Changement de statut d'inscription
+def _change_inscription_status(inscription, new_status, comment=''):
+    previous_status = inscription.status
+    inscription.status = new_status
+    inscription.save(update_fields=['status'])
+    # Le signal inscriptions.signals journalise deja les transitions de statut.
+    if previous_status == new_status and comment:
+        _log_inscription_history(inscription, previous_status, new_status, comment)
+
+# Récupération ou création des préférences cockpit
+def _get_cockpit_pref(user):
+    pref, _ = SuperadminCockpitPreference.objects.get_or_create(user=user)
+    return pref

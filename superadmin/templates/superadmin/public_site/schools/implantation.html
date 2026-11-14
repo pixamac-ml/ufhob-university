@@ -1,0 +1,16 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Implantation — {{ school.display_name }}{% endblock %}
+{% block page_subtitle %}Associer cette école à un campus et définir son statut{% endblock %}
+
+{% block content_main %}
+<section class="card mx-auto max-w-3xl">
+  <div class="card-header"><div><h2 class="text-base font-semibold text-ui-text">Rattachement École · Campus</h2><p class="mt-1 text-sm text-ui-text-muted">Les deux dimensions restent distinctes dans UFHOB.</p></div></div>
+  <form method="post" class="card-body space-y-5" data-confirm-message="Enregistrer ce rattachement École et Campus ?" data-confirm-title="Confirmer le rattachement" data-confirm-label="Enregistrer">
+    {% csrf_token %}
+    {% if link %}<input type="hidden" name="link_id" value="{{ link.pk }}">{% endif %}
+    {% include "superadmin/partials/_django_form_fields.html" with form=form %}
+    <div class="flex flex-wrap justify-end gap-2 border-t border-ui-border pt-4"><a class="btn btn-outline" href="{% url 'superadmin:public_school_edit' school.pk %}">Annuler</a><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,254 @@
+/* UFHOB authenticated application only. light-dark() follows this shell's
+   color-scheme, never the public site. Light values preserve the UI Core palette. */
+[data-app-shell][data-theme="light"] { color-scheme: light; }
+[data-app-shell][data-theme="dark"] { color-scheme: dark; }
+[data-app-shell][data-theme="system"] { color-scheme: light dark; }
+[data-app-shell] {
+  font-size: calc(1rem * var(--app-font-scale, 1));
+  --app-bg: light-dark(#f8fafc, #101923);
+  --surface: light-dark(#f4f6f9, #182431);
+  --surface-subtle: light-dark(#f8fafc, #15212d);
+  --surface-muted: light-dark(#eef2f6, #253440);
+  --surface-hover: light-dark(#f1f5f9, #2b3c4b);
+  --surface-elevated: light-dark(#ffffff, #1c2a38);
+  --surface-overlay: light-dark(#0f172a, #050b12);
+  --surface-selected: light-dark(#e8f3f5, #214256);
+  --surface-skeleton: light-dark(#e2e8f0, #30414e);
+
+  --text-primary: light-dark(#17212b, #f1f6fa);
+  --text-secondary: light-dark(#475569, #c7d5df);
+  --text-strong: light-dark(#0f172a, #ffffff);
+  --text-body-strong: light-dark(#334155, #dce7ee);
+  --text-subtle: light-dark(#64748b, #aec1cf);
+  --text-muted: light-dark(#5f6f7f, #b3c4d0);
+  --text-disabled: light-dark(#94a3b8, #8295a3);
+  --text-inverse: #ffffff;
+
+  --border: light-dark(#d6e4ec, #405261);
+  --border-subtle: light-dark(#dbe3ea, #354755);
+  --border-strong: light-dark(#94a3b8, #718695);
+  --border-hover: light-dark(#cbd5e1, #607989);
+
+  --input-bg: light-dark(#ffffff, #1a2a38);
+  --input-border: light-dark(#dbe3ea, #506778);
+  --input-placeholder: light-dark(#64748b, #a8bac7);
+  --input-focus: light-dark(#1db5b0, #65c8cd);
+
+  --primary: light-dark(#1e4f6f, #276f91);
+  --primary-hover: light-dark(#163b53, #205e7c);
+  --primary-active: light-dark(#123145, #194b65);
+  --primary-soft: light-dark(#eef4f7, #1d3a4c);
+  --primary-text: light-dark(#1e4f6f, #83cce8);
+  --primary-foreground: #ffffff;
+  --accent: light-dark(#f4b942, #efb947);
+  --accent-soft: light-dark(#fff7df, #3c301a);
+  --accent-strong: light-dark(#9a5b00, #f3c66b);
+  --success: light-dark(#177245, #207d52);
+  --success-text: light-dark(#177245, #72d7a2);
+  --success-soft: light-dark(#eaf7f0, #183c2d);
+  --success-foreground: #ffffff;
+  --warning: light-dark(#9a5b00, #865400);
+  --warning-text: light-dark(#9a5b00, #f6c474);
+  --warning-soft: light-dark(#fff6dd, #443419);
+  --warning-foreground: #ffffff;
+  --danger: light-dark(#b42318, #a33832);
+  --danger-text: light-dark(#b42318, #ff9991);
+  --danger-soft: light-dark(#fff0ee, #482624);
+  --danger-foreground: #ffffff;
+  --info: light-dark(#176b87, #1e6f91);
+  --info-text: light-dark(#176b87, #80cbe5);
+  --info-soft: light-dark(#eaf7fb, #1a3949);
+  --info-foreground: #ffffff;
+  --focus-ring: light-dark(#1db5b0, #74d4d4);
+  --shadow-color: 15 23 42;
+
+  --sidebar-bg: light-dark(#17394d, #102d3d);
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: rgb(255 255 255 / 0.65);
+  --sidebar-hover: light-dark(rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.16));
+  --sidebar-active: light-dark(#ffffff, #d8edf5);
+  --navbar-bg: light-dark(#ffffff, #1c2a38);
+  --navbar-border: light-dark(#dbe3ea, #354755);
+}
+
+[data-app-shell][data-font-scale="sm"] { --app-font-scale: .94; }
+[data-app-shell][data-font-scale="md"] { --app-font-scale: 1; }
+[data-app-shell][data-font-scale="lg"] { --app-font-scale: 1.08; }
+[data-app-shell][data-font-scale="xl"] { --app-font-scale: 1.16; }
+[data-app-shell] .text-xs { font-size: calc(.75rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-sm { font-size: calc(.875rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-base { font-size: calc(1rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-lg { font-size: calc(1.125rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-xl { font-size: calc(1.25rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-body { font-size: calc(.875rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-body-small { font-size: calc(.8125rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-label { font-size: calc(.75rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-caption { font-size: calc(.6875rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-micro { font-size: calc(.625rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-panel-title { font-size: calc(1rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-section-title { font-size: calc(1.125rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-page-title { font-size: calc(1.5rem * var(--app-font-scale, 1)); }
+[data-app-shell] .text-ui-display { font-size: calc(2.25rem * var(--app-font-scale, 1)); }
+[data-app-shell] .app-appearance-option {
+  display: inline-flex; align-items: center; gap: .5rem; cursor: pointer;
+  border: 1px solid var(--border-subtle); border-radius: .5rem;
+  background: var(--surface-elevated); color: var(--text-primary); padding: .5rem .75rem;
+}
+[data-app-shell] .app-appearance-option:has(input:checked) {
+  border-color: var(--primary-text); background: var(--primary-soft);
+}
+[data-app-shell] .app-appearance-option:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring); outline-offset: 2px;
+}
+[data-app-shell] .app-appearance-option input { accent-color: var(--primary); }
+
+/* The compiled Tailwind ui-* utilities retain their original fallbacks.
+   These scoped rules connect the shared shell and primitives to the tokens. */
+[data-app-shell].ui-app-shell,
+[data-app-shell] .bg-ui-surface-soft { background-color: var(--app-bg); }
+[data-app-shell] .bg-ui-surface { background-color: var(--surface-elevated); }
+[data-app-shell] .bg-ui-surface\/60 { background-color: color-mix(in srgb, var(--surface-elevated) 60%, transparent); }
+[data-app-shell] .bg-ui-surface\/90 { background-color: color-mix(in srgb, var(--surface-elevated) 90%, transparent); }
+[data-app-shell] .bg-ui-surface-muted { background-color: var(--surface-muted); }
+[data-app-shell] .bg-ui-surface-muted\/30 { background-color: color-mix(in srgb, var(--surface-muted) 30%, transparent); }
+[data-app-shell] .bg-ui-surface-muted\/40 { background-color: color-mix(in srgb, var(--surface-muted) 40%, transparent); }
+[data-app-shell] .bg-ui-surface-muted\/45 { background-color: color-mix(in srgb, var(--surface-muted) 45%, transparent); }
+[data-app-shell] .bg-ui-surface-muted\/50 { background-color: color-mix(in srgb, var(--surface-muted) 50%, transparent); }
+[data-app-shell] .bg-ui-surface-muted\/70 { background-color: color-mix(in srgb, var(--surface-muted) 70%, transparent); }
+[data-app-shell] .bg-ui-surface-soft\/70 { background-color: color-mix(in srgb, var(--app-bg) 70%, transparent); }
+[data-app-shell] .bg-ui-surface-soft\/80 { background-color: color-mix(in srgb, var(--app-bg) 80%, transparent); }
+[data-app-shell] .bg-ui-surface-hover { background-color: var(--surface-hover); }
+[data-app-shell] .bg-ui-surface\/80 { background-color: color-mix(in srgb, var(--navbar-bg) 80%, transparent); }
+[data-app-shell] .bg-ui-surface\/95 { background-color: color-mix(in srgb, var(--navbar-bg) 95%, transparent); }
+[data-app-shell] .bg-ui-selected { background-color: var(--surface-selected); }
+[data-app-shell] .bg-ui-skeleton { background-color: var(--surface-skeleton); }
+[data-app-shell] .bg-ui-sidebar { background-color: var(--sidebar-bg); }
+[data-app-shell] .bg-ui-on-primary\/10 { background-color: color-mix(in srgb, var(--text-inverse) 10%, transparent); }
+[data-app-shell] .bg-ui-overlay { background-color: var(--surface-overlay); }
+[data-app-shell] .bg-ui-overlay\/45 { background-color: color-mix(in srgb, var(--surface-overlay) 45%, transparent); }
+[data-app-shell] .bg-ui-overlay\/5 { background-color: color-mix(in srgb, var(--surface-overlay) 5%, transparent); }
+[data-app-shell] .bg-ui-primary { background-color: var(--primary); }
+[data-app-shell] .bg-ui-primary-strong { background-color: var(--primary-hover); }
+[data-app-shell] .bg-ui-primary-soft { background-color: var(--primary-soft); }
+[data-app-shell] .bg-ui-primary-soft\/20 { background-color: color-mix(in srgb, var(--primary-soft) 20%, transparent); }
+[data-app-shell] .bg-ui-primary-soft\/30 { background-color: color-mix(in srgb, var(--primary-soft) 30%, transparent); }
+[data-app-shell] .bg-ui-primary-soft\/40 { background-color: color-mix(in srgb, var(--primary-soft) 40%, transparent); }
+[data-app-shell] .bg-ui-primary-soft\/50 { background-color: color-mix(in srgb, var(--primary-soft) 50%, transparent); }
+[data-app-shell] .bg-ui-primary-soft\/60 { background-color: color-mix(in srgb, var(--primary-soft) 60%, transparent); }
+[data-app-shell] .bg-ui-accent { background-color: var(--accent); }
+[data-app-shell] .bg-ui-accent-soft { background-color: var(--accent-soft); }
+[data-app-shell] .bg-ui-success-soft { background-color: var(--success-soft); }
+[data-app-shell] .bg-ui-warning-soft { background-color: var(--warning-soft); }
+[data-app-shell] .bg-ui-danger-soft { background-color: var(--danger-soft); }
+[data-app-shell] .bg-ui-info-soft { background-color: var(--info-soft); }
+[data-app-shell] .bg-ui-success { background-color: var(--success); }
+[data-app-shell] .bg-ui-success\/10 { background-color: color-mix(in srgb, var(--success) 10%, transparent); }
+[data-app-shell] .bg-ui-warning { background-color: var(--warning); }
+[data-app-shell] .bg-ui-warning\/10 { background-color: color-mix(in srgb, var(--warning) 10%, transparent); }
+[data-app-shell] .bg-ui-warning\/15 { background-color: color-mix(in srgb, var(--warning) 15%, transparent); }
+[data-app-shell] .bg-ui-warning-soft\/40 { background-color: color-mix(in srgb, var(--warning-soft) 40%, transparent); }
+[data-app-shell] .bg-ui-danger { background-color: var(--danger); }
+[data-app-shell] .bg-ui-danger\/5 { background-color: color-mix(in srgb, var(--danger) 5%, transparent); }
+[data-app-shell] .bg-ui-danger\/10 { background-color: color-mix(in srgb, var(--danger) 10%, transparent); }
+[data-app-shell] .bg-ui-info { background-color: var(--info); }
+[data-app-shell] .bg-ui-text-muted { background-color: var(--text-muted); }
+[data-app-shell] .text-ui-text { color: var(--text-primary); }
+[data-app-shell] .text-ui-text-muted { color: var(--text-muted); }
+[data-app-shell] .text-ui-text-muted\/35 { color: color-mix(in srgb, var(--text-muted) 35%, transparent); }
+[data-app-shell] .text-ui-text-muted\/40 { color: color-mix(in srgb, var(--text-muted) 40%, transparent); }
+[data-app-shell] .text-ui-on-primary { color: var(--text-inverse); }
+[data-app-shell] .text-ui-on-primary\/35 { color: color-mix(in srgb, var(--text-inverse) 35%, transparent); }
+[data-app-shell] .text-ui-on-primary\/50 { color: color-mix(in srgb, var(--text-inverse) 50%, transparent); }
+[data-app-shell] .text-ui-on-primary\/60 { color: color-mix(in srgb, var(--text-inverse) 60%, transparent); }
+[data-app-shell] .text-ui-on-primary\/65 { color: color-mix(in srgb, var(--text-inverse) 65%, transparent); }
+[data-app-shell] .text-ui-on-primary\/75 { color: color-mix(in srgb, var(--text-inverse) 75%, transparent); }
+[data-app-shell] .text-ui-primary { color: var(--primary-text); }
+[data-app-shell] .text-ui-primary\/60 { color: color-mix(in srgb, var(--primary-text) 60%, transparent); }
+[data-app-shell] .text-ui-success { color: var(--success-text); }
+[data-app-shell] .text-ui-warning { color: var(--warning-text); }
+[data-app-shell] .text-ui-danger { color: var(--danger-text); }
+[data-app-shell] .text-ui-info { color: var(--info-text); }
+[data-app-shell] .text-ui-accent-strong { color: var(--accent-strong); }
+[data-app-shell] .text-ui-sidebar { color: var(--sidebar-bg); }
+[data-app-shell] .border-ui-border { border-color: var(--border-subtle); }
+[data-app-shell] .border-ui-border\/70 { border-color: color-mix(in srgb, var(--border-subtle) 70%, transparent); }
+[data-app-shell] .border-ui-border\/80 { border-color: color-mix(in srgb, var(--border-subtle) 80%, transparent); }
+[data-app-shell] .border-ui-primary { border-color: var(--primary); }
+[data-app-shell] .border-ui-danger { border-color: var(--danger); }
+[data-app-shell] .border-ui-focus { border-color: var(--focus-ring); }
+[data-app-shell] .border-ui-on-primary\/10 { border-color: color-mix(in srgb, var(--text-inverse) 10%, transparent); }
+[data-app-shell] .border-ui-primary\/20 { border-color: color-mix(in srgb, var(--primary) 20%, transparent); }
+[data-app-shell] .border-ui-primary\/25 { border-color: color-mix(in srgb, var(--primary) 25%, transparent); }
+[data-app-shell] .border-ui-primary\/30 { border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+[data-app-shell] .border-ui-primary\/35 { border-color: color-mix(in srgb, var(--primary) 35%, transparent); }
+[data-app-shell] .border-ui-primary\/40 { border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
+[data-app-shell] .border-ui-primary\/50 { border-color: color-mix(in srgb, var(--primary) 50%, transparent); }
+[data-app-shell] .border-ui-success\/25 { border-color: color-mix(in srgb, var(--success) 25%, transparent); }
+[data-app-shell] .border-ui-warning\/25 { border-color: color-mix(in srgb, var(--warning) 25%, transparent); }
+[data-app-shell] .border-ui-warning\/40 { border-color: color-mix(in srgb, var(--warning) 40%, transparent); }
+[data-app-shell] .border-ui-warning\/50 { border-color: color-mix(in srgb, var(--warning) 50%, transparent); }
+[data-app-shell] .border-ui-danger\/20 { border-color: color-mix(in srgb, var(--danger) 20%, transparent); }
+[data-app-shell] .border-ui-danger\/25 { border-color: color-mix(in srgb, var(--danger) 25%, transparent); }
+[data-app-shell] .border-ui-danger\/30 { border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
+[data-app-shell] .border-ui-danger\/40 { border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+[data-app-shell] .border-ui-info\/25 { border-color: color-mix(in srgb, var(--info) 25%, transparent); }
+[data-app-shell] .divide-ui-border > :not([hidden]) ~ :not([hidden]) { border-color: var(--border-subtle); }
+[data-app-shell] .shadow-ui-card { box-shadow: 0 1px 3px rgb(var(--shadow-color) / 0.08); }
+[data-app-shell] .shadow-ui-dropdown { box-shadow: 0 8px 24px rgb(var(--shadow-color) / 0.12); }
+[data-app-shell] .shadow-ui-drawer { box-shadow: 0 16px 48px rgb(var(--shadow-color) / 0.2); }
+[data-app-shell] .shadow-ui-modal { box-shadow: 0 20px 60px rgb(var(--shadow-color) / 0.24); }
+[data-app-shell] .focus-visible\:ring-ui-focus:focus-visible { --tw-ring-color: var(--focus-ring); }
+[data-app-shell] .focus\:ring-ui-focus:focus { --tw-ring-color: var(--focus-ring); }
+[data-app-shell] .ring-ui-focus { --tw-ring-color: var(--focus-ring); }
+[data-app-shell] .ring-ui-danger { --tw-ring-color: var(--danger); }
+[data-app-shell] .focus\:border-ui-focus:focus { border-color: var(--focus-ring); }
+[data-app-shell] .hover\:bg-ui-surface-hover:hover { background-color: var(--surface-hover); }
+[data-app-shell] .hover\:bg-ui-surface-muted:hover { background-color: var(--surface-muted); }
+[data-app-shell] .hover\:bg-ui-primary-strong:hover { background-color: var(--primary-hover); }
+[data-app-shell] .hover\:bg-ui-primary-soft:hover { background-color: var(--primary-soft); }
+[data-app-shell] .hover\:bg-ui-success-soft:hover { background-color: var(--success-soft); }
+[data-app-shell] .hover\:bg-ui-warning-soft:hover { background-color: var(--warning-soft); }
+[data-app-shell] .hover\:bg-ui-danger-soft:hover { background-color: var(--danger-soft); }
+[data-app-shell] .hover\:bg-ui-on-primary\/10:hover { background-color: color-mix(in srgb, var(--text-inverse) 10%, transparent); }
+[data-app-shell] .hover\:text-ui-primary:hover { color: var(--primary-text); }
+[data-app-shell] .ui-nav-item[data-active="true"] {
+  background-color: var(--sidebar-active);
+  color: var(--sidebar-bg);
+}
+[data-app-shell] .ui-nav-item[data-active="false"] {
+  color: color-mix(in srgb, var(--sidebar-text) 80%, transparent);
+}
+[data-app-shell] .ui-nav-item[data-active="false"]:hover {
+  background-color: var(--sidebar-hover);
+  color: var(--sidebar-text);
+}
+[data-app-shell] .ui-control {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+[data-app-shell] .ui-focus-ring:focus-visible { --tw-ring-color: var(--focus-ring); }
+[data-app-shell] [data-ui-core="form-field"][data-ui-form-state="error"] :is(input, select, textarea) {
+  border-color: var(--danger);
+  --tw-ring-color: var(--danger);
+}
+[data-app-shell] :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]) {
+  color: var(--text-primary);
+}
+[data-app-shell] :is(input, textarea)::placeholder { color: var(--input-placeholder); }
+[data-app-shell] :is(input, select, textarea):disabled { color: var(--text-disabled); }
+
+/* Small bridge for the older staff shell; no layout or Tailwind build change. */
+[data-app-shell] .app-surface { background-color: var(--surface-elevated); }
+[data-app-shell] .app-surface-subtle { background-color: var(--surface-subtle); }
+[data-app-shell] .app-surface-hover { background-color: var(--surface-hover); }
+[data-app-shell] .app-border { border-color: var(--border-subtle); }
+[data-app-shell] .app-border-soft { border-color: var(--surface-hover); }
+[data-app-shell] .app-text-strong { color: var(--text-strong); }
+[data-app-shell] .app-text-body-strong { color: var(--text-body-strong); }
+[data-app-shell] .app-text-secondary { color: var(--text-secondary); }
+[data-app-shell] .app-text-subtle { color: var(--text-subtle); }
+[data-app-shell] .app-text-disabled { color: var(--text-disabled); }
+[data-app-shell] .app-hover-border:hover { border-color: var(--border-hover); }
+[data-app-shell] .app-hover-text-strong:hover { color: var(--text-strong); }
+[data-app-shell] .app-hover-surface-subtle:hover { background-color: var(--surface-subtle); }

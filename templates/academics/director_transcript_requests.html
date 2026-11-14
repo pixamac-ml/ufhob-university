@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="container mx-auto p-6">
+  <h1>Relevés officiels</h1>
+  <form method="get" class="mb-4 flex flex-wrap gap-2">
+    <input name="q" value="{{ request.GET.q }}" placeholder="Nom, prénom ou matricule">
+    <select name="status"><option value="">Tous les statuts</option>{% for value, label in status_choices %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <input name="school" value="{{ request.GET.school }}" placeholder="ID école">
+    <input name="branch" value="{{ request.GET.branch }}" placeholder="ID campus">
+    <input name="programme" value="{{ request.GET.programme }}" placeholder="ID programme">
+    <input name="academic_class" value="{{ request.GET.academic_class }}" placeholder="ID classe">
+    <input name="semester" value="{{ request.GET.semester }}" placeholder="ID semestre">
+    <input name="academic_year" value="{{ request.GET.academic_year }}" placeholder="ID année">
+    <button type="submit">Filtrer</button>
+  </form>
+  <table>
+    <thead><tr><th>Étudiant</th><th>École / campus</th><th>Programme / classe</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>{% for request_item in transcript_requests %}{% include "academics/partials/transcript_request_row.html" %}{% empty %}<tr><td colspan="5">Aucune demande dans votre périmètre.</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endblock %}

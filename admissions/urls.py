@@ -1,18 +1,48 @@
 from django.urls import path
-from .views import apply_to_programme,candidature_confirmation
+from . import views
 
 app_name = "admissions"
 
 urlpatterns = [
     path(
+        "",
+        views.admission_tunnel,
+        name="admission_tunnel",
+    ),
+    path(
+        "partials/step3/formations/",
+        views.admission_step3_formations,
+        name="admission_step3_formations",
+    ),
+    path(
+        "partials/step3/documents/",
+        views.admission_step3_documents,
+        name="admission_step3_documents",
+    ),
+    path(
+        "partials/step3/campuses/",
+        views.admission_step3_campuses,
+        name="step3_campuses",
+    ),
+    path(
+        "partials/step3/cycles/",
+        views.admission_step3_cycles,
+        name="step3_cycles",
+    ),
+    path(
+        "done/<int:candidature_id>/",
+        views.admission_done,
+        name="done",
+    ),
+    path(
         "s-inscrire/<slug:slug>/",
-        apply_to_programme,
+        views.apply_to_programme,
         name="apply"
     ),
 
     path(
         "confirmation/<int:candidature_id>/",
-        candidature_confirmation,
+        views.candidature_confirmation,
         name="confirmation"
     ),
 

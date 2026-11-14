@@ -1,0 +1,29 @@
+<div data-ui-core="form-field" data-ui-form-state="{% if loading %}loading{% elif error %}error{% elif success %}success{% else %}default{% endif %}">
+  {% if label %}
+    <label for="{{ id }}" class="mb-1.5 block text-sm font-semibold text-ui-text">
+      {{ label }}{% if required %}<span class="text-ui-danger" aria-hidden="true"> *</span>{% endif %}
+    </label>
+  {% endif %}
+  {% if loading %}
+    <div class="h-ui-control w-full animate-pulse rounded-ui-input bg-ui-surface-muted" role="status" aria-label="Chargement du champ"></div>
+  {% else %}
+    <div class="{% if prefix or suffix %}flex items-center{% endif %}">
+      {% if prefix %}<span class="flex-shrink-0 border-r border-ui-border bg-ui-surface-muted px-3 text-sm text-ui-text-muted">{{ prefix }}</span>{% endif %}
+      {% if type == "textarea" %}
+        <textarea id="{{ id }}" name="{{ name }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %} {% if disabled %}disabled aria-disabled="true"{% endif %} {% if readonly %}readonly{% endif %} {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %} {% if help_text or error or success %}aria-describedby="{{ id }}-message"{% endif %}{% if error %} aria-invalid="true"{% endif %} class="min-h-24 w-full rounded-ui-input border bg-ui-surface px-3 py-2 text-sm text-ui-text disabled:cursor-not-allowed disabled:bg-ui-surface-muted {% if error %}border-ui-danger focus:border-ui-danger focus:ring-ui-danger{% else %}border-ui-border focus:border-ui-focus focus:ring-ui-focus{% endif %}">{{ value }}</textarea>
+      {% elif type == "select" %}
+        <select id="{{ id }}" name="{{ name }}" {% if required %}required{% endif %} {% if disabled %}disabled aria-disabled="true"{% endif %} {% if help_text or error or success %}aria-describedby="{{ id }}-message"{% endif %}{% if error %} aria-invalid="true"{% endif %} class="h-ui-control w-full rounded-ui-input border bg-ui-surface px-3 text-sm text-ui-text disabled:cursor-not-allowed disabled:bg-ui-surface-muted {% if error %}border-ui-danger focus:border-ui-danger focus:ring-ui-danger{% else %}border-ui-border focus:border-ui-focus focus:ring-ui-focus{% endif %}">
+          {% for option in options %}<option value="{{ option.value }}" {% if option.value == value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <input id="{{ id }}" name="{{ name }}" type="{{ type }}" {% if type != "file" %}value="{{ value }}"{% endif %} placeholder="{{ placeholder }}" {% if accept %}accept="{{ accept }}"{% endif %} {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %} {% if inputmode %}inputmode="{{ inputmode }}"{% endif %} {% if min_value != '' %}min="{{ min_value }}"{% endif %} {% if max_value != '' %}max="{{ max_value }}"{% endif %} {% if step != '' %}step="{{ step }}"{% endif %} {% if required %}required{% endif %} {% if disabled %}disabled aria-disabled="true"{% endif %} {% if readonly %}readonly{% endif %} {% if help_text or error or success %}aria-describedby="{{ id }}-message"{% endif %}{% if error %} aria-invalid="true"{% endif %} class="h-ui-control w-full rounded-ui-input border bg-ui-surface px-3 text-sm text-ui-text disabled:cursor-not-allowed disabled:bg-ui-surface-muted {% if error %}border-ui-danger focus:border-ui-danger focus:ring-ui-danger{% else %}border-ui-border focus:border-ui-focus focus:ring-ui-focus{% endif %} {% if prefix %}rounded-l-none{% endif %}{% if suffix %}rounded-r-none{% endif %}">
+      {% endif %}
+      {% if suffix %}<span class="flex-shrink-0 border-l border-ui-border bg-ui-surface-muted px-3 text-sm text-ui-text-muted">{{ suffix }}</span>{% endif %}
+    </div>
+  {% endif %}
+  {% if error or success or help_text %}
+    <p id="{{ id }}-message" class="mt-1.5 text-xs {% if error %}font-semibold text-ui-danger{% elif success %}font-semibold text-ui-success{% else %}text-ui-text-muted{% endif %}"{% if error %} role="alert"{% elif success %} role="status"{% endif %}>
+      {{ error|default:success|default:help_text }}
+    </p>
+  {% endif %}
+</div>

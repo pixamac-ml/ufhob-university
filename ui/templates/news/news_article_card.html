@@ -1,96 +1,41 @@
-<article class="bg-white rounded-2xl shadow-sm border border-primary-50 overflow-hidden hover:shadow-md transition duration-300">
-
+{% load static %}
+<article class="news-editorial-card group">
     {% if news.image %}
-    <a href="{{ news.get_absolute_url }}" class="block overflow-hidden">
-        <img src="{{ news.image.url }}"
-             alt="{{ news.titre }}"
-             class="w-full h-64 object-cover hover:scale-[1.02] transition duration-500">
+    <a href="{{ news.get_absolute_url }}" class="news-editorial-card__media">
+        <img src="{{ news.image.url }}" alt="{{ news.titre }}" loading="lazy">
     </a>
+    {% else %}
+    <a href="{{ news.get_absolute_url }}" class="news-editorial-card__media"><img src="{% static 'images/placeholders/ufhob-university-life-cover-v1.png' %}" alt="Illustration UFHOB pour {{ news.titre }}" loading="lazy"></a>
     {% endif %}
 
-    <div class="p-8 space-y-6">
-
-        <!-- META -->
-        <div class="flex flex-wrap items-center gap-6 text-sm text-gray-400">
-
-            <!-- Date -->
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-primary-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M8 7V3m8 4V3m-9 8h10m-11 8h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-                <span>{{ news.published_at|date:"d M Y" }}</span>
-            </div>
-
-            <!-- Catégorie -->
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-primary-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M7 7h10l4 4-10 10-4-4V7z"/>
-                </svg>
-                <span>{{ news.categorie.nom }}</span>
-            </div>
-
-            <!-- Vues -->
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-primary-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5
-                             c4.477 0 8.268 2.943 9.542 7
-                             -1.274 4.057-5.065 7-9.542 7
-                             -4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-                <span>{{ news.views_count }}</span>
-            </div>
-
-            {% if news.is_important %}
-            <span class="px-3 py-1 text-xs rounded-full bg-secondary/10 text-secondary font-medium">
-                Important
-            </span>
-            {% endif %}
-
-            {% if news.is_urgent %}
-            <span class="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 font-medium">
-                Urgent
-            </span>
-            {% endif %}
-
+    <div class="flex flex-1 flex-col p-5 sm:p-6">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-bold uppercase tracking-[0.12em] text-ufhob-muted">
+            <span class="text-ufhob-secondary-dark">{{ news.categorie.nom }}</span>
+            <span aria-hidden="true">·</span>
+            <time datetime="{{ news.published_at|date:'c' }}">{{ news.published_at|date:"d M Y" }}</time>
+            {% if news.is_important %}<span class="news-status-badge news-status-badge--important">Important</span>{% endif %}
+            {% if news.is_urgent %}<span class="news-status-badge news-status-badge--urgent">Urgent</span>{% endif %}
         </div>
 
-        <!-- TITRE -->
-        <h2 class="text-2xl md:text-3xl font-semibold leading-snug text-primary-700">
-            <a href="{{ news.get_absolute_url }}"
-               class="hover:text-secondary transition">
-                {{ news.titre }}
-            </a>
+        <h2 class="mt-4 line-clamp-2 text-xl font-bold leading-snug text-ufhob-primary text-balance sm:text-2xl">
+            <a href="{{ news.get_absolute_url }}" class="transition-colors hover:text-ufhob-secondary-dark">{{ news.titre }}</a>
         </h2>
 
-        <!-- RÉSUMÉ -->
-        {% if news.resume %}
-        <p class="text-gray-600 leading-relaxed">
-            {{ news.resume|truncatewords:30 }}
-        </p>
-        {% endif %}
+        {% if news.resume %}<p class="mt-3 line-clamp-3 text-sm leading-6 text-ufhob-muted">{{ news.resume|striptags|truncatewords:28 }}</p>{% endif %}
 
-        <!-- FOOTER -->
-        <div class="flex items-center justify-between pt-4 border-t border-primary-50">
-
-            <a href="{{ news.get_absolute_url }}"
-               class="inline-flex items-center gap-2 text-primary-600 font-medium hover:text-secondary transition">
-
-                Lire le communiqué
-
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
-                     viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-
+        <div class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ufhob-border pt-5">
+            <a href="{{ news.get_absolute_url }}" class="news-text-link">Lire la publication <span aria-hidden="true">→</span></a>
+            <button type="button"
+                    class="news-card-preview"
+                    @click="$dispatch('open-news-modal', {
+                        title: '{{ news.titre|escapejs }}',
+                        category: '{{ news.categorie.nom|escapejs }}',
+                        date: '{{ news.published_at|date:"d M Y" }}',
+                        summary: '{{ news.resume|default:news.contenu|striptags|truncatewords:45|escapejs }}',
+                        url: '{{ news.get_absolute_url }}'
+                    })">
+                Aperçu rapide
+            </button>
         </div>
-
     </div>
-
 </article>

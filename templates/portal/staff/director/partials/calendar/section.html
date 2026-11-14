@@ -1,0 +1,90 @@
+{% load component_tags %}
+<section id="director-calendar-section" class="min-w-0 space-y-5" {% if dg_calendar_context %}hx-vals='{"scope_branch_id":"{{ director_calendar_branch.id|default:"" }}"{% if director_calendar_branch %},"academic_year_id":"{{ director_active_academic_year.id|default:"" }}"{% endif %}}'{% endif %}>
+  {% component "ui_core.page_header" eyebrow="Pilotage académique" title="Calendrier académique" subtitle="Année institutionnelle et calendriers des annexes." %}
+    {% fill "actions" %}
+      {% if dg_calendar_context and director_selected_calendar %}
+      <form hx-post="{% url 'accounts_portal:director_calendar_action' %}" hx-target="#director-calendar-section" hx-swap="outerHTML">
+        {% csrf_token %}<input type="hidden" name="calendar_id" value="{{ director_selected_calendar.id }}">
+        {% if director_calendar_edit_mode %}<input type="hidden" name="action" value="exit_calendar_edit">{% else %}<input type="hidden" name="action" value="enter_calendar_edit">{% endif %}
+        <button class="ui-focus-ring h-ui-control rounded-ui-button bg-ui-primary px-3 text-xs font-semibold text-ui-on-primary">{% if director_calendar_edit_mode %}Terminer la modification{% else %}Modifier le calendrier{% endif %}</button>
+      </form>
+      {% endif %}
+      {% if director_selected_calendar and not director_calendar_read_only %}
+      <a href="{{ calendar_tabs.1.href }}" hx-get="{{ calendar_tabs.1.hx_get }}" hx-target="#director-calendar-subcontent" hx-swap="innerHTML" hx-push-url="{{ calendar_tabs.1.hx_push_url }}" hx-indicator="#director-calendar-loading" class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-3 text-xs font-semibold text-ui-on-primary">
+        <i data-lucide="calendar-plus" class="h-4 w-4" aria-hidden="true"></i>{% if director_selected_calendar %}Configurer{% else %}Créer le calendrier{% endif %}
+      </a>
+      {% endif %}
+      {% if director_selected_calendar %}
+        {% component "ui_core.status_badge" label=director_selected_calendar.get_status_display tone="info" %}{% endcomponent %}
+        <span class="inline-flex h-ui-control items-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-3 text-xs font-semibold text-ui-text">
+          <i data-lucide="git-branch" class="h-4 w-4 text-ui-primary" aria-hidden="true"></i>V{{ director_selected_calendar.version }}
+        </span>
+        <details class="relative">
+          <summary class="ui-focus-ring inline-flex h-ui-control cursor-pointer list-none items-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-3 text-xs font-semibold text-ui-text"><i data-lucide="ellipsis" class="h-4 w-4"></i>Plus</summary>
+          <div class="absolute right-0 z-30 mt-2 w-52 overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface py-1 shadow-lg">
+            {% for tab in calendar_advanced_tabs %}
+              {% if tab.id != "disruptions" or director_selected_calendar.status == "published" %}
+              <a href="{{ tab.href }}" hx-get="{{ tab.hx_get }}" hx-target="#director-calendar-subcontent" hx-swap="innerHTML" hx-push-url="{{ tab.hx_push_url }}" hx-indicator="#director-calendar-loading" class="ui-focus-ring flex items-center gap-2 px-3 py-2 text-xs font-semibold text-ui-text hover:bg-ui-surface-hover"><i data-lucide="{{ tab.icon }}" class="h-4 w-4 text-ui-text-muted"></i>{{ tab.label }}</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
+    {% endfill %}
+  {% endcomponent %}
+
+  {% if toast %}
+    {% if toast.level == "success" %}{% component "ui_core.alert" title="Calendrier académique" message=toast.message tone="success" %}{% endcomponent %}{% else %}{% component "ui_core.alert" title="Action non effectuée" message=toast.message tone="danger" %}{% endcomponent %}{% endif %}
+  {% endif %}
+
+  {% if director_calendar_can_manage_academic_years %}
+    <h2 class="text-sm font-semibold text-ui-text">Gestion institutionnelle des années académiques</h2>
+    {% include "portal/staff/director/partials/calendar/year_management.html" %}
+  {% endif %}
+
+  {% if director_calendar_has_branch %}
+  <div class="rounded-ui-card border border-ui-border bg-ui-surface p-4 text-sm text-ui-text">
+    <h2 class="font-semibold">Calendrier académique — {{ director_calendar_branch.name }}</h2>
+    <p>Année institutionnelle : {{ director_active_academic_year.name|default:"Aucune année ouverte" }}{% if director_active_academic_year.is_active %} — ACTIVE{% endif %}</p>
+    <p>Responsable : {% for assignment in director_calendar_responsibles %}{{ assignment.user.get_full_name|default:assignment.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}Non assigné{% endfor %}</p>
+    {% if dg_calendar_context %}<p>{% if director_calendar_edit_mode %}Mode édition DG{% else %}Consultation / supervision{% endif %}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if not director_calendar_has_branch %}
+    {% component "ui_core.empty_state" title="Sélectionnez une annexe" message="L’année académique est gérée au niveau institutionnel. Choisissez ensuite une annexe dans le contexte DG pour préparer ou consulter son calendrier." icon="building-2" %}{% endcomponent %}
+  {% elif not director_calendar_has_active_year %}
+    {% component "ui_core.empty_state" title="Aucune année académique active" message="Une année académique doit d’abord être ouverte par la Direction générale." icon="calendar-x" %}{% endcomponent %}
+  {% else %}
+  {% component "ui_core.tabs" id="director-calendar-tabs" items=calendar_tabs active=calendar_subview density="compact" %}{% endcomponent %}
+
+  {% if director_academic_calendars %}
+  <form hx-post="{% url 'accounts_portal:director_calendar_action' %}" hx-trigger="change from:#director-calendar-picker" hx-target="#director-calendar-section" hx-swap="outerHTML" hx-indicator="#director-calendar-loading" class="flex items-center gap-3 rounded-ui-card border border-ui-border bg-ui-surface px-3 py-2">
+    {% csrf_token %}<input type="hidden" name="action" value="select_calendar">
+    <label for="director-calendar-picker" class="shrink-0 text-xs font-semibold text-ui-text">Version du calendrier de l’annexe</label>
+    <select id="director-calendar-picker" name="calendar_id" class="ui-focus-ring h-ui-control min-w-0 flex-1 rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text">
+      {% for cal in director_academic_calendars %}<option value="{{ cal.id }}" {% if director_selected_calendar and cal.id == director_selected_calendar.id %}selected{% endif %}>{{ cal.academic_year.name }} — V{{ cal.version }} — {{ cal.get_status_display }}</option>{% endfor %}
+    </select>
+    <span class="hidden text-xs text-ui-text-muted sm:inline">La sélection s’ouvre automatiquement.</span>
+  </form>
+  {% endif %}
+
+  <div class="relative min-w-0">
+    <div id="director-calendar-loading" class="htmx-indicator pointer-events-none absolute inset-0 z-20">
+      {% component "ui_core.loading_overlay" loading=True label="Chargement du calendrier" %}{% endcomponent %}
+    </div>
+    <div id="director-calendar-subcontent" class="min-w-0" aria-live="polite">
+      {% include "portal/staff/director/partials/calendar/content.html" %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% if director_calendar_refresh_dg_year_selector %}
+  <select id="dg-academic-year-select" hx-swap-oob="outerHTML" class="rounded-ui-button border border-ui-border bg-ui-surface px-2 py-2 text-sm text-ui-text" onchange="dgHandleAcademicYearChange(this.value)">
+    {% for academic_year in director_dg_academic_years %}
+      <option value="{{ academic_year.id }}" {% if director_dg_selected_academic_year_id == academic_year.id|stringformat:"s" %}selected{% endif %}>{{ academic_year.name }}</option>
+    {% empty %}
+      <option value="">Aucune année</option>
+    {% endfor %}
+  </select>
+{% endif %}

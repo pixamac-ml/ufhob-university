@@ -1,0 +1,19 @@
+{% load component_tags %}
+{% url 'accounts_portal:teacher_course_studio' as course_studio_url %}
+<section id="teacher-panel-supports" data-teacher-section="supports" class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Pédagogie" title="Ressources de cours" subtitle="Choisissez une classe, une matière, puis déposez votre fichier, vidéo ou texte." %}
+    {% fill "actions" %}<a href="{{ course_studio_url }}" class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong"><i data-lucide="book-open-check" class="h-4 w-4"></i>Ouvrir Course Studio</a>{% endfill %}
+  {% endcomponent %}
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in section_kpi_cards %}{% component "ui_core.stat_card" label=card.label value=card.value icon=card.icon tone=card.tone compact=True %}{% endcomponent %}{% endfor %}
+  </div>
+  {% component "ui_core.panel" title="1. Choisir le cours concerné" subtitle="Sélectionnez une classe : vous choisirez ensuite la matière et le chapitre." %}
+    {% if class_focus_rows %}
+      <div class="grid gap-3 sm:grid-cols-2">
+        {% for row in class_focus_rows %}
+          <a href="{{ course_studio_url }}?class_id={{ row.class_id }}&teaching_branch_id={{ row.branch_id }}" class="flex w-full items-center justify-between rounded-ui-button border border-ui-border px-3 py-2 text-left text-sm font-semibold text-ui-text hover:bg-ui-surface-hover"><span>{{ row.class_name }}<span class="mt-1 block text-xs font-normal text-ui-text-muted">{{ row.school_code|default:"École à rattacher" }} · {{ row.branch_name }} · {{ row.programme_title }} · {{ row.academic_year_name }}</span></span><i data-lucide="book-open-check" class="h-4 w-4 text-ui-primary"></i></a>
+        {% endfor %}
+      </div>
+    {% else %}{% component "ui_core.empty_state" icon="folder-open" title="Aucune classe rattachée" message="Un support peut être ajouté dès qu'une affectation est publiée." %}{% endcomponent %}{% endif %}
+  {% endcomponent %}
+</section>

@@ -1,0 +1,13 @@
+{% extends "portal/staff/director_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <script>
+    window.StudentDashboardConfig = {
+      contentProgressUrlTemplate: "{% url 'portal_student:content_progress' 0 %}",
+      academicYearId: "{{ selected_academic_year_id|default_if_none:'' }}"
+    };
+  </script>
+  <script src="{% static 'portal/student/dashboard.js' %}?v=student-certified-2"></script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "public/base.html" %}
+{% load component_tags %}
+
+{% block title %}{{ page_title }} – UFHOB{% endblock %}
+{% block content %}
+<section class="bg-ufhob-ivory py-14 sm:py-18">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <c-public.section_header eyebrow="Recherche & innovation" title=page_title text=page_intro />
+    <form method="get" class="mt-8 grid gap-3 border border-ufhob-border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5" hx-get="{{ request.path }}" hx-target="#scientific-results" hx-swap="innerHTML" hx-push-url="true" hx-trigger="change, submit">
+      {% if not fixed_work_type %}<label><span class="sr-only">Type de travail</span><select name="type" class="w-full border border-ufhob-border px-3 py-2.5 text-sm"><option value="" {% if not type_actif %}selected{% endif %}>Tous les types</option><option value="publication" {% if type_actif == 'publication' %}selected{% endif %}>Publications / travaux de recherche</option><option value="memoire" {% if type_actif == 'memoire' %}selected{% endif %}>Mémoires</option><option value="these" {% if type_actif == 'these' %}selected{% endif %}>Thèses</option></select></label>{% else %}<input type="hidden" name="type" value="{{ fixed_work_type }}">{% endif %}
+      <label><span class="sr-only">École</span><select name="school" class="w-full border border-ufhob-border px-3 py-2.5 text-sm"><option value="">Toutes les écoles</option>{% for school in school_choices %}<option value="{{ school.id }}" {% if school.id|stringformat:'s' == school_active %}selected{% endif %}>{{ school.display_name }}</option>{% endfor %}</select></label>
+      <label><span class="sr-only">Programme</span><select name="filiere" class="w-full border border-ufhob-border px-3 py-2.5 text-sm"><option value="">Tous les programmes</option>{% for filiere in filieres %}<option value="{{ filiere.id }}" {% if filiere.id|stringformat:'s' == filiere_active %}selected{% endif %}>{{ filiere.name }}</option>{% endfor %}</select></label>
+      <label><span class="sr-only">Année</span><input type="number" name="annee" value="{{ annee_active }}" placeholder="Année" class="w-full border border-ufhob-border px-3 py-2.5 text-sm"></label>
+      <label><span class="sr-only">Recherche textuelle</span><input name="q" value="{{ q }}" placeholder="Titre, auteur, mot-clé" class="w-full border border-ufhob-border px-3 py-2.5 text-sm"></label>
+      <button class="bg-ufhob-primary px-4 py-2.5 text-sm font-bold text-white lg:col-span-5">Rechercher</button>
+    </form>
+    <div id="scientific-results" class="mt-8">{% include "memoires/partials/public_results.html" %}</div>
+  </div>
+</section>
+{% endblock %}

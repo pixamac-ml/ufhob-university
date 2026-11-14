@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cahier de séance | UFHOB</title>
+  <link rel="stylesheet" href="{% static 'app/css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app/tokens.css' %}">
+</head>
+<body class="dashboard-shell min-h-screen bg-ui-app text-ui-text">
+<main class="mx-auto max-w-2xl p-4 sm:p-8">
+  {% if invalid %}
+    <section class="rounded-ui-card border border-ui-danger bg-ui-danger-soft p-5"><h1 class="text-xl font-bold text-ui-danger">Session indisponible</h1><p class="mt-2">Ce lien a expiré ou a déjà été utilisé.</p></section>
+  {% elif completed %}
+    <section class="rounded-ui-card border border-ui-success bg-ui-success-soft p-5"><h1 class="text-xl font-bold text-ui-success">Cahier soumis</h1><p class="mt-2">Le cahier est attribué à l'enseignant et transmis au surveillant. Vous pouvez remettre le terminal à la gestionnaire.</p></section>
+  {% else %}
+    <header class="mb-5"><p class="text-sm font-semibold text-ui-text-muted">Accès assisté · séance #{{ event.id }}</p><h1 class="text-2xl font-bold">{{ event.ec.title }}</h1><p class="mt-1 text-ui-text-muted">{{ event.academic_class.display_name }} · {{ event.start_datetime|date:"d/m/Y H:i" }}–{{ event.end_datetime|date:"H:i" }}</p></header>
+    {% if error %}<div class="mb-4 rounded-ui-card border border-ui-danger bg-ui-danger-soft p-3 text-sm text-ui-danger">{{ error }}</div>{% endif %}
+    <form method="post" class="space-y-4 rounded-ui-card border border-ui-border bg-ui-surface p-5">
+      {% csrf_token %}
+      <p class="text-sm text-ui-text-muted">L'enseignant affecté confirme lui-même son identité. Ces identifiants ne remplacent pas la session gestionnaire et ne donnent accès à aucun dashboard.</p>
+      <label class="block text-sm font-semibold">Identifiant<input name="username" autocomplete="username" required class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="block text-sm font-semibold">Mot de passe<input name="password" type="password" autocomplete="current-password" required class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="block text-sm font-semibold">Contenu effectivement traité<textarea name="content" rows="5" required class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></textarea></label>
+      <label class="block text-sm font-semibold">Chapitre / progression<textarea name="chapter_progress" rows="2" class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></textarea></label>
+      <label class="block text-sm font-semibold">Travaux / exercices<textarea name="homework" rows="2" class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></textarea></label>
+      <label class="block text-sm font-semibold">Observations<textarea name="observations" rows="2" class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></textarea></label>
+      <label class="block text-sm font-semibold">État<select name="session_outcome" class="mt-1 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"><option value="normal">Effectuée normalement</option><option value="partial">Effectuée partiellement</option><option value="incident">Incident / difficulté</option></select></label>
+      <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="certified" required class="mt-1"><span>Je certifie que les informations renseignées correspondent à la séance effectuée.</span></label>
+      <button class="rounded-ui-button bg-ui-primary px-4 py-2 font-semibold text-ui-on-primary">Certifier et soumettre</button>
+    </form>
+  {% endif %}
+</main>
+</body>
+</html>

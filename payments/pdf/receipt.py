@@ -30,10 +30,7 @@ def render_pdf(*, payment, inscription, qr_image):
     # WATERMARK LOGO (BACKGROUND INSTITUTIONNEL)
     # ======================================================
 
-    watermark_path = os.path.join(
-        settings.BASE_DIR,
-        "static/institution/logo.png"
-    )
+    watermark_path = os.path.join(settings.BASE_DIR, "static/images/students/logo-ubhob.png")
 
     try:
 
@@ -81,7 +78,7 @@ def render_pdf(*, payment, inscription, qr_image):
     c.drawCentredString(
         width / 2,
         height - 40,
-        "ÉCOLE DE SANTÉ FÉLIX HOUPHOUËT-BOIGNY"
+        "UNIVERSITÉ FÉLIX HOUPHOUËT-BOIGNY - MALI"
     )
 
     c.setFont("Helvetica", 9)
@@ -89,17 +86,14 @@ def render_pdf(*, payment, inscription, qr_image):
     c.drawCentredString(
         width / 2,
         height - 52,
-        "Institution de formation paramédicale — Bamako, Mali"
+        f"{getattr(getattr(programme, 'school', None), 'display_name', '')} · {getattr(getattr(inscription, 'candidature', None), 'branch', None) or ''}"
     )
 
     # ======================================================
     # LOGO
     # ======================================================
 
-    logo_path = os.path.join(
-        settings.BASE_DIR,
-        "static/institution/logo.png"
-    )
+    logo_path = os.path.join(settings.BASE_DIR, "static/images/students/logo-ubhob.png")
 
     try:
 
@@ -111,6 +105,13 @@ def render_pdf(*, payment, inscription, qr_image):
             mask='auto'
         )
 
+    except Exception:
+        pass
+
+    school_logo = getattr(getattr(programme, "school", None), "logo", None)
+    try:
+        if school_logo and os.path.isfile(school_logo.path):
+            c.drawImage(school_logo.path, width - 45 * mm, height - 55 * mm, width=25 * mm, mask="auto")
     except Exception:
         pass
 
@@ -346,7 +347,7 @@ def render_pdf(*, payment, inscription, qr_image):
     c.drawCentredString(
         width / 2,
         40,
-        "Document généré automatiquement par le système de gestion académique ESFé."
+        "Document généré automatiquement par le système de gestion académique UFHOB-Mali."
     )
 
     c.drawCentredString(

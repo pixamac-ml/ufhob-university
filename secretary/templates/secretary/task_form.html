@@ -1,0 +1,27 @@
+{% extends "secretary/base.html" %}
+{% load component_tags %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="sg-panel">
+    <div class="sg-section-hero">
+        <div>
+            <p class="sg-badge-sm sg-badge-blue">{{ modal_kicker|default:"Suivi" }}</p>
+            <div class="sg-section-hero-title" style="margin-top:8px;">{{ page_title }}</div>
+            <div class="sg-section-hero-sub">{{ modal_description|default:"Creer ou mettre a jour une tache du secretariat." }}</div>
+        </div>
+        <div class="sg-section-actions">
+            <a class="sg-btn sg-btn-outline" href="{% url 'secretary:task_list' %}">{% component "icon" name="arrow-left" %}{% endcomponent %}Retour</a>
+        </div>
+    </div>
+
+    <form method="post" style="display:grid;gap:16px;">
+        {% csrf_token %}
+        {% include "secretary/htmx/form_fields.html" %}
+        <div class="sg-form-footer">
+            <button class="sg-btn sg-btn-primary" type="submit">{% component "icon" name="check" %}{% endcomponent %}{{ submit_label|default:"Enregistrer" }}</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

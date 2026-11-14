@@ -7,6 +7,7 @@ Objectifs :
 - sécurité multi-annexe
 - base commune pour tous les dashboards
 """
+from accounts.scoping import scoped
 
 from admissions.models import Candidature
 from inscriptions.models import Inscription
@@ -38,6 +39,8 @@ def get_base_queryset(user, model_type):
 
     branch = get_user_branch(user)
     is_global = is_global_viewer(user)
+    institutional = getattr(user, "institutional_profile", None)
+    school_wide = institutional is not None and institutional.scope == "SCHOOL"
 
     # ==========================================================
     # CANDIDATURES
@@ -46,14 +49,15 @@ def get_base_queryset(user, model_type):
     if model_type == "candidature":
 
         qs = (
-            Candidature.objects
+            scoped(Candidature, user=user)
+            .filter(is_deleted=False)
             .select_related(
                 "programme",
                 "branch"
             )
         )
 
-        if not is_global:
+        if not is_global and not school_wide:
 
             if not branch:
                 return qs.none()
@@ -70,7 +74,11 @@ def get_base_queryset(user, model_type):
     if model_type == "inscription":
 
         qs = (
-            Inscription.objects
+            scoped(Inscription, user=user)
+            .filter(
+                is_archived=False,
+                candidature__is_deleted=False,
+            )
             .select_related(
                 "candidature",
                 "candidature__programme",
@@ -78,7 +86,7 @@ def get_base_queryset(user, model_type):
             )
         )
 
-        if not is_global:
+        if not is_global and not school_wide:
 
             if not branch:
                 return qs.none()
@@ -97,7 +105,11 @@ def get_base_queryset(user, model_type):
     if model_type == "payment":
 
         qs = (
-            Payment.objects
+            scoped(Payment, user=user)
+            .filter(
+                inscription__is_archived=False,
+                inscription__candidature__is_deleted=False,
+            )
             .select_related(
                 "inscription",
                 "inscription__candidature",
@@ -107,7 +119,7 @@ def get_base_queryset(user, model_type):
             )
         )
 
-        if not is_global:
+        if not is_global and not school_wide:
 
             if not branch:
                 return qs.none()

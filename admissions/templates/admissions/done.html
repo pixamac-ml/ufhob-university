@@ -1,0 +1,21 @@
+{% extends "public/base.html" %}
+{% block title %}Candidature reçue | UFHOB{% endblock %}
+{% block content %}
+<section class="bg-ufhob-ivory py-16 sm:py-24">
+  <div class="mx-auto max-w-3xl px-5">
+    <div class="border border-ufhob-border bg-white p-6 sm:p-10">
+      <p class="text-xs font-bold uppercase tracking-widest text-ufhob-secondary-dark">UFHOB · Admissions</p>
+      <h1 class="mt-4 text-3xl font-bold text-ufhob-primary">Votre candidature est reçue.</h1>
+      <p class="mt-4 text-ufhob-muted">Votre dossier pour {{ candidature.programme.title }}, sur le campus {{ candidature.branch.name }}, a été transmis au service des admissions.</p>
+      <dl class="mt-6 border-y border-ufhob-border py-4 text-sm space-y-3">
+        <div><dt class="text-ufhob-muted">Numéro de dossier</dt><dd class="font-semibold text-ufhob-primary">{{ candidature.pk }}</dd></div>
+        <div><dt class="text-ufhob-muted">État</dt><dd class="font-semibold text-ufhob-primary">{{ candidature.get_status_display }}</dd></div>
+      </dl>
+      {% if candidature.status == 'to_complete' %}<p class="mt-5 text-sm text-ufhob-primary">Votre dossier reste à compléter. Vous avez indiqué transmettre les pièces manquantes ultérieurement. Le service des admissions vous indiquera les modalités de complément.</p>
+      {% else %}<p class="mt-5 text-sm text-ufhob-muted">Le service des admissions examinera votre dossier et vous informera de la prochaine étape.</p>{% endif %}
+      <p class="mt-3 text-xs text-ufhob-muted">Cette confirmation de réception ne constitue pas une décision d’admission.</p>
+      <a href="{% url 'core:home' %}" class="mt-8 inline-block bg-ufhob-primary px-6 py-3 text-sm font-semibold text-white">Retour à l’université</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

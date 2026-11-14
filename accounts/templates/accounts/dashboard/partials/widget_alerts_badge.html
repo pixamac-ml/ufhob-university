@@ -1,0 +1,14 @@
+{% load component_tags %}
+{% load humanize %}
+<span id="widget-alerts-badge"
+      hx-get="{% url 'accounts:widget_alerts_badge' %}"
+      hx-trigger="every 45s, dashboardStatsUpdated from:body"
+      hx-swap="outerHTML"
+      style="display:inline-flex; align-items:center; gap:6px;">
+  {% if alerts_count > 0 %}
+  {% component "ui_core.status_badge" label=alerts_count tone="danger" icon="bell" %}{% endcomponent %}
+  {% endif %}
+  {% if priorities_count > 0 %}
+  {% component "ui_core.status_badge" label=priorities_count tone="warning" icon="list-check" %}{% endcomponent %}
+  {% endif %}
+</span>

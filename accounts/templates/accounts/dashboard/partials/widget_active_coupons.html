@@ -1,0 +1,33 @@
+{% load component_tags %}
+{% load humanize %}
+<div id="widget-active-coupons"
+     hx-get="{% url 'accounts:widget_active_coupons' %}"
+     hx-trigger="couponApplied from:body, every 60s"
+     hx-swap="outerHTML">
+  {% component "ui_core.panel" title="Coupons actifs" subtitle="Offres actuellement applicables dans cette annexe" density="compact" %}
+    {% fill "header" %}
+      {% component "ui_core.status_badge" label=coupons|length tone="success" %}{% endcomponent %}
+    {% endfill %}
+    {% fill "default" %}
+      {% if coupons %}
+      <div class="divide-y divide-ui-border">
+        {% for coupon in coupons|slice:":5" %}
+        <div class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <strong class="text-sm text-ui-text">{{ coupon.code }}</strong>
+            <p class="mt-1 text-xs text-ui-text-muted">
+              {% if coupon.discount_type == "percentage" %}{{ coupon.value }}%{% else %}{{ coupon.value|intcomma }} FCFA{% endif %}
+              {% with programme_count=coupon.programmes.count %}{% if programme_count %} &middot; {{ programme_count }} formation{{ programme_count|pluralize }}{% endif %}{% endwith %}
+              {% if coupon.valid_until %} &middot; expire le {{ coupon.valid_until|date:"d/m/Y" }}{% endif %}
+            </p>
+          </div>
+          {% component "ui_core.status_badge" label=coupon.redemptions_count tone="success" %}{% endcomponent %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        {% component "ui_core.empty_state" title="Aucun coupon actif" message="Aucune offre n'est actuellement disponible pour cette annexe." icon="ticket-percent" %}{% endcomponent %}
+      {% endif %}
+    {% endfill %}
+  {% endcomponent %}
+</div>

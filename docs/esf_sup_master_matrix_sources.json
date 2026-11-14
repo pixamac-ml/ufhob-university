@@ -1,0 +1,1283 @@
+{
+  "university": "UFHOB-Mali",
+  "school": "ESFé Sup",
+  "version": "2026-10-09",
+  "notes": "Documentary UE totals are retained here. Real UE totals derive from EC. Missing EC coefficients are never inferred. AMBIGUOUS sections are not imported. Missing EC numeric allocation is reported; no student results are included.",
+  "programmes": [
+    {
+      "formation": "Biologie Médicale",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/MPro -BIO bon.pdf",
+              "pages": [
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MBIO111",
+              "title": "Sciences de Laboratoire Médical I",
+              "credits": 9,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Maintenance biomédicale",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Métrologie",
+                  "credits": 1,
+                  "coefficient": null
+                },
+                {
+                  "title": "Management de la qualité",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Gestion des laboratoires",
+                  "credits": 4,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO112",
+              "title": "Sciences de base I",
+              "credits": 6.0,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Entomologie appliquée",
+                  "credits": 2.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Changements climatiques",
+                  "credits": 1.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Santé environnementale",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO113",
+              "title": "Renforcement des compétences professionnelles I/communication, droit, et recherche",
+              "credits": 10.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Pédagogie",
+                  "credits": 3,
+                  "coefficient": null
+                },
+                {
+                  "title": "Législation de travail",
+                  "credits": 1.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Genre et leadership",
+                  "credits": 1,
+                  "coefficient": null
+                },
+                {
+                  "title": "Anglais technique",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Informatique",
+                  "credits": 3,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO114",
+              "title": "Sciences en Santé Publique I",
+              "credits": 4.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Biostatistique",
+                  "credits": 3.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Épidémiologie appliquée",
+                  "credits": 1,
+                  "coefficient": null
+                }
+              ]
+            }
+          ],
+          "source_notes": "30 par semestre ; crédits UE et disciplines explicites (détail ci-dessous). ABSENTS du dossier. Aucune valeur inventée.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/MPro -BIO bon.pdf",
+              "pages": [
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MBIO121",
+              "title": "Sciences de Laboratoire Médical II",
+              "credits": 15.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Bactériologie I",
+                  "credits": 3,
+                  "coefficient": null
+                },
+                {
+                  "title": "Virologie I",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Parasitologie I",
+                  "credits": 3,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biochimie I",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Immunologie I",
+                  "credits": 2.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Hématologie I",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Immunohistochimie/Immunochimie",
+                  "credits": 1,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO122",
+              "title": "Sciences de base II",
+              "credits": 5.0,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Cytologie et histologie",
+                  "credits": 1,
+                  "coefficient": null
+                },
+                {
+                  "title": "Anatomie pathologie",
+                  "credits": 1.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biologie de la reproduction",
+                  "credits": 1,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biologie moléculaire I",
+                  "credits": 1.5,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO123",
+              "title": "Sciences de base III",
+              "credits": 3,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Toxicologie I",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Pharmacologie",
+                  "credits": 1,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO124",
+              "title": "Sciences en Santé Publique II",
+              "credits": 2,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Biosécurité/Biosûreté",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO125",
+              "title": "Renforcement des compétences professionnelles II/ droit, recherche",
+              "credits": 4.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Projet de Recherche",
+                  "credits": 4,
+                  "coefficient": null
+                },
+                {
+                  "title": "Éthique et déontologie",
+                  "credits": 0.5,
+                  "coefficient": null
+                }
+              ]
+            }
+          ],
+          "source_notes": "30 par semestre ; crédits UE et disciplines explicites (détail ci-dessous). ABSENTS du dossier. Aucune valeur inventée.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/MPro -BIO bon.pdf",
+              "pages": [
+                17,
+                18
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MBIO231",
+              "title": "Sciences de Laboratoire Médical III",
+              "credits": 20.0,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Bactériologie II",
+                  "credits": 3.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Virologie II",
+                  "credits": 3.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Parasitologie II",
+                  "credits": 3.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biochimie II",
+                  "credits": 3.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Immunologie II",
+                  "credits": 2.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Hématologie II",
+                  "credits": 3.5,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO232",
+              "title": "Sciences de Laboratoire Médical IV",
+              "credits": 4,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Hémobiologie",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biologie moléculaire II",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO233",
+              "title": "Sciences de Laboratoire Médical V",
+              "credits": 4.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Mycologie",
+                  "credits": 2.5,
+                  "coefficient": null
+                },
+                {
+                  "title": "Toxicologie II",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO234",
+              "title": "Renforcement des compétences professionnelles III/ recherche",
+              "credits": 1.5,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Projet de Recherche",
+                  "credits": 1.5,
+                  "coefficient": null
+                }
+              ]
+            }
+          ],
+          "source_notes": "30 par semestre ; crédits UE et disciplines explicites (détail ci-dessous). ABSENTS du dossier. Aucune valeur inventée.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/MPro -BIO bon.pdf",
+              "pages": [
+                17,
+                18
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MBIO241",
+              "title": "Sciences de Laboratoire Médical III",
+              "credits": 12,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Bactériologie III",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Virologie III",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Parasitologie III",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biochimie III",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Immunologie III",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Hématologie III",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO242",
+              "title": "Sciences de Laboratoire Médical IV",
+              "credits": 4,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Hémobiologie II",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Biologie moléculaire III",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO243",
+              "title": "Sciences de Laboratoire Médical V",
+              "credits": 4,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Mycologie II",
+                  "credits": 2,
+                  "coefficient": null
+                },
+                {
+                  "title": "Toxicologie III",
+                  "credits": 2,
+                  "coefficient": null
+                }
+              ]
+            },
+            {
+              "code": "MBIO244",
+              "title": "Renforcement des compétences professionnelles III/ recherche",
+              "credits": 10,
+              "coefficient": null,
+              "ecs": [
+                {
+                  "title": "Stage et rédaction du mémoire",
+                  "credits": 10,
+                  "coefficient": null
+                }
+              ]
+            }
+          ],
+          "source_notes": "30 par semestre ; crédits UE et disciplines explicites (détail ci-dessous). ABSENTS du dossier. Aucune valeur inventée.",
+          "unallocated_stage_credits": 0
+        }
+      ]
+    },
+    {
+      "formation": "Gynécologie Obstétrique",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MSS411",
+              "title": "Management des services de santé",
+              "credits": 15,
+              "coefficient": 5,
+              "ecs": []
+            },
+            {
+              "code": "SEP412",
+              "title": "Suivi et Evaluation des programmes et Projets de Santé",
+              "credits": 4,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "GDS413",
+              "title": "Genre et droit en matière de santé",
+              "credits": 6,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "BEB414",
+              "title": "Bio-statistique et épidémiologie de base",
+              "credits": 5,
+              "coefficient": 4,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "ISP421",
+              "title": "Introduction en soins promotionnels",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "SPP422",
+              "title": "Soins promotionnels et préventifs",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "CIA423",
+              "title": "Communication, Informatique et Langues",
+              "credits": 11,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "MdR424",
+              "title": "Méthodologie de la recherche",
+              "credits": 3,
+              "coefficient": 2,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 2,
+          "arithmetic_note": "Les notes de bas de tableau documentent ces crédits de stage en plus des crédits UE. Leur répartition par EC n’est pas fournie : aucun EC/UE de stage supplémentaire n’est inventé."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                21,
+                22,
+                23
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "PSN531",
+              "title": "Politique et stratégies en SR/PF",
+              "credits": 7,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "SRM532",
+              "title": "Santé reproductive de la mère",
+              "credits": 4,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "SRN533",
+              "title": "Santé reproductive du nouveau-né",
+              "credits": 3,
+              "coefficient": null,
+              "ecs": []
+            },
+            {
+              "code": "SRJ534",
+              "title": "Santé reproductive des adolescents et des jeunes",
+              "credits": 3,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "DSR535",
+              "title": "Dysfonctionnement du système de reproduction",
+              "credits": 8,
+              "coefficient": 4,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S3 : UE 7/4/3/3/8, total 25 + 5 stage ; S4 : 24 + 6 stage. Répartition EC absente. S3 : PSN 4, SRM 3, SRJ 3, DSR 4 ; SRN non lisible dans extraction, ne pas déduire du total 15. S4 : UE 5. Coefficients EC absents.",
+          "unallocated_stage_credits": 5,
+          "arithmetic_note": "Les notes de bas de tableau documentent ces crédits de stage en plus des crédits UE. Leur répartition par EC n’est pas fournie : aucun EC/UE de stage supplémentaire n’est inventé."
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                21,
+                22,
+                23
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MFE541",
+              "title": "Mémoire de fin d'étude",
+              "credits": 24,
+              "coefficient": 5,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S3 : UE 7/4/3/3/8, total 25 + 5 stage ; S4 : 24 + 6 stage. Répartition EC absente. S3 : PSN 4, SRM 3, SRJ 3, DSR 4 ; SRN non lisible dans extraction, ne pas déduire du total 15. S4 : UE 5. Coefficients EC absents.",
+          "unallocated_stage_credits": 6,
+          "arithmetic_note": "Les notes de bas de tableau documentent ces crédits de stage en plus des crédits UE. Leur répartition par EC n’est pas fournie : aucun EC/UE de stage supplémentaire n’est inventé."
+        }
+      ]
+    },
+    {
+      "formation": "Manager en Santé",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                63,
+                64,
+                65
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S3 : UE 2/9/3/9/5, total 28 ; note stage 90 h, 45 x 2, mais texte 6 crédits : incohérence. S4 : 24 + 6 stage. Répartition EC absente. S3 : seconde série 1/4/1/4/3, total 13 ; en-tête ECUE/UE incohérent, statut coefficient à confirmer. S4 : UE 5. Coefficients EC absents."
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                63,
+                64,
+                65
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S3 : UE 2/9/3/9/5, total 28 ; note stage 90 h, 45 x 2, mais texte 6 crédits : incohérence. S4 : 24 + 6 stage. Répartition EC absente. S3 : seconde série 1/4/1/4/3, total 13 ; en-tête ECUE/UE incohérent, statut coefficient à confirmer. S4 : UE 5. Coefficients EC absents."
+        }
+      ]
+    },
+    {
+      "formation": "Pédagogie en Santé",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                80,
+                81
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S3 : UE 3/6/6/6/4, total 25 ; stage 225 h, note 4 crédits mais calcul 45 x 5. S4 : 30, note 24 + 6 stage. Répartition EC absente. S3 : UE 2/4/2/4/3. S4 : UE 5 mais total 30, contradiction. Coefficients EC absents."
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                80,
+                81
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S3 : UE 3/6/6/6/4, total 25 ; stage 225 h, note 4 crédits mais calcul 45 x 5. S4 : 30, note 24 + 6 stage. Répartition EC absente. S3 : UE 2/4/2/4/3. S4 : UE 5 mais total 30, contradiction. Coefficients EC absents."
+        }
+      ]
+    },
+    {
+      "formation": "Épidémiologie",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            },
+            {
+              "path": "SITE/UPFHOB/AMAQ 2024/UFHOB-MALI/ANNEXES/ANNEXES LIG.docx",
+              "note": "Références historiques dans suppressions suivies, exclues comme maquette validée."
+            }
+          ],
+          "ues": [
+            {
+              "code": "MSS411",
+              "title": "Management des services de santé",
+              "credits": 15,
+              "coefficient": 5,
+              "ecs": []
+            },
+            {
+              "code": "SEP412",
+              "title": "Suivi et Evaluation des programmes et Projets de Santé",
+              "credits": 4,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "GDS413",
+              "title": "Genre et droit en matière de santé",
+              "credits": 6,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "BEB414",
+              "title": "Bio-statistique et épidémiologie de base",
+              "credits": 5,
+              "coefficient": 4,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            },
+            {
+              "path": "SITE/UPFHOB/AMAQ 2024/UFHOB-MALI/ANNEXES/ANNEXES LIG.docx",
+              "note": "Références historiques dans suppressions suivies, exclues comme maquette validée."
+            }
+          ],
+          "ues": [
+            {
+              "code": "ISP421",
+              "title": "Introduction en soins promotionnels",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "SPP422",
+              "title": "Soins promotionnels et préventifs",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "CIA423",
+              "title": "Communication, Informatique et Langues",
+              "credits": 11,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "MdR424",
+              "title": "Méthodologie de la recherche",
+              "credits": 3,
+              "coefficient": 2,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 2,
+          "arithmetic_note": "Les notes de bas de tableau documentent ces crédits de stage en plus des crédits UE. Leur répartition par EC n’est pas fournie : aucun EC/UE de stage supplémentaire n’est inventé."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                46,
+                47
+              ]
+            },
+            {
+              "path": "SITE/UPFHOB/AMAQ 2024/UFHOB-MALI/ANNEXES/ANNEXES LIG.docx",
+              "note": "Références historiques dans suppressions suivies, exclues comme maquette validée."
+            }
+          ],
+          "ues": [
+            {
+              "code": "FTE531",
+              "title": "Fonction de travail de l’épidémiologiste",
+              "credits": 3,
+              "coefficient": 2,
+              "ecs": []
+            },
+            {
+              "code": "QME532",
+              "title": "Qualités de la mesure en épidémiologie",
+              "credits": 3,
+              "coefficient": 2,
+              "ecs": []
+            },
+            {
+              "code": "TEE533",
+              "title": "typologies d’études épidémiologiques",
+              "credits": 6,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "RAE534",
+              "title": "Risques et associations en Epidémiologie",
+              "credits": 5,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "GEC535",
+              "title": "Gestion d’une épidémie/Catastrophe",
+              "credits": 6,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "GDE536",
+              "title": "Gestion des données épidémiologiques",
+              "credits": 7,
+              "coefficient": 4,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S3 : UE 3/3/6/5/6/7, total 30 ; S4 : total 30, note 24 + 6 stage, cellule crédit UE peu claire. Répartition EC absente. S3 : UE 2/2/4/4/4/4. S4 : 30 affiché et total 30, contrôler visuellement. Coefficients EC absents.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                46,
+                47
+              ]
+            },
+            {
+              "path": "SITE/UPFHOB/AMAQ 2024/UFHOB-MALI/ANNEXES/ANNEXES LIG.docx",
+              "note": "Références historiques dans suppressions suivies, exclues comme maquette validée."
+            }
+          ],
+          "ues": [
+            {
+              "code": "MFE541",
+              "title": "Mémoire de fin d’étude",
+              "credits": 30,
+              "coefficient": null,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S3 : UE 3/3/6/5/6/7, total 30 ; S4 : total 30, note 24 + 6 stage, cellule crédit UE peu claire. Répartition EC absente. S3 : UE 2/2/4/4/4/4. S4 : 30 affiché et total 30, contrôler visuellement. Coefficients EC absents.",
+          "unallocated_stage_credits": 0,
+          "arithmetic_note": "SOURCE_CONFLICT : tableau crédit UE/total 30 ; note de bas de tableau 24 crédits de cours + 6 de stage. Position du coefficient également à clarifier. Aucune ventilation implicite."
+        }
+      ]
+    },
+    {
+      "formation": "Nutrition",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "MSS411",
+              "title": "Management des services de santé",
+              "credits": 15,
+              "coefficient": 5,
+              "ecs": []
+            },
+            {
+              "code": "SEP412",
+              "title": "Suivi et Evaluation des programmes et Projets de Santé",
+              "credits": 4,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "GDS413",
+              "title": "Genre et droit en matière de santé",
+              "credits": 6,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "BEB414",
+              "title": "Bio-statistique et épidémiologie de base",
+              "credits": 5,
+              "coefficient": 4,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "MEDIUM",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [
+            {
+              "code": "ISP421",
+              "title": "Introduction en soins promotionnels",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "SPP422",
+              "title": "Soins promotionnels et préventifs",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "CIA423",
+              "title": "Communication, Informatique et Langues",
+              "credits": 11,
+              "coefficient": 4,
+              "ecs": []
+            },
+            {
+              "code": "MdR424",
+              "title": "Méthodologie de la recherche",
+              "credits": 3,
+              "coefficient": 2,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents.",
+          "unallocated_stage_credits": 2,
+          "arithmetic_note": "Les notes de bas de tableau documentent ces crédits de stage en plus des crédits UE. Leur répartition par EC n’est pas fournie : aucun EC/UE de stage supplémentaire n’est inventé."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "HIGH",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                16,
+                17
+              ]
+            },
+            {
+              "path": "Master maquette/odonto/réleve s4 odonto.xlsx",
+              "sheet": "Feuil1",
+              "note": "En-tête Nutrition mais nom odonto : attribution non certifiée ; S4 uniquement."
+            }
+          ],
+          "ues": [
+            {
+              "code": "NUC531",
+              "title": "Nutrition Communautaire",
+              "credits": 4,
+              "coefficient": 2,
+              "ecs": []
+            },
+            {
+              "code": "NSA532",
+              "title": "Nutrition et sécurité alimentaire",
+              "credits": 7,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "IAN533",
+              "title": "Interventions alimentaires et nutritionnelles",
+              "credits": 8,
+              "coefficient": 3,
+              "ecs": []
+            },
+            {
+              "code": "SEI534",
+              "title": "Suivi et évaluation",
+              "credits": 5,
+              "coefficient": 2,
+              "ecs": []
+            },
+            {
+              "code": "CSS535",
+              "title": "Conférences, séminaires et stage",
+              "credits": 6,
+              "coefficient": 2,
+              "ecs": []
+            }
+          ],
+          "source_notes": "S3 : UE 4/7/8/5/6 (CSS535 comprend stage), total 26 + 4 stage. S4 : UE 30, total 24 + 6 stage. Excel S4 candidat : EC 4/6/20. S3 : UE 2/3/3/2/2. S4 PDF : UE 5 ; Excel candidat : UE 30, EC 4/6/20. Versions différentes.",
+          "unallocated_stage_credits": 0
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                16,
+                17
+              ]
+            },
+            {
+              "path": "Master maquette/odonto/réleve s4 odonto.xlsx",
+              "sheet": "Feuil1",
+              "note": "En-tête Nutrition mais nom odonto : attribution non certifiée ; S4 uniquement."
+            }
+          ],
+          "ues": [],
+          "source_notes": "S3 : UE 4/7/8/5/6 (CSS535 comprend stage), total 26 + 4 stage. S4 : UE 30, total 24 + 6 stage. Excel S4 candidat : EC 4/6/20. S3 : UE 2/3/3/2/2. S4 PDF : UE 5 ; Excel candidat : UE 30, EC 4/6/20. Versions différentes."
+        }
+      ]
+    },
+    {
+      "formation": "Santé Environnementale",
+      "semesters": [
+        {
+          "number": 1,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 2,
+          "year": 1,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                11,
+                12
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "S1 : UE 15/4/6/5, total 30. S2 : UE 7/7/11/3, total 28 enseignements + 2 stage. Répartition EC absente. S1 : UE 5/4/4/4 ; S2 : UE 3/3/4/2. Coefficients EC absents."
+        },
+        {
+          "number": 3,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                56,
+                57,
+                58,
+                59
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "CANDIDATE SST uniquement : S3 UE 2/7/4/2/5/7, total 27 + 3 stage ; S4 : 24 + 6 stage. Équivalence au Master exact non prouvée. CANDIDATE SST : S3 seconde série 1/4/2/1/3/4 ; S4 UE 5 mais total 30. Coefficients EC absents."
+        },
+        {
+          "number": 4,
+          "year": 2,
+          "credits": 30,
+          "confidence": "AMBIGUOUS",
+          "sources": [
+            {
+              "path": "Master maquette/DOC-20260423-WA0041..pdf",
+              "pages": [
+                56,
+                57,
+                58,
+                59
+              ]
+            }
+          ],
+          "ues": [],
+          "source_notes": "CANDIDATE SST uniquement : S3 UE 2/7/4/2/5/7, total 27 + 3 stage ; S4 : 24 + 6 stage. Équivalence au Master exact non prouvée. CANDIDATE SST : S3 seconde série 1/4/2/1/3/4 ; S4 UE 5 mais total 30. Coefficients EC absents."
+        }
+      ]
+    }
+  ]
+}

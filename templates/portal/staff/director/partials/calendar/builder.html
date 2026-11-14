@@ -1,0 +1,47 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% if director_selected_calendar %}
+    {% with cal=director_selected_calendar %}
+      {% if director_calendar_can_add_entry %}
+        {% component "ui_core.panel" title="Cadre du calendrier" subtitle="Les informations qui figureront sur le document officiel." %}
+          <form hx-post="{% url 'accounts_portal:director_calendar_action' %}" hx-target="#director-calendar-section" hx-swap="outerHTML" hx-indicator="#director-calendar-loading" class="grid gap-4 lg:grid-cols-12">
+            {% csrf_token %}<input type="hidden" name="action" value="update_calendar_details"><input type="hidden" name="calendar_id" value="{{ cal.id }}">
+            <div class="lg:col-span-6"><label class="mb-1 block text-xs font-semibold text-ui-text">Intitulé officiel</label><input name="official_title" value="{{ cal.official_title }}" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text" placeholder="Ex. Calendrier académique 2027-2028"></div>
+            <div class="lg:col-span-4"><p class="mb-1 text-xs font-semibold text-ui-text">Référence du document</p><p class="flex h-ui-control items-center rounded-ui-button border border-ui-border bg-ui-surface-muted px-3 text-sm font-semibold text-ui-text">{{ director_calendar_document_reference }}</p><input type="hidden" name="administrative_reference" value="{{ cal.administrative_reference }}"></div>
+            <div class="flex items-end lg:col-span-2"><button class="ui-focus-ring h-ui-control w-full rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary">Enregistrer</button></div>
+            <div class="lg:col-span-12"><label class="mb-1 block text-xs font-semibold text-ui-text">Note de cadrage</label><textarea name="general_observations" rows="2" class="ui-focus-ring w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 py-2 text-sm text-ui-text" placeholder="Précisions importantes, statut provisoire ou consignes de diffusion.">{{ cal.general_observations }}</textarea></div>
+          </form>
+        {% endcomponent %}
+
+        {% component "ui_core.panel" title="Ajouter une période" subtitle="Ajoutez les périodes utiles : rentrée, semestre, examens, rattrapages, résultats ou autre échéance." %}
+          <form x-data="{ scope: 'branch' }" hx-post="{% url 'accounts_portal:director_calendar_action' %}" hx-target="#director-calendar-section" hx-swap="outerHTML" hx-indicator="#director-calendar-loading" class="grid gap-4 lg:grid-cols-12">
+            {% csrf_token %}<input type="hidden" name="action" value="add_entry"><input type="hidden" name="calendar_id" value="{{ cal.id }}">
+            <div class="lg:col-span-5"><label class="mb-1 block text-xs font-semibold text-ui-text">Intitulé</label><input required name="title" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text" placeholder="Ex. Session normale du semestre 1"></div>
+            <div class="lg:col-span-3"><label class="mb-1 block text-xs font-semibold text-ui-text">Type</label><select required name="event_type" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text">{% for value,label in director_calendar_event_type_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="lg:col-span-2"><label class="mb-1 block text-xs font-semibold text-ui-text">Début</label><input required type="date" name="start_date" min="{{ cal.academic_year.start_date|date:'Y-m-d' }}" max="{{ cal.academic_year.end_date|date:'Y-m-d' }}" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"></div>
+            <div class="lg:col-span-2"><label class="mb-1 block text-xs font-semibold text-ui-text">Fin</label><input required type="date" name="end_date" min="{{ cal.academic_year.start_date|date:'Y-m-d' }}" max="{{ cal.academic_year.end_date|date:'Y-m-d' }}" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"></div>
+            <div class="lg:col-span-12"><label class="mb-1 block text-xs font-semibold text-ui-text">Note utile <span class="font-normal text-ui-text-muted">(facultative)</span></label><input name="description" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text" placeholder="Information à communiquer aux personnes concernées."></div>
+            <details class="lg:col-span-12 rounded-ui-button border border-ui-border bg-ui-surface-muted px-3 py-2">
+              <summary class="cursor-pointer text-xs font-semibold text-ui-primary">Cibler un public précis <span class="font-normal text-ui-text-muted">— par défaut, toute l’annexe est concernée</span></summary>
+              <div class="mt-3 grid gap-3 lg:grid-cols-12">
+                <div class="lg:col-span-3"><label class="mb-1 block text-xs font-semibold text-ui-text">École</label><button type="button" @click="scope = 'school'" class="mb-1 text-xs font-semibold text-ui-primary underline">Cibler une école</button><input type="hidden" name="target_scope" value="school" :disabled="scope !== 'school'"><select x-show="scope === 'school'" :disabled="scope !== 'school'" name="school_id" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"><option value="">-- choisir --</option>{% for school_branch in director_calendar_available_schools %}<option value="{{ school_branch.school.id }}">{{ school_branch.school.display_name }}</option>{% endfor %}</select></div>
+                <div class="lg:col-span-3"><label class="mb-1 block text-xs font-semibold text-ui-text">Portée</label><select x-model="scope" name="target_scope" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"><option value="branch">Toute l’annexe</option><option value="school">École</option><option value="programme">Formation</option><option value="class">Classe / niveau</option><option value="semester">Semestre(s)</option></select></div>
+                <div x-show="scope === 'programme'" class="lg:col-span-3"><label class="mb-1 block text-xs font-semibold text-ui-text">Formation</label><select :disabled="scope !== 'programme'" name="programme_id" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"><option value="">-- choisir --</option>{% for programme in director_calendar_available_programmes %}<option value="{{ programme.id }}">{{ programme.title }}</option>{% endfor %}</select></div>
+                <div x-show="scope === 'class'" class="lg:col-span-3"><label class="mb-1 block text-xs font-semibold text-ui-text">Classe</label><select :disabled="scope !== 'class'" name="class_id" class="ui-focus-ring h-ui-control w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm text-ui-text"><option value="">-- choisir --</option>{% for cls in director_calendar_available_classes %}<option value="{{ cls.id }}">{{ cls.display_name }}</option>{% endfor %}</select></div>
+                <div x-show="scope === 'semester'" class="lg:col-span-4"><label class="mb-1 block text-xs font-semibold text-ui-text">Semestres concernés</label><select multiple size="4" :disabled="scope !== 'semester'" name="semester_ids" class="ui-focus-ring w-full rounded-ui-button border border-ui-border bg-ui-surface px-3 py-2 text-sm text-ui-text">{% for sem in director_calendar_available_semesters %}<option value="{{ sem.id }}">{{ sem.academic_class.display_name }} · S{{ sem.number }}</option>{% endfor %}</select><p class="mt-1 text-[11px] text-ui-text-muted">Ctrl/Cmd permet de sélectionner plusieurs semestres.</p></div>
+                <label class="flex items-end gap-2 pb-2 text-xs font-semibold text-ui-text lg:col-span-2"><input type="checkbox" name="is_blocking" value="1" class="rounded border-ui-border text-ui-primary focus:ring-ui-primary">Période prioritaire</label>
+              </div>
+            </details>
+            <div class="flex justify-end lg:col-span-12"><button class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary"><i data-lucide="plus" class="h-4 w-4"></i>Ajouter l’échéance</button></div>
+          </form>
+        {% endcomponent %}
+
+        <div class="border-t border-ui-border pt-5">{% include "portal/staff/director/partials/calendar/milestones.html" %}</div>
+      {% else %}
+        {% component "ui_core.alert" title="Calendrier verrouillé" message="Cette version n’est plus modifiable. Créez une révision depuis le menu Plus si une correction est nécessaire." tone="info" %}{% endcomponent %}
+      {% endif %}
+    {% endwith %}
+  {% else %}
+    {% component "ui_core.empty_state" title="Aucune année académique active" message="Une année académique doit d’abord être ouverte par la Direction générale avant la préparation du calendrier." icon="calendar-x" %}{% endcomponent %}
+  {% endif %}
+</div>

@@ -1,0 +1,40 @@
+{% load component_tags %}
+<section class="space-y-5" data-overlay-title="{{ editor_title }}">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">UFHOB · Structure universitaire</p>
+    {% if school_admin %}<h3 class="mt-1 text-lg font-semibold">{{ school_admin.code }} · {{ school_admin.short_name }}</h3>{% endif %}
+    <p class="mt-2 text-sm text-ui-text-muted">{% if is_school_editor %}L’identité de l’école reste configurable. Sa désactivation ferme les nouvelles offres sans supprimer les parcours historiques.{% else %}Choisissez un campus physique existant. Il peut accueillir plusieurs écoles. Désactiver ce rattachement conserve son historique.{% endif %}</p>
+  </div>
+  <form method="post" action="{% if is_school_editor %}{% url 'accounts_portal:dg_school_editor' %}{% else %}{% url 'accounts_portal:dg_implantation_editor' %}{% endif %}" class="space-y-4" data-dg-interactive-form onsubmit="return dgSubmitAction(this)">
+    {% csrf_token %}
+    {% if school_admin %}<input type="hidden" name="school_id" value="{{ school_admin.pk }}">{% endif %}
+    {% if implantation_admin %}<input type="hidden" name="link_id" value="{{ implantation_admin.pk }}">{% endif %}
+    {% if form.non_field_errors %}<div role="alert" class="text-sm text-ui-danger">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}{% if field.name != "branches" %}{% component "ui_core.django_form_field" field=field %}{% endcomponent %}{% endif %}{% endfor %}
+    {% if is_school_editor %}
+    <fieldset class="space-y-2 rounded-ui-card border border-ui-border p-4">
+      <legend class="px-1 text-xs font-bold uppercase tracking-wide text-ui-primary">Campus d’implantation</legend>
+      <p class="text-xs text-ui-text-muted">Campus physiques où cette école est implantée. Cocher crée ou réactive une implantation ; décocher la désactive en conservant son historique.</p>
+      {% if form.branches.field.queryset %}
+      <ul class="grid max-h-64 overflow-y-auto gap-2 md:grid-cols-2" role="group" aria-label="{{ form.branches.label }}">
+        {% for choice in form.branches %}
+        <li>
+          <label for="{{ choice.id_for_label }}" class="flex items-center gap-3 rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">
+            <input type="checkbox" name="{{ form.branches.html_name }}" value="{{ choice.data.value }}" id="{{ choice.id_for_label }}"{% if choice.data.selected %} checked{% endif %} class="h-4 w-4 rounded border-ui-border text-ui-primary focus:ring-ui-focus">
+            <span>{{ choice.choice_label }}</span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-ui-text-muted">Aucun campus actif. Créez d’abord un campus dans l’onglet Campus.</p>
+      {% endif %}
+      {% if form.branches.errors %}<ul class="space-y-1 text-xs font-semibold text-ui-danger" role="alert">{% for error in form.branches.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </fieldset>
+    {% endif %}
+    <div class="flex justify-end gap-3 border-t border-ui-border pt-4">
+      <button type="button" class="rounded-ui-button border border-ui-border px-3 py-2" onclick="dgCloseModal()">Annuler</button>
+      <button type="submit" class="rounded-ui-button bg-ui-primary px-3 py-2 font-semibold text-ui-on-primary">Enregistrer</button>
+    </div>
+  </form>
+</section>

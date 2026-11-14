@@ -1,775 +1,117 @@
-{% extends "base.html" %}
+{% extends "public/base.html" %}
 {% load static %}
-{% load component_tags %}
-{% load humanize %}
 
-{% block title %}Accueil – UFHOB{% endblock %}
+{% block title %}Université – UFHOB-Mali{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="Découvrez l'Université Privée Félix Houphouët-Boigny du Mali, ses écoles, ses formations, ses campus et son engagement pour la recherche et l'innovation.">
+{% endblock %}
+
+{% block public_navbar %}<c-public.navbar :schools="schools" logo_url="{{ site_logo_url }}" reveal_after_hero="true" />{% endblock %}
+{% block public_floating_widget %}{% endblock %}
 
 {% block content %}
+<c-public.cinematic_hero :slides="hero_slides" />
 
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 1 : HERO
-   ══════════════════════════════════════════════════════════════════════════════ #}
-{% component "hero"
-   title="UFHOB"
-   subtitle="L'excellence universitaire au Mali"
-   cities="['EsMed', 'ESGA', 'FATEC']"
-%}{% endcomponent %}
-
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 2 : À PROPOS (Fusion Qui sommes-nous + Vision)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="a-propos" class="py-24 lg:py-32 bg-soft">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.30.once="show = true">
-
-    {# Header #}
-    <div class="text-center mb-16 lg:mb-20"
-         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
-         class="transition-all duration-700">
-      <span class="inline-block text-sm font-semibold text-secondary uppercase tracking-wider mb-4">
-        Qui sommes-nous
-      </span>
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-500 mb-6">
-        Une université, <span class="text-secondary">trois pôles d'excellence</span>
-      </h2>
-      <p class="text-gray-600 text-lg max-w-3xl mx-auto">
-        UFHOB forme les professionnels de demain en santé, gestion et technologies
-        selon des standards académiques rigoureux adaptés aux réalités du Mali.
-      </p>
-    </div>
-
-    {# Grid Principal #}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-20">
-
-      {# Image #}
-      <div :class="show ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
-           class="transition-all duration-1000 delay-200">
-        <div class="relative">
-          <img src="{% static 'images/institution/students-academic.jpg' %}"
-               class="w-full rounded-3xl shadow-2xl object-cover"
-               alt="Étudiants UFHOB"
-               loading="lazy">
-          {# Badge flottant #}
-          <div class="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-6 hidden lg:block">
-            <div class="text-3xl font-bold text-secondary">15+</div>
-            <div class="text-sm text-gray-600">Années d'excellence</div>
-          </div>
-        </div>
+<section id="universite" class="bg-white py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto grid max-w-ufhob-container items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8">
+    <div>
+      <c-public.section-header eyebrow="L’université" title="{{ presentation.about_title|default:'Une formation exigeante, ouverte sur les défis de notre temps' }}" text="Découvrez le projet institutionnel, la vision et la mission de l’UFHOB." />
+      <div class="mt-6 max-w-2xl text-base leading-7 text-ufhob-muted">
+        {% if presentation.about_text %}{{ presentation.about_text|safe|truncatewords_html:75 }}{% else %}<p>L’Université Privée Félix Houphouët-Boigny du Mali associe rigueur académique, pertinence pratique, innovation et engagement communautaire. Elle accompagne chaque étudiant dans le développement de ses compétences, de sa créativité et de son esprit d’initiative.</p>{% endif %}
       </div>
-
-      {# Contenu texte #}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'"
-           class="transition-all duration-1000 delay-300">
-
-        <h3 class="text-2xl font-bold text-primary-500 mb-6">
-          Former les leaders de demain au Mali
-        </h3>
-
-        <p class="text-gray-600 mb-6 leading-relaxed">
-          <strong class="text-primary-500">L'Université Félix Houphouët-Boigny (UFHOB)</strong>
-          est un établissement d'enseignement supérieur regroupant trois écoles d'excellence :
-          EsMed (Sciences Médicales), ESGA (Gestion & Administration) et FATEC (Technologies Appliquées).
-        </p>
-
-        <p class="text-gray-600 mb-8 leading-relaxed">
-          Notre approche combine excellence académique, rigueur professionnelle
-          et engagement social durable pour transformer les compétences en impact réel sur le terrain.
-        </p>
-
-        {# Points clés #}
-        <div class="space-y-4">
-          <div class="flex items-start gap-4">
-            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-              <i data-lucide="award" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h4 class="font-semibold text-primary-500">Diplômes reconnus par l'État</h4>
-              <p class="text-sm text-gray-600">Validés pour concours et fonction publique.</p>
-            </div>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-              <i data-lucide="users" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h4 class="font-semibold text-primary-500">Encadrement expérimenté</h4>
-              <p class="text-sm text-gray-600">Corps enseignant issu du terrain professionnel.</p>
-            </div>
-          </div>
-
-          <div class="flex items-start gap-4">
-            <div class="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-              <i data-lucide="rocket" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h4 class="font-semibold text-primary-500">3 pôles de formation</h4>
-              <p class="text-sm text-gray-600">Santé, Gestion et Technologies réunis.</p>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <a href="{% url 'core:university' %}" class="mt-7 inline-flex items-center gap-2 rounded-ufhob-sm border border-ufhob-primary px-5 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-primary hover:text-white">Découvrir l’université <span aria-hidden="true">→</span></a>
     </div>
-
-    {# Piliers (si disponibles) #}
-    {% if pillars %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-         class="transition-all duration-700 delay-500">
-      {% for pillar in pillars %}
-        <div class="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-secondary">
-          <h3 class="font-semibold text-lg mb-2 text-primary-500">{{ pillar.title }}</h3>
-          <p class="text-sm text-gray-600">{{ pillar.description }}</p>
-        </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-  </div>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 2.5 : NOS ÉCOLES (NOUVELLE SECTION)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section class="py-20 bg-white" x-data="{ activeTab: 'esmed' }">
-    <div class="container mx-auto px-4">
-
-        <!-- Titre de section -->
-        <div class="text-center mb-12" data-aos="fade-up">
-            <span class="text-secondary font-semibold text-sm uppercase tracking-wider">Nos Facultés</span>
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">
-                3 Écoles, <span class="text-primary-500">1 Excellence</span>
-            </h2>
-            <p class="text-gray-600 mt-4 max-w-2xl mx-auto">
-                Découvrez nos trois pôles de formation d'excellence, chacun dédié à un domaine stratégique pour votre avenir.
-            </p>
-        </div>
-
-        <!-- Tabs Navigation -->
-        <div class="flex flex-wrap justify-center gap-4 mb-10" data-aos="fade-up" data-aos-delay="100">
-            <button @click="activeTab = 'esmed'"
-                    :class="activeTab === 'esmed' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-emerald-50'"
-                    class="px-6 py-3 rounded-full font-semibold transition-all duration-300 flex items-center gap-2">
-                <i data-lucide="heart-pulse" class="w-5 h-5"></i>
-                EsMed
-            </button>
-            <button @click="activeTab = 'esga'"
-                    :class="activeTab === 'esga' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-blue-50'"
-                    class="px-6 py-3 rounded-full font-semibold transition-all duration-300 flex items-center gap-2">
-                <i data-lucide="briefcase" class="w-5 h-5"></i>
-                ESGA
-            </button>
-            <button @click="activeTab = 'fatec'"
-                    :class="activeTab === 'fatec' ? 'bg-primary-500 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-orange-50'"
-                    class="px-6 py-3 rounded-full font-semibold transition-all duration-300 flex items-center gap-2">
-                <i data-lucide="cpu" class="w-5 h-5"></i>
-                FATEC
-            </button>
-        </div>
-
-        <!-- Tab Contents -->
-        <div class="max-w-5xl mx-auto">
-
-            <!-- EsMed Content -->
-            <div x-show="activeTab === 'esmed'"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 transform translate-y-4"
-                 x-transition:enter-end="opacity-100 transform translate-y-0"
-                 class="bg-gradient-to-br from-emerald-50 to-white rounded-2xl p-8 shadow-xl border border-emerald-100">
-
-                <div class="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
-                                <i data-lucide="heart-pulse" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-emerald-800">École des Sciences Médicales</h3>
-                        </div>
-                        <p class="text-gray-600 mb-6">
-                            Formez-vous aux métiers de la santé avec des programmes reconnus et des stages pratiques en milieu hospitalier. Notre engagement : former les professionnels de santé de demain.
-                        </p>
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-emerald-600">8+</span>
-                                <p class="text-sm text-gray-500">Formations</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-emerald-600">3 ans</span>
-                                <p class="text-sm text-gray-500">Durée moyenne</p>
-                            </div>
-                        </div>
-                        <a href="{% url 'formations:list' %}?school=esmed"
-                           class="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors">
-                            Voir les formations
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </a>
-                    </div>
-                    <div class="hidden md:block">
-                        <img src="{% static 'images/schools/esmed-illustration.svg' %}" alt="EsMed" class="w-full max-w-sm mx-auto">
-                    </div>
-                </div>
-            </div>
-
-            <!-- ESGA Content -->
-            <div x-show="activeTab === 'esga'"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 transform translate-y-4"
-                 x-transition:enter-end="opacity-100 transform translate-y-0"
-                 class="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 shadow-xl border border-blue-100">
-
-                <div class="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                                <i data-lucide="briefcase" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-blue-800">École Supérieure de Gestion</h3>
-                        </div>
-                        <p class="text-gray-600 mb-6">
-                            Devenez un leader du monde des affaires avec nos programmes en management, comptabilité et administration. Une formation tournée vers l'entreprise et l'entrepreneuriat.
-                        </p>
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-blue-600">6+</span>
-                                <p class="text-sm text-gray-500">Formations</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-blue-600">2-3 ans</span>
-                                <p class="text-sm text-gray-500">Durée moyenne</p>
-                            </div>
-                        </div>
-                        <a href="{% url 'formations:list' %}?school=esga"
-                           class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                            Voir les formations
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </a>
-                    </div>
-                    <div class="hidden md:block">
-                        <img src="{% static 'images/schools/esga-illustration.svg' %}" alt="ESGA" class="w-full max-w-sm mx-auto">
-                    </div>
-                </div>
-            </div>
-
-            <!-- FATEC Content -->
-            <div x-show="activeTab === 'fatec'"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 transform translate-y-4"
-                 x-transition:enter-end="opacity-100 transform translate-y-0"
-                 class="bg-gradient-to-br from-orange-50 to-white rounded-2xl p-8 shadow-xl border border-orange-100">
-
-                <div class="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center">
-                                <i data-lucide="cpu" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-primary-600">Faculté des Technologies</h3>
-                        </div>
-                        <p class="text-gray-600 mb-6">
-                            Plongez dans l'univers du numérique et de l'innovation. Développement, réseaux, cybersécurité : préparez-vous aux métiers d'avenir avec des compétences recherchées.
-                        </p>
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-primary-500">5+</span>
-                                <p class="text-sm text-gray-500">Formations</p>
-                            </div>
-                            <div class="bg-white rounded-lg p-4 shadow-sm">
-                                <span class="text-2xl font-bold text-primary-500">2-3 ans</span>
-                                <p class="text-sm text-gray-500">Durée moyenne</p>
-                            </div>
-                        </div>
-                        <a href="{% url 'formations:list' %}?school=fatec"
-                           class="inline-flex items-center gap-2 bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition-colors">
-                            Voir les formations
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </a>
-                    </div>
-                    <div class="hidden md:block">
-                        <img src="{% static 'images/schools/fatec-illustration.svg' %}" alt="FATEC" class="w-full max-w-sm mx-auto">
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 3 : STATISTIQUES (Compacte, intégrée)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="stats" class="py-16 bg-primary-500 text-white">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.50.once="show = true">
-
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
-
-      {% for stat in stats %}
-      <div class="text-center"
-           x-data="advancedCounter({{ stat.value }}, '{{ stat.suffix }}')"
-           x-intersect.once="start()"
-           :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
-           style="transition-delay: {{ forloop.counter0 }}50ms"
-           class="transition-all duration-700">
-
-        <div class="text-4xl lg:text-5xl font-bold text-white mb-2">
-          <span x-text="display"></span>{{ stat.suffix }}
-        </div>
-        <div class="text-sm text-white/70 uppercase tracking-wider">
-          {{ stat.label }}
-        </div>
-
-      </div>
-      {% endfor %}
-
+    <div class="relative">
+      <div class="absolute -inset-4 -z-0 rounded-ufhob-lg bg-ufhob-secondary-soft"></div>
+      {% if presentation.about_image or site_configuration.home_about_image %}<img src="{% if presentation.about_image %}{{ presentation.about_image.url }}{% elif site_configuration.home_about_image %}{{ site_configuration.home_about_image.url }}{% endif %}" alt="Campus de l’UFHOB-Mali" class="relative h-[360px] w-full rounded-ufhob-lg object-cover shadow-premium sm:h-[440px]" loading="lazy">{% endif %}
+      <div class="absolute -bottom-5 left-5 right-5 rounded-ufhob-md bg-ufhob-primary p-5 text-white shadow-premium sm:left-auto sm:w-72"><p class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary">Notre signature</p><p class="mt-1 text-lg font-bold">Demain, c’est aujourd’hui</p></div>
     </div>
   </div>
 </section>
 
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 4 : FORMATIONS
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="formations" class="py-24 lg:py-32 bg-gradient-to-b from-white to-soft/50">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.20.once="show = true">
-
-    {# Header #}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-end mb-16">
-      <div>
-        <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
-          Catalogue académique
-        </span>
-        <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-500">
-          Nos Formations Professionnelles
-        </h2>
-        <p class="mt-4 text-gray-600 max-w-xl">
-          Des parcours structurés, reconnus par l'État, conçus pour former les professionnels de demain.
-        </p>
+<section class="bg-ufhob-ivory py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <c-public.section_header eyebrow="Notre cap" title="Vision, mission et valeurs" text="Les engagements qui orientent la communauté universitaire et son action." />
+    <div class="mt-10 grid gap-8 lg:grid-cols-[1fr_1fr]">
+      <div class="grid gap-6">
+        <article class="rounded-ufhob-lg bg-ufhob-primary p-7 text-white shadow-premium"><span class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary">Vision</span><h3 class="mt-3 text-2xl font-bold text-white">{% firstof presentation.vision_title 'Un centre d’excellence et d’innovation' %}</h3><p class="mt-4 leading-7 text-white/75">{% firstof presentation.vision_text 'D’ici 2030, devenir un centre d’excellence et d’innovation reconnu pour la qualité de son enseignement, de sa recherche et de son engagement communautaire.' %}</p></article>
+        <article class="rounded-ufhob-lg border border-ufhob-border bg-white p-7 shadow-soft"><span class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary-dark">Mission</span><h3 class="mt-3 text-2xl font-bold text-ufhob-primary">{% firstof presentation.mission_title 'Former, chercher, agir' %}</h3><p class="mt-4 leading-7 text-ufhob-muted">{% firstof presentation.mission_text 'Fournir une éducation de haute qualité qui combine rigueur académique et pertinence pratique, tout en favorisant la recherche et l’innovation au service des enjeux locaux et globaux.' %}</p></article>
       </div>
-      <div class="lg:text-right">
-        <a href="{% url 'formations:list' %}"
-           class="inline-flex items-center gap-2 bg-secondary hover:bg-secondary/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1">
-          Explorer toutes les formations
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
-        </a>
+      <div class="rounded-ufhob-lg border border-ufhob-border bg-white p-7 shadow-soft">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary-dark">Valeurs</p>
+        <div class="mt-5 divide-y divide-ufhob-border">{% for value in values %}<div class="grid grid-cols-[2.5rem_1fr] gap-4 py-4 first:pt-0 last:pb-0"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-ufhob-primary-soft text-sm font-bold text-ufhob-primary">0{{ forloop.counter }}</span><div><h3 class="font-bold text-ufhob-primary">{{ value.title }}</h3><p class="mt-1 text-sm leading-6 text-ufhob-muted">{{ value.description }}</p></div></div>{% endfor %}</div>
       </div>
     </div>
-
-    {# Grid Formations #}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {% for formation in formations_home %}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'"
-           style="transition-delay: {{ forloop.counter0 }}00ms"
-           class="group relative bg-white rounded-2xl p-8 shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border-l-4 {% if formation.is_featured %}border-secondary{% else %}border-primary-500{% endif %}">
-
-        {# Meta #}
-        <div class="flex justify-between items-center mb-6">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {{ formation.cycle.name }}
-          </span>
-          {% if formation.is_featured %}
-          <span class="text-xs bg-secondary/20 text-secondary px-3 py-1 rounded-full font-medium">
-            Recommandé
-          </span>
-          {% endif %}
-        </div>
-
-        {# Titre #}
-        <h3 class="text-xl font-semibold mb-4 text-primary-500 leading-snug group-hover:text-secondary transition-colors">
-          {{ formation.title }}
-        </h3>
-
-        {# Description #}
-        <p class="text-sm text-gray-600 mb-6 leading-relaxed">
-          {{ formation.short_description|truncatewords:18 }}
-        </p>
-
-        {# Infos #}
-        <div class="flex justify-between text-xs text-gray-400 mb-6 pb-6 border-b border-gray-100">
-          <span class="flex items-center gap-1">
-            <i data-lucide="clock" class="w-4 h-4"></i>
-            {{ formation.duration_years }} an{% if formation.duration_years > 1 %}s{% endif %}
-          </span>
-          <span>{{ formation.diploma_awarded.name }}</span>
-        </div>
-
-        {# Link #}
-        <a href="{{ formation.get_absolute_url }}"
-           class="inline-flex items-center text-primary-500 font-medium hover:text-secondary transition-colors duration-300 group/link">
-          Voir le programme
-          <svg class="w-4 h-4 ml-2 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
-        </a>
-
-      </div>
-      {% endfor %}
-    </div>
-
   </div>
 </section>
 
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 5 : POURQUOI UFHOB (Simplifiée)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="pourquoi-ufhob" class="py-24 lg:py-32 bg-soft">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.20.once="show = true">
-
-    {# Header #}
-    <div class="text-center mb-16">
-      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
-        Notre engagement
-      </span>
-      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-500">
-        Pourquoi choisir <span class="text-secondary">UFHOB</span> ?
-      </h2>
+{% if director_message %}
+<section id="mot-direction" class="bg-ufhob-primary py-16 text-white sm:py-20">
+  <div class="mx-auto grid max-w-ufhob-container items-center gap-8 px-4 sm:px-6 lg:grid-cols-[220px_1fr] lg:px-8">
+    {% if director_message.photo %}<img src="{{ director_message.photo.url }}" alt="{{ director_message.full_name }}" class="h-64 w-full rounded-ufhob-lg object-cover" loading="lazy">{% endif %}
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-white/75">Mot du {{ director_message.position }}</p>
+      <h2 class="mt-3 text-3xl font-bold text-white sm:text-4xl">{{ director_message.title }}</h2>
+      <p class="mt-4 text-base leading-7 text-white/90">{{ director_message.message|truncatewords:55 }}</p>
+      <p class="mt-5 text-sm font-bold text-white">{{ director_message.full_name }}{% if director_message.position %} · {{ director_message.position }}{% endif %}</p>
+      <a href="{% url 'core:university' %}#dirigeant" class="mt-6 inline-flex border border-white/60 px-5 py-3 text-sm font-bold text-white hover:bg-white hover:text-ufhob-primary">Voir plus</a>
     </div>
+  </div>
+</section>
+{% endif %}
 
-    {# Grid visuel #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {% for item in why_blocks %}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-           style="transition-delay: {{ forloop.counter0 }}00ms"
-           class="group relative rounded-2xl overflow-hidden shadow-xl transition-all duration-500 hover:-translate-y-3">
-
-        <img src="{% static 'images/ufhob/' %}{{ item.img }}"
-             class="w-full h-56 object-cover transition duration-700 group-hover:scale-110"
-             alt="{{ item.title }}"
-             loading="lazy">
-
-        {# Overlay #}
-        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
-
-        {# Texte #}
-        <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-          <h4 class="font-semibold text-lg mb-2">{{ item.title }}</h4>
-          <p class="text-sm text-white/80">{{ item.desc }}</p>
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
-
-    {# Points clés #}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
-         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-         class="transition-all duration-700 delay-300">
-
-      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
-        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i data-lucide="graduation-cap" class="w-7 h-7"></i>
-        </div>
-        <h4 class="font-semibold text-primary-500 mb-2">Excellence académique</h4>
-        <p class="text-sm text-gray-600">Rigueur pédagogique et suivi individualisé.</p>
-      </div>
-
-      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
-        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i data-lucide="briefcase" class="w-7 h-7"></i>
-        </div>
-        <h4 class="font-semibold text-primary-500 mb-2">Insertion professionnelle</h4>
-        <p class="text-sm text-gray-600">Formations alignées avec les besoins du terrain.</p>
-      </div>
-
-      <div class="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition hover:-translate-y-2 text-center">
-        <div class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i data-lucide="map-pin" class="w-7 h-7"></i>
-        </div>
-        <h4 class="font-semibold text-primary-500 mb-2">Présence nationale</h4>
-        <p class="text-sm text-gray-600">{{ annexes|length }} annexes stratégiques au Mali.</p>
-      </div>
-
-    </div>
-
+<section id="gouvernance" class="bg-white py-16 sm:py-20">
+  <div class="mx-auto grid max-w-ufhob-container gap-10 px-4 sm:px-6 lg:grid-cols-[.8fr_1.2fr] lg:px-8">
+    <c-public.section_header eyebrow="Gouvernance" title="{{ governance_title }}" text="{{ governance_text }}" />
+    <div class="grid gap-4 sm:grid-cols-2"><div class="rounded-ufhob-md bg-ufhob-primary-soft p-6"><h3 class="text-lg font-bold text-ufhob-primary">{{ site_configuration.governance_admin_title|default:'Pôle administratif' }}</h3><p class="mt-2 text-sm leading-6 text-ufhob-muted">{{ site_configuration.governance_admin_text|default:'Le Conseil d’administration oriente et contrôle la gestion de l’établissement avec les services administratifs.' }}</p></div><div class="rounded-ufhob-md bg-ufhob-ivory p-6"><h3 class="text-lg font-bold text-ufhob-primary">{{ site_configuration.governance_academic_title|default:'Pôle académique' }}</h3><p class="mt-2 text-sm leading-6 text-ufhob-muted">{{ site_configuration.governance_academic_text|default:'Le Conseil académique et le Rectorat coordonnent l’enseignement, la recherche et la vie académique.' }}</p></div></div>
   </div>
 </section>
 
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 6 : GALERIE SPOTLIGHT (NOUVELLE)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-{% component "gallery_spotlight"
-   title="Instants Capturés"
-   subtitle="Revivez les moments forts de notre communauté"
-   gallery_url="/galerie/"
-   total_count=48
-%}{% endcomponent %}
-
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 7 : ANNEXES (Simplifiée - Slider)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="annexes" class="py-24 lg:py-32 bg-white">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.20.once="show = true">
-
-    {# Header #}
-    <div class="text-center mb-16">
-      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
-        Présence nationale
-      </span>
-      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-500">
-        Nos Annexes Stratégiques
-      </h2>
-      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
-        UFHOB déploie ses formations à travers plusieurs régions du Mali pour garantir
-        accessibilité et excellence académique sur l'ensemble du territoire.
-      </p>
-    </div>
-
-    {# Grid Annexes #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
-      {# Annexe Card - Djélibougou #}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
-        <div class="relative h-48 overflow-hidden">
-          <img src="{% static 'images/annexes/dielibougou.jpg' %}"
-               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-               alt="UFHOB Djélibougou"
-               loading="lazy">
-          <div class="absolute inset-0 bg-gradient-to-t from-primary-500/80 to-transparent"></div>
-          <div class="absolute bottom-4 left-4 text-white">
-            <h4 class="font-semibold text-lg">UFHOB Djélibougou</h4>
-            <p class="text-white/80 text-sm">Siège principal</p>
-          </div>
-        </div>
-        <div class="p-4">
-          <a href="tel:+22370000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
-            <i data-lucide="phone" class="w-4 h-4"></i>
-            +223 70 00 00 00
-          </a>
-        </div>
-      </div>
-
-      {# Annexe Card - Ségou #}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-           style="transition-delay: 100ms"
-           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
-        <div class="relative h-48 overflow-hidden">
-          <img src="{% static 'images/annexes/segou.jpg' %}"
-               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-               alt="UFHOB Ségou"
-               loading="lazy">
-          <div class="absolute inset-0 bg-gradient-to-t from-primary-500/80 to-transparent"></div>
-          <div class="absolute bottom-4 left-4 text-white">
-            <h4 class="font-semibold text-lg">UFHOB Ségou</h4>
-            <p class="text-white/80 text-sm">Annexe régionale</p>
-          </div>
-        </div>
-        <div class="p-4">
-          <a href="tel:+22371000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
-            <i data-lucide="phone" class="w-4 h-4"></i>
-            +223 71 00 00 00
-          </a>
-        </div>
-      </div>
-
-      {# Annexe Card - Sikasso #}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-           style="transition-delay: 200ms"
-           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
-        <div class="relative h-48 overflow-hidden">
-          <img src="{% static 'images/annexes/sikasso.jpg' %}"
-               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-               alt="UFHOB Sikasso"
-               loading="lazy">
-          <div class="absolute inset-0 bg-gradient-to-t from-primary-500/80 to-transparent"></div>
-          <div class="absolute bottom-4 left-4 text-white">
-            <h4 class="font-semibold text-lg">UFHOB Sikasso</h4>
-            <p class="text-white/80 text-sm">Annexe régionale</p>
-          </div>
-        </div>
-        <div class="p-4">
-          <a href="tel:+22374000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
-            <i data-lucide="phone" class="w-4 h-4"></i>
-            +223 74 00 00 00
-          </a>
-        </div>
-      </div>
-
-      {# Annexe Card - Kayes #}
-      <div :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'"
-           style="transition-delay: 300ms"
-           class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 border border-gray-100">
-        <div class="relative h-48 overflow-hidden">
-          <img src="{% static 'images/annexes/kayes.jpg' %}"
-               class="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-               alt="UFHOB Kayes"
-               loading="lazy">
-          <div class="absolute inset-0 bg-gradient-to-t from-primary-500/80 to-transparent"></div>
-          <div class="absolute bottom-4 left-4 text-white">
-            <h4 class="font-semibold text-lg">UFHOB Kayes</h4>
-            <p class="text-white/80 text-sm">Annexe régionale</p>
-          </div>
-        </div>
-        <div class="p-4">
-          <a href="tel:+22375000000" class="flex items-center gap-2 text-secondary font-medium hover:underline text-sm">
-            <i data-lucide="phone" class="w-4 h-4"></i>
-            +223 75 00 00 00
-          </a>
-        </div>
-      </div>
-
-    </div>
-
-    {# Voir plus #}
-    <div class="text-center mt-12">
-      <a href="#"
-         class="inline-flex items-center gap-2 text-primary-500 font-semibold hover:text-secondary transition-colors">
-        Voir toutes nos implantations
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-        </svg>
-      </a>
-    </div>
-
+<section id="schools" class="bg-ufhob-ivory py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><c-public.section_header eyebrow="Nos écoles" title="Des composantes réunies dans une même université" text="Chaque école porte ses disciplines et ses parcours au sein d’une même communauté universitaire." /><a href="#formations" class="shrink-0 text-sm font-bold text-ufhob-primary">Voir les formations →</a></div>
+    <div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for school in schools %}<c-public.school_card :school="school" />{% empty %}<div class="rounded-ufhob-lg border border-dashed border-ufhob-border bg-white p-8 text-ufhob-muted md:col-span-2 lg:col-span-3">Les écoles actives seront affichées ici dès leur publication.</div>{% endfor %}</div>
   </div>
 </section>
 
-
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 8 : ACTUALITÉS & BLOG (Simplifiée)
-   ══════════════════════════════════════════════════════════════════════════════ #}
-<section id="actualites" class="py-24 lg:py-32 bg-soft">
-  <div class="max-w-7xl mx-auto px-6"
-       x-data="{ show: false }"
-       x-intersect:enter.threshold.15.once="show = true">
-
-    {# Header #}
-    <div class="text-center mb-16"
-         :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
-         class="transition-all duration-700">
-      <span class="text-sm uppercase tracking-wider font-semibold text-secondary">
-        Actualités & Publications
-      </span>
-      <h2 class="mt-4 text-3xl md:text-4xl font-bold text-primary-500">
-        La vie académique en continu
-      </h2>
-      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
-        Suivez les événements institutionnels et découvrez nos analyses pédagogiques.
-      </p>
-    </div>
-
-    {# Grid Actualités + Blog #}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-
-      {# Actualités #}
-      <div>
-        <h3 class="text-xl font-semibold text-primary-500 mb-8 flex items-center gap-2">
-          <i data-lucide="newspaper" class="w-5 h-5 text-secondary"></i>
-          Actualités
-        </h3>
-
-        <div class="space-y-4">
-          {% for news in latest_news %}
-          <a href="{{ news.get_absolute_url }}"
-             class="group flex gap-5 items-center bg-white rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-300">
-
-            {% if news.image %}
-            <div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
-              <img src="{{ news.image.url }}"
-                   class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                   alt="{{ news.titre }}">
-            </div>
-            {% endif %}
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-2">
-                {% if news.is_urgent %}
-                <span class="text-[10px] px-2 py-0.5 bg-red-100 text-red-600 rounded-full uppercase font-medium">
-                  Urgent
-                </span>
-                {% endif %}
-                {% if news.is_important %}
-                <span class="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full uppercase font-medium">
-                  Important
-                </span>
-                {% endif %}
-                <span class="text-xs text-gray-400">{{ news.published_at|date:"d M Y" }}</span>
-              </div>
-              <h4 class="font-semibold text-primary-500 group-hover:text-secondary transition truncate">
-                {{ news.titre }}
-              </h4>
-            </div>
-
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-
-      {# Blog #}
-      <div>
-        <h3 class="text-xl font-semibold text-primary-500 mb-8 flex items-center gap-2">
-          <i data-lucide="book-open" class="w-5 h-5 text-secondary"></i>
-          Articles & Analyses
-        </h3>
-
-        <div class="space-y-4">
-          {% for article in latest_articles %}
-          <a href="{{ article.get_absolute_url }}"
-             class="group flex gap-5 items-center bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-lg transition-all duration-300">
-
-            {% if article.image %}
-            <div class="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
-              <img src="{{ article.image.url }}"
-                   class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                   alt="{{ article.title }}">
-            </div>
-            {% endif %}
-
-            <div class="flex-1 min-w-0">
-              <span class="text-xs text-gray-400">{{ article.published_at|date:"d M Y" }}</span>
-              <h4 class="font-semibold text-primary-500 group-hover:text-secondary transition truncate mt-1">
-                {{ article.title }}
-              </h4>
-            </div>
-
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-
-    </div>
-
-    {# CTA #}
-    <div class="text-center mt-16">
-      <a href="{% url 'news:list' %}"
-         class="inline-flex items-center gap-3 bg-secondary hover:bg-secondary/90 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1">
-        <i data-lucide="arrow-right" class="w-5 h-5"></i>
-        Voir toutes les publications
-      </a>
-    </div>
-
+<section id="formations" class="bg-white py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><c-public.section_header eyebrow="Formations" title="Des parcours pour apprendre, créer et agir" text="Découvrez une sélection des programmes proposés par les écoles de l’université." /><a href="{% url 'formations:list' %}" class="shrink-0 rounded-ufhob-sm bg-ufhob-primary px-5 py-3 text-sm font-bold text-white">Toutes les formations</a></div>
+    <div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for programme in formations_home %}<c-public.programme_card :programme="programme" />{% empty %}<div class="rounded-ufhob-lg bg-ufhob-ivory p-8 text-ufhob-muted md:col-span-2 lg:col-span-3">Le catalogue public est en cours de préparation.</div>{% endfor %}</div>
   </div>
 </section>
 
-{# ══════════════════════════════════════════════════════════════════════════════
-   SECTION 9 : FAQ
-   ══════════════════════════════════════════════════════════════════════════════ #}
-{% component "faq"
-   title="Questions Fréquentes"
-   subtitle="Trouvez rapidement les réponses à vos interrogations"
-%}{% endcomponent %}
+<section id="recherche" class="relative isolate overflow-hidden bg-ufhob-primary py-16 text-white sm:py-20 lg:py-24">
+  {% if site_configuration.research_image %}<img src="{% if site_configuration.research_image %}{{ site_configuration.research_image.url }}{% endif %}" alt="Recherche et innovation à l’UFHOB" class="absolute inset-0 -z-20 h-full w-full object-cover" loading="lazy">{% endif %}<div class="absolute inset-0 -z-10 bg-ufhob-primary/90"></div>
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8"><div class="max-w-3xl"><p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary">Recherche & innovation</p><h2 class="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl">{{ research_title }}</h2><p class="mt-5 text-lg leading-8 text-white/75">{{ research_text }}</p><a href="{% url 'core:research_innovation' %}" class="mt-7 inline-flex border border-white/50 px-5 py-3 text-sm font-bold text-white hover:bg-white hover:text-ufhob-primary">Découvrir la recherche</a></div></div>
+</section>
 
+<section id="campus" class="bg-ufhob-ivory py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <c-public.section_header eyebrow="Campus & implantations" title="L’UFHOB-Mali au plus près de ses étudiants" text="Découvrez nos implantations et les composantes universitaires présentes dans plusieurs localités du Mali." />
+    <div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for campus in annexes %}<c-public.campus_card :campus="campus" />{% empty %}<div class="rounded-ufhob-lg border border-dashed border-ufhob-border bg-white p-8 text-ufhob-muted md:col-span-2 lg:col-span-3">Les implantations actives seront bientôt présentées.</div>{% endfor %}</div>
+  </div>
+</section>
+
+<section id="vie-universitaire" class="bg-white py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto grid max-w-ufhob-container items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+    <div class="grid grid-cols-2 gap-4">{% if site_configuration.campus_life_image_1 %}<img src="{% if site_configuration.campus_life_image_1 %}{{ site_configuration.campus_life_image_1.url }}{% endif %}" alt="Vie universitaire" class="h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy">{% endif %}{% if site_configuration.campus_life_image_2 %}<img src="{% if site_configuration.campus_life_image_2 %}{{ site_configuration.campus_life_image_2.url }}{% endif %}" alt="Apprentissage et activités étudiantes" class="mt-8 h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy">{% endif %}</div>
+    <div><c-public.section_header eyebrow="Vie universitaire" title="{{ campus_life_title }}" text="{{ campus_life_text }}" /><div class="mt-7 grid gap-3 text-sm text-ufhob-muted sm:grid-cols-2"><p class="rounded-ufhob-sm bg-ufhob-primary-soft p-4">Accompagnement pédagogique</p><p class="rounded-ufhob-sm bg-ufhob-ivory p-4">Ressources et documentation</p><p class="rounded-ufhob-sm bg-ufhob-ivory p-4">Engagement étudiant</p><p class="rounded-ufhob-sm bg-ufhob-primary-soft p-4">Activités scientifiques et culturelles</p></div></div>
+  </div>
+</section>
+
+<section id="actualites" class="bg-ufhob-ivory py-16 sm:py-20 lg:py-24">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><c-public.section_header eyebrow="Actualités & événements" title="Ce qui fait vivre l’UFHOB" text="Les dernières informations publiées par l’université." /><a href="{% url 'news:list' %}" class="shrink-0 text-sm font-bold text-ufhob-primary">Toutes les actualités →</a></div>
+    <div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for item in latest_news %}<c-public.news_card :item="item" />{% empty %}<div class="rounded-ufhob-lg border border-dashed border-ufhob-border bg-white p-8 text-ufhob-muted md:col-span-2 lg:col-span-3">Aucune actualité n’est publiée pour le moment.</div>{% endfor %}</div>
+    {% if latest_events %}<div class="mt-10"><h3 class="text-xl font-bold text-ufhob-primary">Événements publiés</h3><div class="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for event in latest_events %}<c-public.event_card :event="event" />{% endfor %}</div></div>{% endif %}
+  </div>
+</section>
+
+<c-public.cta title="{{ presentation.cta_title|default:'Construisez le monde de demain, aujourd’hui' }}" text="{{ presentation.cta_subtitle|default:'Explorez les formations de l’UFHOB et engagez la première étape de votre parcours universitaire.' }}" button_text="{{ presentation.cta_button_text }}" button_url="{{ presentation.cta_button_url }}" />
 {% endblock %}
+
+{% block public_footer %}<c-public.footer logo_url="{{ site_logo_url }}" :institution="institution" :site_configuration="site_configuration" :public_legal_links="public_legal_links" />{% endblock %}
+{% block public_cookie_consent %}<c-public.cookie_banner />{% endblock %}
+{% block extra_scripts %}<script src="{% static 'src/js/public/cinematic_hero.js' %}"></script>{% endblock %}

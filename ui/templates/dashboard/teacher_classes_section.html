@@ -1,0 +1,10 @@
+{% load component_tags %}
+<section id="teacher-panel-classes" data-teacher-section="classes" class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Mon périmètre" title="Mes classes et matières" subtitle="Retrouvez simplement les classes, effectifs et matières qui vous sont affectés." %}
+    {% fill "actions" %}{% component "ui_core.status_badge" label=class_focus_rows|length|add:" classe(s)" tone="primary" icon="school" %}{% endcomponent %}{% endfill %}
+  {% endcomponent %}
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {% for card in section_kpi_cards %}{% component "ui_core.stat_card" label=card.label value=card.value icon=card.icon tone=card.tone compact=True %}{% endcomponent %}{% endfor %}
+  </div>
+  {% component "ui_core.data_table" id="teacher-classes-table" caption="Classes rattachées" headers=teacher_ui_tables.classes_headers rows=teacher_ui_tables.classes density="compact" empty_title="Aucune classe rattachée" empty_message="Vos affectations par classe apparaîtront ici." %}{% endcomponent %}
+</section>

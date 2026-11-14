@@ -1,0 +1,107 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Candidature #{{ candidature.pk }}{% endblock %}
+{% block page_subtitle %}Dossier complet et workflow administratif{% endblock %}
+
+{% block content_main %}
+<div class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <a href="{% url 'superadmin:candidature_list' %}" class="text-slate-500 hover:text-slate-700"><i data-lucide="arrow-left" class="h-4 w-4"></i></a>
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900 mb-0">{{ candidature.full_name }}</h2>
+                <span class="badge-status badge-{% if candidature.status == 'accepted' %}success{% elif candidature.status == 'rejected' %}danger{% elif candidature.status == 'under_review' %}info{% elif candidature.status == 'to_complete' %}warning{% else %}draft{% endif %}">{{ candidature.get_status_display }}</span>
+            </div>
+            <p class="text-sm text-slate-500 mb-0">Réf: {{ candidature.reference }} • Soumise le {{ candidature.submitted_at|date:"d/m/Y H:i" }}</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'superadmin:candidature_edit' candidature.pk %}" class="btn btn-outline"><i data-lucide="pencil" class="h-4 w-4"></i>Éditer</a>
+            {% if linked_inscription %}
+            <a href="{% url 'superadmin:inscription_detail' linked_inscription.pk %}" class="btn btn-secondary"><i data-lucide="link" class="h-4 w-4"></i>Voir inscription</a>
+            {% else %}
+            <a href="{% url 'superadmin:inscription_create' %}?candidature={{ candidature.pk }}" class="btn btn-secondary"><i data-lucide="user-plus" class="h-4 w-4"></i>Créer inscription</a>
+            {% endif %}
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('status-panel').classList.toggle('hidden')"><i data-lucide="zap" class="h-4 w-4"></i>Actions statut</button>
+        </div>
+    </div>
+
+    <div id="status-panel" class="card hidden">
+        <div class="card-body">
+            <form method="post" action="{% url 'superadmin:candidature_status' candidature.pk %}" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {% csrf_token %}
+                <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if candidature.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="admin_comment" placeholder="Commentaire optionnel" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <button type="submit" class="btn btn-primary"><i data-lucide="check" class="h-4 w-4"></i>Mettre à jour</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2 space-y-6">
+            <div class="card">
+                <div class="card-header"><h3 class="text-base font-bold text-slate-900">Informations personnelles</h3></div>
+                <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-slate-500">Nom complet</span><p class="font-medium text-slate-800 mb-0">{{ candidature.full_name }}</p></div>
+                    <div><span class="text-slate-500">Email</span><p class="font-medium text-slate-800 mb-0">{{ candidature.email }}</p></div>
+                    <div><span class="text-slate-500">Téléphone</span><p class="font-medium text-slate-800 mb-0">{{ candidature.phone }}</p></div>
+                    <div><span class="text-slate-500">Naissance</span><p class="font-medium text-slate-800 mb-0">{{ candidature.birth_date|date:"d/m/Y" }} — {{ candidature.birth_place }}</p></div>
+                    <div><span class="text-slate-500">Adresse</span><p class="font-medium text-slate-800 mb-0">{{ candidature.address|default:"-" }}</p></div>
+                    <div><span class="text-slate-500">Ville/Pays</span><p class="font-medium text-slate-800 mb-0">{{ candidature.city|default:"-" }}, {{ candidature.country|default:"-" }}</p></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="text-base font-bold text-slate-900">Parcours académique</h3></div>
+                <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-slate-500">Programme</span><p class="font-medium text-slate-800 mb-0">{{ candidature.programme.title }}</p></div>
+                    <div><span class="text-slate-500">Cycle</span><p class="font-medium text-slate-800 mb-0">{{ candidature.programme.cycle.name|default:"-" }}</p></div>
+                    <div><span class="text-slate-500">Filière</span><p class="font-medium text-slate-800 mb-0">{{ candidature.programme.filiere.name|default:"-" }}</p></div>
+                    <div><span class="text-slate-500">Campus</span><p class="font-medium text-slate-800 mb-0">{{ candidature.branch.name|default:"-" }}</p></div>
+                    <div><span class="text-slate-500">Année académique</span><p class="font-medium text-slate-800 mb-0">{{ candidature.academic_year }}</p></div>
+                    <div><span class="text-slate-500">Année d'entrée</span><p class="font-medium text-slate-800 mb-0">{{ candidature.entry_year }}</p></div>
+                </div>
+            </div>
+
+            {% include "superadmin/candidatures/_document_inline.html" %}
+
+            <div class="card">
+                <div class="card-header"><h3 class="text-base font-bold text-slate-900">Commentaires internes</h3></div>
+                <div class="card-body space-y-3">
+                    <form method="post">
+                        {% csrf_token %}
+                        <textarea name="admin_comment" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2">{{ candidature.admin_comment|default:'' }}</textarea>
+                        <div class="mt-2 flex justify-end">
+                            <button type="submit" class="btn btn-primary"><i data-lucide="save" class="h-4 w-4"></i>Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            {% include "superadmin/candidatures/_timeline.html" %}
+
+            <div class="card">
+                <div class="card-header"><h3 class="text-base font-bold text-slate-900">Navigation profonde</h3></div>
+                <div class="card-body space-y-2 text-sm">
+                    <a href="{% url 'superadmin:formation_detail' candidature.programme.pk %}" class="btn btn-outline w-full justify-start"><i data-lucide="graduation-cap" class="h-4 w-4"></i>Voir programme</a>
+                    {% if linked_inscription %}
+                    <a href="{% url 'superadmin:inscription_detail' linked_inscription.pk %}" class="btn btn-outline w-full justify-start"><i data-lucide="contact" class="h-4 w-4"></i>Voir inscription</a>
+                    {% else %}
+                    <a href="{% url 'superadmin:inscription_create' %}?candidature={{ candidature.pk }}" class="btn btn-outline w-full justify-start"><i data-lucide="user-plus" class="h-4 w-4"></i>Créer inscription</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'superadmin:candidature_delete' candidature.pk %}" data-confirm-message="Supprimer cette candidature ?" data-confirm-title="Confirmer">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger w-full justify-start"><i data-lucide="trash-2" class="h-4 w-4"></i>Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% load component_tags %}
+<div data-ui-core="preference-settings" class="space-y-6">
+  <h3 class="text-lg font-bold text-ui-text">Préférences</h3>
+
+  {% if form %}
+  <form method="post" action="{% url 'accounts:appearance_update' %}"
+        hx-post="{% url 'accounts:appearance_update' %}" hx-trigger="change" hx-sync="this:replace"
+        hx-swap="none" hx-indicator="closest form" class="space-y-4" data-app-appearance-form>
+    {% csrf_token %}
+    <h4 class="text-sm font-bold uppercase tracking-wide text-ui-text-muted">Apparence</h4>
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-semibold text-ui-text">Thème</legend>
+      <div class="flex flex-wrap gap-2">
+        <label class="app-appearance-option"><input type="radio" name="theme" value="LIGHT" {% if form.instance.theme == 'LIGHT' %}checked{% endif %}><span>Clair</span></label>
+        <label class="app-appearance-option"><input type="radio" name="theme" value="DARK" {% if form.instance.theme == 'DARK' %}checked{% endif %}><span>Sombre</span></label>
+        <label class="app-appearance-option"><input type="radio" name="theme" value="SYSTEM" {% if form.instance.theme == 'SYSTEM' or not form.instance.theme %}checked{% endif %}><span>Système</span></label>
+      </div>
+    </fieldset>
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-semibold text-ui-text">Taille du texte</legend>
+      <div class="flex flex-wrap gap-2">
+        <label class="app-appearance-option"><input type="radio" name="font_scale" value="SM" {% if form.instance.font_scale == 'SM' %}checked{% endif %}><span>Petite</span></label>
+        <label class="app-appearance-option"><input type="radio" name="font_scale" value="MD" {% if form.instance.font_scale == 'MD' or not form.instance.font_scale %}checked{% endif %}><span>Normale</span></label>
+        <label class="app-appearance-option"><input type="radio" name="font_scale" value="LG" {% if form.instance.font_scale == 'LG' %}checked{% endif %}><span>Grande</span></label>
+        <label class="app-appearance-option"><input type="radio" name="font_scale" value="XL" {% if form.instance.font_scale == 'XL' %}checked{% endif %}><span>Très grande</span></label>
+      </div>
+    </fieldset>
+    <p class="text-xs text-ui-text-muted">Le mode Système suit automatiquement l’apparence de votre appareil.</p>
+    <span class="htmx-indicator text-xs text-ui-text-muted" role="status">Enregistrement…</span>
+    <noscript><button type="submit" class="rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary">Enregistrer l’apparence</button></noscript>
+  </form>
+  {% endif %}
+
+  <form {% if hx_post %}hx-post="{{ hx_post }}" hx-target="{{ hx_target|default:'#preferences-container' }}" hx-swap="innerHTML" hx-indicator="#prefs-loading"{% endif %} method="POST" class="space-y-4">
+    {% csrf_token %}
+    {% if form %}
+      {% for field in form %}
+        <div class="space-y-1.5">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-ui-text">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="text-xs text-ui-text-muted">{{ field.help_text }}</p>
+          {% endif %}
+          {% if field.errors %}
+            <p class="text-xs text-ui-danger" role="alert">{{ field.errors.0 }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div id="prefs-loading" class="htmx-indicator">
+      <div class="flex items-center gap-2 text-sm text-ui-text-muted">
+        <div class="h-4 w-4 animate-spin rounded-full border-2 border-ui-border border-t-ui-info"></div>
+        Enregistrement...
+      </div>
+    </div>
+
+    <div class="flex justify-end border-t border-ui-border pt-4">
+      <button type="submit" class="rounded-ui-button bg-ui-info px-4 py-2 text-sm font-semibold text-white hover:bg-ui-info/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus focus-visible:ring-offset-2">
+        Enregistrer les préférences
+      </button>
+    </div>
+  </form>
+</div>

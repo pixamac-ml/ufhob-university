@@ -1,0 +1,26 @@
+{% extends "superadmin/unified_base.html" %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block content_main %}
+<section class="card max-w-4xl mx-auto rounded-xl border border-slate-100 shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for field in form %}{% if field.name != 'schools' %}
+        <div>{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
+      {% endif %}{% endfor %}
+      </div>
+      <fieldset class="rounded-lg border border-slate-200 p-4">
+        <legend>Implantation académique</legend>
+        <p class="text-sm">Écoles présentes sur ce campus. Décocher désactive l’implantation et conserve son historique.</p>
+        <div class="max-h-64 overflow-y-auto">{{ form.schools }}</div>{{ form.schools.errors }}
+      </fieldset>
+      <div class="flex justify-end gap-2">
+        <a href="{% url 'superadmin:branch_list' %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

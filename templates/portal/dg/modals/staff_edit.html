@@ -1,0 +1,44 @@
+{% load component_tags %}
+<section class="space-y-5" data-overlay-title="Modifier le personnel">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Fiche personnel</p>
+    <p class="mt-1 text-sm text-ui-text-muted">{{ staff_profile.user.get_full_name|default:staff_profile.user.username }} · les privilèges Django ne sont pas modifiables ici.</p>
+  </div>
+  <form method="post" action="{% url 'accounts_portal:dg_staff_edit' %}" class="space-y-4" data-dg-interactive-form onsubmit="return dgSubmitAction(this)">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div role="alert" class="text-sm text-ui-danger">{{ form.non_field_errors }}</div>{% endif %}
+    {{ form.profile_id }}
+    <fieldset class="space-y-4 rounded-2xl border border-ui-border p-4 shadow-sm">
+      <legend class="px-2 text-sm font-bold text-ui-text">Identité</legend>
+      {% component "ui_core.django_form_field" field=form.first_name %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=form.last_name %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=form.email %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=form.phone %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=form.username %}{% endcomponent %}
+    </fieldset>
+    <fieldset class="space-y-4 rounded-2xl border border-ui-border p-4 shadow-sm">
+      <legend class="px-2 text-sm font-bold text-ui-text">Rémunération et protection sociale</legend>
+      {% component "ui_core.django_form_field" field=form.salary_base %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=form.teacher_hourly_rate %}{% endcomponent %}
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div class="rounded-xl border border-ui-border bg-ui-surface-muted p-3">
+          {% component "ui_core.django_form_field" field=form.amo_applicable %}{% endcomponent %}
+          <div class="mt-3">{% component "ui_core.django_form_field" field=form.amo_rate %}{% endcomponent %}</div>
+        </div>
+        <div class="rounded-xl border border-ui-border bg-ui-surface-muted p-3">
+          {% component "ui_core.django_form_field" field=form.inps_applicable %}{% endcomponent %}
+          <div class="mt-3">{% component "ui_core.django_form_field" field=form.inps_rate %}{% endcomponent %}</div>
+        </div>
+      </div>
+      <div class="rounded-xl border border-ui-info/30 bg-ui-info-soft px-3 py-2 text-xs text-ui-text-muted">
+        <strong class="text-ui-text">AMO et INPS :</strong> saisissez uniquement le taux en <strong class="text-ui-text">%</strong>.
+        Le montant en FCFA est calculé automatiquement sur le salaire brut.
+      </div>
+      {% include "accounts/dashboard/partials/payroll_social_calculator.html" with base_field="salary_base" allowances_field="" deductions_field="" %}
+    </fieldset>
+    <div class="flex flex-wrap justify-end gap-3 border-t border-ui-border pt-5">
+      <button type="button" class="inline-flex h-ui-control items-center rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover" onclick="dgCloseModal()">Annuler</button>
+      <button type="submit" class="inline-flex h-ui-control items-center rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong">Enregistrer</button>
+    </div>
+  </form>
+</section>

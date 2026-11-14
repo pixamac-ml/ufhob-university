@@ -1,0 +1,41 @@
+{% load static humanize %}
+<main class="receipt-document">
+  <header class="receipt-letterhead">
+    <div class="receipt-logos">
+      <img class="receipt-logo" src="{% static 'images/students/logo-ubhob.png' %}" alt="Logo UFHOB">
+      {% if payment.inscription.candidature.programme.school.logo %}<img class="receipt-logo" src="{{ payment.inscription.candidature.programme.school.logo.url }}" alt="Logo {{ payment.inscription.candidature.programme.school.display_name }}">{% endif %}
+    </div>
+    <div class="receipt-institution">
+      <p class="receipt-university">Université Félix Houphouët-Boigny — Mali</p>
+      <p class="receipt-school">{% firstof payment.inscription.candidature.programme.school.official_name payment.inscription.candidature.programme.school.code %}</p>
+      <p class="receipt-campus">Campus de {% if payment.inscription.candidature.branch %}{{ payment.inscription.candidature.branch.name }}{% else %}—{% endif %}</p>
+      <p class="receipt-contact">{% firstof payment.inscription.candidature.programme.school.institution.address "" %}{% if payment.inscription.candidature.programme.school.institution.city %} · {{ payment.inscription.candidature.programme.school.institution.city }}{% endif %}{% if payment.inscription.candidature.programme.school.institution.phone %} · Tél. {{ payment.inscription.candidature.programme.school.institution.phone }}{% endif %}{% if payment.inscription.candidature.programme.school.institution.email %} · {{ payment.inscription.candidature.programme.school.institution.email }}{% endif %}</p>
+    </div>
+  </header>
+  <section class="receipt-title-row">
+    <h1>REÇU OFFICIEL DE PAIEMENT</h1>
+    <dl class="receipt-references"><div><dt>Reçu n°</dt><dd>{{ payment.public_receipt_reference }}</dd></div><div><dt>Paiement n°</dt><dd>{{ payment.public_reference }}</dd></div><div><dt>Date</dt><dd>{% if payment.paid_at %}{{ payment.paid_at|date:"d/m/Y" }}{% else %}—{% endif %}</dd></div></dl>
+  </section>
+  <section class="receipt-section receipt-identification">
+    <h2>Identification de l’étudiant</h2>
+    <dl class="receipt-data-grid">
+      <div><dt>Nom et prénom</dt><dd>{% firstof candidature.full_name payment.inscription.candidature.full_name %}</dd></div>
+      {% if payment.inscription.student.matricule and not payment.inscription.student.matricule|slice:":5" == "ESFE-" %}<div><dt>Matricule</dt><dd>{{ payment.inscription.student.matricule }}</dd></div>{% endif %}
+      <div><dt>Programme</dt><dd>{% firstof programme.title payment.inscription.candidature.programme.title %}</dd></div>
+      <div><dt>Cycle / niveau</dt><dd>{% firstof payment.inscription.academic_level programme.cycle.name "—" %}</dd></div>
+      <div><dt>École</dt><dd>{% firstof payment.inscription.candidature.programme.school.official_name payment.inscription.candidature.programme.school.code %}</dd></div>
+      <div><dt>Campus</dt><dd>{% if payment.inscription.candidature.branch %}{{ payment.inscription.candidature.branch.name }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Année académique</dt><dd>{{ payment.inscription.candidature.academic_year }}</dd></div>
+    </dl>
+  </section>
+  <section class="receipt-section">
+    <h2>Détail du versement</h2>
+    <table class="receipt-table"><thead><tr><th>Désignation</th><th>Mode</th><th class="amount">Montant</th></tr></thead><tbody><tr><td>Versement au titre des frais de scolarité</td><td>{{ payment.get_method_display }}</td><td class="amount">{{ payment.amount|intcomma }} FCFA</td></tr></tbody></table>
+    <dl class="receipt-operation-meta"><div><dt>Référence de paiement</dt><dd>{{ payment.public_reference }}</dd></div><div><dt>Agent d’encaissement</dt><dd>{% if payment.agent and payment.agent.user %}{% firstof payment.agent.user.get_full_name payment.agent.agent_code %}{% elif payment.agent %}{{ payment.agent.agent_code }}{% else %}Non renseigné{% endif %}</dd></div><div><dt>Statut</dt><dd>VALIDÉ</dd></div></dl>
+  </section>
+  <section class="receipt-financial-summary" aria-label="Situation financière du dossier">
+    <p><span>Montant du versement</span><strong>{{ payment.amount|intcomma }} FCFA</strong></p><p><span>Total annuel</span><strong>{{ payment.inscription.amount_due|intcomma }} FCFA</strong></p><p><span>Déjà payé</span><strong>{{ payment.inscription.amount_paid|intcomma }} FCFA</strong></p><p class="balance"><span>Reste à payer</span><strong>{{ payment.inscription.balance|intcomma }} FCFA</strong></p>
+  </section>
+  <section class="receipt-validation"><p>Fait à {% firstof payment.inscription.candidature.programme.school.institution.city "Bamako" %}, le {% if payment.paid_at %}{{ payment.paid_at|date:"d/m/Y" }}{% else %}—{% endif %}</p><p>Validation électronique — référence de vérification : {{ payment.public_receipt_reference }}</p></section>
+  <footer class="receipt-footer"><p>Demain, c’est aujourd’hui</p><p>Université Félix Houphouët-Boigny — Mali{% if payment.inscription.candidature.programme.school.institution.phone %} · {{ payment.inscription.candidature.programme.school.institution.phone }}{% endif %}{% if payment.inscription.candidature.programme.school.institution.email %} · {{ payment.inscription.candidature.programme.school.institution.email }}{% endif %}</p><p>Document électronique — référence de vérification : {{ payment.public_receipt_reference }}</p></footer>
+</main>

@@ -1,0 +1,52 @@
+# Template for an existing Linux Nginx host. Replace the domain, application
+# path and certificate paths. Keep the ASGI port reachable only on loopback.
+map $http_upgrade $ufhob_connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+server {
+    listen 80;
+    server_name ufhob.example.com;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/ufhob/acme;
+    }
+    location / { return 301 https://ufhob.example.com$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    server_name ufhob.example.com;
+    ssl_certificate /etc/letsencrypt/live/ufhob.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ufhob.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 50m;
+
+    # Private documents must go through the existing authorized Django views.
+    location ~ ^/media/(notifier/internal-messages|communications|candidatures|payments|students|courses|academics|academic_calendar)(/|$) {
+        return 404;
+    }
+    location /private_media/ { return 404; }
+    location ~ /\. { return 404; }
+
+    # Only presentation assets have public URLs. Never alias all MEDIA_ROOT.
+    location ~ ^/media/(?:institution|site|schools|programmes|programs|blog|news|events|branches|infrastructure|university_life|partners|temoignages|staff|shop/products|memoires/couvertures)/.*\.(?:jpg|jpeg|png|gif|webp|avif|ico|mp4|webm)$ {
+        root /srv/ufhob;
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff always;
+        expires 1d;
+    }
+    location /media/ { return 404; }
+
+    location / {
+        proxy_pass http://127.0.0.1:8002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $ufhob_connection_upgrade;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}

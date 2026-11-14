@@ -1,0 +1,277 @@
+from __future__ import annotations
+
+from decimal import Decimal, InvalidOperation
+
+from django.core.exceptions import ValidationError
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
+
+from academics.models import AcademicClass, AcademicEnrollment, AcademicYear, EC, Semester, UE
+from academics.services.programme_structure_service import (
+    archive_ec_for_branch,
+    save_ec_for_branch,
+    save_ue_for_branch,
+)
+from formations.models import Programme
+from inscriptions.models import Inscription
+from students.models import Student
+
+
+def _group_programmes_by_cycle():
+    grouped = {}
+    programmes = Programme.objects.select_related("cycle").order_by(
+        "cycle__min_duration_years",
+        "cycle__name",
+        "title",
+        "id",
+    )[:300]
+    for programme in programmes:
+        cycle_name = programme.cycle.name if programme.cycle_id else "Sans cycle"
+        grouped.setdefault(cycle_name, []).append(programme)
+    return [{"cycle": cycle, "programmes": items} for cycle, items in grouped.items()]
+
+
+def _academic_class_name(*, programme, branch, academic_year, level):
+    return f"{level} {programme.title} - {branch.name} ({academic_year.name})"[:100]
+
+
+def _page_queryset(queryset, page_number, *, per_page):
+    paginator = Paginator(queryset, per_page)
+    try:
+        return paginator.page(page_number or 1)
+    except (EmptyPage, PageNotAnInteger):
+        return paginator.page(1)
+
+
+def build_academic_structure_context(*, branch, selected_class_id=None, student_query="", section="classes", class_page=1, student_page=1):
+    section = (section or "classes").strip().lower()
+    if section not in {"classes", "maquettes", "affectations"}:
+        section = "classes"
+
+    classes_qs = (
+        AcademicClass.objects.select_related("programme", "academic_year", "branch")
+        .filter(branch=branch)
+        .filter(is_archived=False)
+        .order_by("-is_active", "programme__title", "level", "id")
+    )
+    selected_class = classes_qs.filter(pk=selected_class_id).first() if selected_class_id else None
+    if selected_class is None:
+        selected_class = classes_qs.first()
+    classes_page = _page_queryset(classes_qs, class_page, per_page=12)
+
+    semesters = []
+    ue_rows = []
+    ec_count = 0
+    if selected_class is not None:
+        semesters = list(selected_class.semesters.prefetch_related("ues__ecs").order_by("number"))
+        for semester in semesters:
+            semester_ues = list(semester.ues.all().order_by("code", "id"))
+            ue_rows.append(
+                {
+                    "semester": semester,
+                    "ues": semester_ues,
+                }
+            )
+            ec_count += sum(ue.ecs.count() for ue in semester_ues)
+
+    unassigned_students = (
+        Student.objects.select_related("user", "inscription__candidature", "inscription__candidature__programme")
+        .filter(
+            inscription__candidature__branch=branch,
+            inscription__status__in=[Inscription.STATUS_PARTIAL, Inscription.STATUS_ACTIVE],
+            inscription__is_archived=False,
+            user__academic_enrollments__isnull=True,
+        )
+        .order_by("inscription__candidature__last_name", "inscription__candidature__first_name", "matricule")
+    )
+    if student_query:
+        unassigned_students = unassigned_students.filter(
+            Q(inscription__candidature__last_name__icontains=student_query)
+            | Q(inscription__candidature__first_name__icontains=student_query)
+            | Q(matricule__icontains=student_query)
+        )
+
+    unassigned_students_count = unassigned_students.count()
+    unassigned_students_page = _page_queryset(unassigned_students, student_page, per_page=15)
+
+    return {
+        "branch": branch,
+        "classes": list(classes_page.object_list),
+        "classes_page": classes_page,
+        "selected_class": selected_class,
+        "section": section,
+        "semesters": semesters,
+        "ue_rows": ue_rows,
+        "programmes_by_cycle": _group_programmes_by_cycle(),
+        "academic_years": list(AcademicYear.objects.order_by("-start_date")[:20]),
+        "unassigned_students": list(unassigned_students_page.object_list),
+        "unassigned_students_page": unassigned_students_page,
+        "student_query": student_query,
+        "metrics": {
+            "classes": classes_qs.count(),
+            "ues": sum(semester.ues.count() for semester in semesters) if selected_class else 0,
+            "ecs": ec_count,
+            "students_without_class": unassigned_students_count,
+        },
+    }
+
+
+@transaction.atomic
+def save_academic_class(*, branch, class_id=None, programme_id=None, academic_year_id=None, level="", threshold="", actor=None):
+    level = (level or "").strip().upper()
+    if not programme_id:
+        raise ValidationError("Programme obligatoire.")
+    if not academic_year_id:
+        raise ValidationError("Annee academique obligatoire.")
+    if not level:
+        raise ValidationError("Niveau de classe obligatoire.")
+
+    programme = Programme.objects.filter(pk=programme_id).first()
+    academic_year = AcademicYear.objects.filter(pk=academic_year_id).first()
+    if programme is None or academic_year is None:
+        raise ValidationError("Programme ou annee academique invalide.")
+
+    validation_threshold = None
+    if str(threshold or "").strip():
+        try:
+            validation_threshold = Decimal(str(threshold).replace(",", "."))
+        except (InvalidOperation, TypeError):
+            raise ValidationError("Seuil de validation invalide.")
+
+    duplicate_class = AcademicClass.objects.select_for_update().filter(
+        programme=programme,
+        branch=branch,
+        academic_year=academic_year,
+        level=level,
+    )
+
+    if class_id:
+        duplicate_class = duplicate_class.exclude(pk=class_id).first()
+        if duplicate_class is not None:
+            raise ValidationError("Une classe existe deja pour ce programme, cette annee et ce niveau.")
+        academic_class = AcademicClass.objects.select_for_update().filter(pk=class_id, branch=branch).first()
+    else:
+        academic_class = duplicate_class.first() or AcademicClass(branch=branch)
+
+    if academic_class is None:
+        raise ValidationError("Classe introuvable.")
+
+    academic_class.programme = programme
+    academic_class.academic_year = academic_year
+    academic_class.level = level
+    academic_class.study_level = _infer_study_level(level)
+    academic_class.validation_threshold = validation_threshold
+    academic_class.name = _academic_class_name(
+        programme=programme,
+        branch=branch,
+        academic_year=academic_year,
+        level=level,
+    )
+    academic_class.is_active = True
+    academic_class.is_archived = False
+    academic_class.archived_at = None
+    academic_class.save()
+
+    for number in (1, 2):
+        Semester.objects.get_or_create(academic_class=academic_class, number=number)
+    return academic_class
+
+
+def archive_academic_class(*, branch, class_id):
+    academic_class = AcademicClass.objects.filter(pk=class_id, branch=branch).first()
+    if academic_class is None:
+        raise ValidationError("Classe introuvable.")
+    academic_class.is_active = False
+    academic_class.is_archived = True
+    academic_class.archived_at = timezone.now()
+    academic_class.save(update_fields=["is_active", "is_archived", "archived_at"])
+    return academic_class
+
+
+@transaction.atomic
+def save_semester(*, branch, class_id, number):
+    academic_class = AcademicClass.objects.filter(pk=class_id, branch=branch, is_active=True).first()
+    if academic_class is None:
+        raise ValidationError("Classe introuvable ou inactive.")
+    number = int(number)
+    if number < 1 or number > 8:
+        raise ValidationError("Le numero de semestre doit etre entre 1 et 8.")
+    if Semester.objects.filter(academic_class=academic_class, number=number).exists():
+        raise ValidationError(f"Le semestre {number} existe deja pour cette classe.")
+    semester = Semester.objects.create(academic_class=academic_class, number=number)
+    return semester
+
+
+def save_ue(*, branch, actor=None, ue_id=None, semester_id=None, code="", title=""):
+    return save_ue_for_branch(
+        branch=branch,
+        actor=actor,
+        ue_id=ue_id,
+        semester_id=semester_id,
+        code=code,
+        title=title,
+    )
+
+
+def save_ec(*, branch, actor=None, ec_id=None, ue_id=None, title="", coefficient="", credit_required=""):
+    return save_ec_for_branch(
+        branch=branch,
+        actor=actor,
+        ec_id=ec_id,
+        ue_id=ue_id,
+        title=title,
+        coefficient=coefficient,
+        credit_required=credit_required,
+    )
+
+
+def delete_ec(*, branch, actor=None, ec_id):
+    return archive_ec_for_branch(branch=branch, actor=actor, ec_id=ec_id)
+
+
+@transaction.atomic
+def assign_student_to_class(*, branch, student_id, class_id):
+    student = Student.objects.select_related("user", "inscription__candidature").filter(
+        pk=student_id,
+        inscription__candidature__branch=branch,
+    ).first()
+    academic_class = AcademicClass.objects.select_related("programme", "academic_year", "branch").filter(
+        pk=class_id,
+        branch=branch,
+        is_active=True,
+    ).first()
+    if student is None or academic_class is None:
+        raise ValidationError("Etudiant ou classe invalide.")
+    if student.inscription.status not in {Inscription.STATUS_PARTIAL, Inscription.STATUS_ACTIVE}:
+        raise ValidationError("L'etudiant doit avoir une inscription administrative active ou partielle.")
+    if student.inscription.candidature.programme_id != academic_class.programme_id:
+        raise ValidationError("La classe ne correspond pas au programme de l'etudiant.")
+
+    enrollment, _created = AcademicEnrollment.objects.update_or_create(
+        inscription=student.inscription,
+        defaults={
+            "student": student.user,
+            "programme": academic_class.programme,
+            "branch": branch,
+            "academic_year": academic_class.academic_year,
+            "academic_class": academic_class,
+            "is_active": True,
+        },
+    )
+    student.inscription.academic_class = academic_class
+    student.inscription.academic_level = academic_class.level
+    student.inscription.save(update_fields=["academic_class", "academic_level", "updated_at"])
+    return enrollment
+
+
+def _infer_study_level(level):
+    level = (level or "").upper()
+    if level.startswith(("M", "MASTER", "MAITRISE", "MBA")):
+        return "MASTER"
+    if level.startswith(("L", "LICENCE", "BACHELOR")):
+        return "LICENCE"
+    if level.startswith("B"):
+        return "BAC"
+    return "LICENCE"

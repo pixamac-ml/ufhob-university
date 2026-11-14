@@ -1,0 +1,57 @@
+<section
+  class="rounded-ui-card border border-ui-border bg-ui-surface p-4 shadow-ui-card"
+  x-data="{
+    cursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+    monthLabel() { return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(this.cursor); },
+    cells() {
+      const first = new Date(this.cursor.getFullYear(), this.cursor.getMonth(), 1);
+      const offset = first.getDay() === 0 ? 6 : first.getDay() - 1;
+      const start = new Date(first);
+      start.setDate(first.getDate() - offset);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start); date.setDate(start.getDate() + index);
+        return { day: date.getDate(), current: date.getMonth() === this.cursor.getMonth(), today: date.getTime() === today.getTime() };
+      });
+    },
+    move(delta) { this.cursor = new Date(this.cursor.getFullYear(), this.cursor.getMonth() + delta, 1); }
+  }"
+  data-ui-core="dashboard-mini-calendar"
+>
+  <header class="mb-4 flex items-center justify-between gap-3">
+    <button type="button" @click="move(-1)" class="grid h-9 w-9 place-items-center rounded-ui-button border border-ui-border text-ui-text-muted hover:bg-ui-surface-hover" aria-label="Mois précédent">
+      <i data-lucide="chevron-left" class="h-4 w-4"></i>
+    </button>
+    <div class="min-w-0 text-center">
+      <p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-text-muted">{{ title }}</p>
+      <strong class="block truncate text-sm capitalize text-ui-text" x-text="monthLabel()"></strong>
+    </div>
+    <button type="button" @click="move(1)" class="grid h-9 w-9 place-items-center rounded-ui-button border border-ui-border text-ui-text-muted hover:bg-ui-surface-hover" aria-label="Mois suivant">
+      <i data-lucide="chevron-right" class="h-4 w-4"></i>
+    </button>
+  </header>
+  <div class="grid grid-cols-7 gap-1 text-center" aria-label="Mini calendrier mensuel">
+    <template x-for="label in labels" :key="label">
+      <span class="py-1 text-ui-micro font-bold uppercase text-ui-text-muted" x-text="label"></span>
+    </template>
+    <template x-for="(cell, index) in cells()" :key="index">
+      <span
+        class="grid aspect-square min-h-8 place-items-center rounded-ui-button text-xs font-semibold"
+        :class="cell.today ? 'bg-ui-primary text-ui-on-primary' : (cell.current ? 'text-ui-text hover:bg-ui-surface-hover' : 'text-ui-text-muted/40')"
+        :aria-current="cell.today ? 'date' : null"
+        x-text="cell.day"
+      ></span>
+    </template>
+  </div>
+  {% if action_url %}
+    <a
+      href="{{ action_url }}"
+      {% if action_target %}hx-get="{{ action_url }}" hx-target="{{ action_target }}" hx-swap="innerHTML" hx-push-url="{{ action_push_url|default:'true' }}"{% endif %}
+      class="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-primary hover:bg-ui-surface-hover"
+    >
+      <i data-lucide="calendar-days" class="h-4 w-4"></i>
+      {{ action_label }}
+    </a>
+  {% endif %}
+</section>

@@ -1,0 +1,11 @@
+{% extends "workspace_base.html" %}
+{% block title %}Aperçu · {{ content.title }} | ESFE{% endblock %}
+{% block content %}
+<main class="min-h-screen bg-ui-surface-muted">
+  <header class="border-b border-ui-border bg-ui-surface"><div class="mx-auto flex min-h-16 max-w-5xl items-center gap-4 px-4 sm:px-6"><a href="{% url 'accounts_portal:teacher_course_studio' %}?class_id={{ content.chapter.ec.ue.semester.academic_class_id }}&ec_id={{ content.chapter.ec_id }}" class="ui-focus-ring inline-flex min-h-10 items-center gap-2 rounded-ui-button px-2 text-sm font-semibold"><i data-lucide="arrow-left" class="h-4 w-4"></i>Course Studio</a><div class="min-w-0 border-l border-ui-border pl-4"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Aperçu enseignant</p><h1 class="truncate text-lg font-bold">{{ content.title }}</h1></div></div></header>
+  <article class="mx-auto max-w-5xl bg-ui-surface px-5 py-8 sm:px-10 sm:py-12">
+    {% if content.content_type == 'video' %}{% with embed_url=content.video_embed_url %}{% if embed_url %}<div class="aspect-video overflow-hidden rounded-ui-card bg-black">{% if 'youtube' in embed_url or 'vimeo' in embed_url %}<iframe src="{{ embed_url }}" class="h-full w-full border-0" allowfullscreen></iframe>{% else %}<video controls class="h-full w-full"><source src="{{ embed_url }}"></video>{% endif %}</div>{% elif content.file %}<video controls class="w-full rounded-ui-card bg-black"><source src="{{ content.file.url }}"></video>{% endif %}{% endwith %}{% endif %}
+    {% if content.text_content %}<div class="prose prose-slate mt-8 max-w-none text-ui-text">{{ content.text_content|safe }}</div>{% elif content.content_type != 'video' %}<p class="text-sm text-ui-text-muted">Cette leçon ne contient pas encore de contenu pédagogique natif.</p>{% endif %}
+  </article>
+</main>
+{% endblock %}

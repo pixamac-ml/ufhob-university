@@ -1,0 +1,168 @@
+from django.urls import path
+
+from .views import (
+    annual_class_report_view,
+    bulletin_detail_view,
+    bulletin_pdf_view,
+    class_reports_overview_view,
+    class_lesson_logs_view,
+    daily_lesson_status_view,
+    director_result_access_decision_view,
+    director_transcript_requests_view,
+    director_take_transcript_request_view,
+    director_generate_transcript_view,
+    director_mark_transcript_available_view,
+    director_mark_transcript_delivered_view,
+    diploma_award_detail_view,
+    diploma_award_pdf_view,
+    export_class_reports_view,
+    export_selected_reports_view,
+    generate_annual_bulletin_view,
+    generate_semester_bulletin_view,
+    lesson_log_create_view,
+    lesson_log_update_view,
+    prepare_diploma_award_view,
+    student_annual_report_view,
+    student_semester_pdf_view,
+    student_semester_report_view,
+    student_year_report_view,
+    teacher_lesson_logs_view,
+)
+from .views_import import download_template, upload_grades
+from .views_frontend import academic_calendar_frontend
+from . import calendar_views
+from . import session_views
+
+app_name = "academics"
+urlpatterns = [
+    path("sessions/<int:event_id>/", session_views.course_session_detail, name="course_session_detail"),
+    path("sessions/<int:event_id>/check-in/", session_views.course_session_check_in, name="course_session_check_in"),
+    path("sessions/<int:event_id>/end/", session_views.course_session_end, name="course_session_end"),
+    path("sessions/<int:event_id>/validate-exception/", session_views.course_session_validate_exception, name="course_session_validate_exception"),
+    path("sessions/<int:event_id>/assist/start/", session_views.course_session_assist_start, name="course_session_assist_start"),
+    path("sessions/assist/<str:token>/", session_views.course_session_assist, name="course_session_assist"),
+    path("calendar/", calendar_views.calendar_list_create, name="calendar_list_create"),
+    path("calendar/<int:pk>/", calendar_views.calendar_detail_update, name="calendar_detail_update"),
+    path("calendar/<int:pk>/validate/", calendar_views.calendar_validate, name="calendar_validate"),
+    path("calendar/<int:pk>/publish/", calendar_views.calendar_publish, name="calendar_publish"),
+    path("calendar/<int:pk>/archive/", calendar_views.calendar_archive, name="calendar_archive"),
+    path("calendar/<int:pk>/entries/", calendar_views.calendar_entry_create, name="calendar_entry_create"),
+    path("calendar/<int:pk>/entries/<int:entry_pk>/", calendar_views.calendar_entry_detail, name="calendar_entry_detail"),
+    path("calendar-ui/", academic_calendar_frontend, name="calendar_frontend"),
+    path(
+        "imports/grades/template/<int:class_id>/<int:semester_id>/",
+        download_template,
+        name="download_import_template",
+    ),
+    path(
+        "imports/grades/upload/",
+        upload_grades,
+        name="upload_grades",
+    ),
+    path(
+        "reports/student/<int:student_id>/semester/<int:semester_id>/",
+        student_semester_report_view,
+        name="student_semester_report",
+    ),
+    path("director/result-access/<int:authorization_id>/decision/", director_result_access_decision_view, name="director_result_access_decision"),
+    path("director/transcript-requests/", director_transcript_requests_view, name="director_transcript_requests"),
+    path("director/transcript-requests/<int:transcript_request_id>/take/", director_take_transcript_request_view, name="director_take_transcript_request"),
+    path("director/transcript-requests/<int:transcript_request_id>/generate/", director_generate_transcript_view, name="director_generate_transcript"),
+    path("director/transcript-requests/<int:transcript_request_id>/available/", director_mark_transcript_available_view, name="director_mark_transcript_available"),
+    path("director/transcript-requests/<int:transcript_request_id>/delivered/", director_mark_transcript_delivered_view, name="director_mark_transcript_delivered"),
+    path(
+        "reports/student/<int:student_id>/semester/<int:semester_id>/pdf/",
+        student_semester_pdf_view,
+        name="student_semester_pdf",
+    ),
+    path(
+        "reports/semester/<int:semester_id>/export-selected/",
+        export_selected_reports_view,
+        name="export_selected_reports",
+    ),
+    path(
+        "reports/semester/<int:semester_id>/export-all/",
+        export_class_reports_view,
+        name="export_class_reports",
+    ),
+    path(
+        "reports/semester/<int:semester_id>/overview/",
+        class_reports_overview_view,
+        name="class_reports_overview",
+    ),
+    path(
+        "reports/class/<int:class_id>/annual/",
+        annual_class_report_view,
+        name="annual_class_report",
+    ),
+    path(
+        "reports/student/<int:student_id>/annual/",
+        student_annual_report_view,
+        name="student_annual_report",
+    ),
+    path(
+        "reports/student/<int:student_id>/year/<int:academic_year_id>/",
+        student_year_report_view,
+        name="student_year_report",
+    ),
+    path(
+        "bulletins/generate/semester/<int:enrollment_id>/<int:semester_id>/",
+        generate_semester_bulletin_view,
+        name="generate_semester_bulletin",
+    ),
+    path(
+        "bulletins/generate/annual/<int:enrollment_id>/",
+        generate_annual_bulletin_view,
+        name="generate_annual_bulletin",
+    ),
+    path(
+        "bulletins/<int:bulletin_id>/",
+        bulletin_detail_view,
+        name="bulletin_detail",
+    ),
+    path(
+        "bulletins/<int:bulletin_id>/pdf/",
+        bulletin_pdf_view,
+        name="bulletin_pdf",
+    ),
+    path(
+        "diplomas/prepare/<int:enrollment_id>/",
+        prepare_diploma_award_view,
+        name="prepare_diploma_award",
+    ),
+    path(
+        "diplomas/<int:award_id>/",
+        diploma_award_detail_view,
+        name="diploma_award_detail",
+    ),
+    path(
+        "diplomas/<int:award_id>/pdf/",
+        diploma_award_pdf_view,
+        name="diploma_award_pdf",
+    ),
+    path(
+        "lesson-logs/create/",
+        lesson_log_create_view,
+        name="lesson_log_create",
+    ),
+    path(
+        "lesson-logs/<int:lesson_log_id>/update/",
+        lesson_log_update_view,
+        name="lesson_log_update",
+    ),
+    path(
+        "lesson-logs/class/<int:class_id>/",
+        class_lesson_logs_view,
+        name="class_lesson_logs",
+    ),
+    path(
+        "lesson-logs/teacher/<int:teacher_id>/",
+        teacher_lesson_logs_view,
+        name="teacher_lesson_logs",
+    ),
+    path(
+        "lesson-logs/daily-status/",
+        daily_lesson_status_view,
+        name="daily_lesson_status",
+    ),
+]

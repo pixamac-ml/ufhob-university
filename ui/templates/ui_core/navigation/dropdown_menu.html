@@ -1,0 +1,54 @@
+<div
+  class="relative inline-flex"
+  data-ui-core="dropdown-menu"
+  x-data="{ open: false, position: '', place() { const trigger = $refs.trigger.getBoundingClientRect(); const menu = $refs.menu; const width = Math.min(288, window.innerWidth - 16); const height = Math.min(menu.scrollHeight, window.innerHeight - 24); const left = Math.max(8, Math.min({% if align == 'left' %}trigger.left{% else %}trigger.right - width{% endif %}, window.innerWidth - width - 8)); const top = trigger.bottom + height + 8 <= window.innerHeight ? trigger.bottom + 6 : Math.max(8, trigger.top - height - 6); this.position = 'left:' + left + 'px;top:' + top + 'px;width:' + width + 'px;max-height:' + (window.innerHeight - top - 8) + 'px'; } }"
+  @keydown.escape.window="if (open) { open = false; $refs.trigger.focus(); }"
+  @resize.window="open = false"
+  @scroll.window="open = false"
+>
+  <button
+    type="button"
+    id="{{ id }}-trigger"
+    x-ref="trigger"
+    @click="open = !open; if (open) $nextTick(() => place())"
+    :aria-expanded="open"
+    aria-haspopup="menu"
+    aria-controls="{{ id }}-menu"
+    {% if disabled %}disabled{% endif %}
+    class="inline-flex h-ui-control items-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus disabled:cursor-not-allowed disabled:opacity-40"
+  >
+    {{ label }} <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+  </button>
+  <template x-teleport="body"><div
+    x-show="open"
+    x-cloak
+    id="{{ id }}-menu"
+    role="menu"
+    x-ref="menu"
+    :style="position"
+    x-init="$nextTick(() => { if (window.htmx) window.htmx.process($el); })"
+    @click.outside="open = false"
+    @keydown.tab="open = false"
+    class="fixed z-[100] overflow-y-auto rounded-ui-card border border-ui-border bg-ui-surface p-1 shadow-ui-dropdown"
+  >
+    {% for item in items %}
+      {% if item.separator %}<div class="my-1 border-t border-ui-border" role="separator"></div>{% endif %}
+      <button
+        type="button"
+        role="menuitem"
+        @click="open = false; {% if item.href and not item.disabled %}window.location.assign('{{ item.href|escapejs }}');{% endif %}"
+        {% if item.get_url %}hx-get="{{ item.get_url }}"{% endif %}
+        {% if item.post_url %}hx-post="{{ item.post_url }}"{% endif %}
+        {% if item.target %}hx-target="{{ item.target }}"{% endif %}
+        {% if item.swap %}hx-swap="{{ item.swap }}"{% endif %}
+        {% if item.disabled %}disabled{% endif %}
+        class="flex w-full items-center gap-2 rounded-ui-button px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus disabled:cursor-not-allowed disabled:opacity-40 {% if item.danger %}text-ui-danger hover:bg-ui-danger-soft{% else %}text-ui-text hover:bg-ui-surface-hover{% endif %}"
+      >
+        {% if item.icon %}<i data-lucide="{{ item.icon }}" class="h-4 w-4" aria-hidden="true"></i>{% endif %}
+        {{ item.label }}
+      </button>
+    {% empty %}
+      <p class="px-3 py-2 text-sm text-ui-text-muted">Aucune action</p>
+    {% endfor %}
+  </div></template>
+</div>

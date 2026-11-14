@@ -1,0 +1,9 @@
+{% load component_tags %}
+<fieldset class="grid gap-3 md:grid-cols-2" data-staff-scope>
+  <legend class="mb-2 text-sm font-semibold">Affectation</legend>
+  {{ form.campus_options|json_script:"dg-staff-campus-options" }}
+  {{ form.global_positions|json_script:"dg-staff-global-positions" }}
+  {% component "ui_core.django_form_field" field=form.access_scope %}{% endcomponent %}
+  {% component "ui_core.django_form_field" field=form.school %}{% endcomponent %}
+  <div class="md:col-span-2">{% component "ui_core.django_form_field" field=form.branch %}{% endcomponent %}</div>
+</fieldset>

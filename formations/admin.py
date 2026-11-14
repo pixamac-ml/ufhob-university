@@ -1,178 +1,317 @@
-# formations/admin.py
-
+from accounts.admin_scoping import UniversityScopeAdminMixin
 from django.contrib import admin
-from django.utils.html import format_html
 
 from .models import (
-    Cycle, Diploma, Filiere, Programme, ProgrammeYear, Fee,
-    ProgrammeQuickFact, ProgrammeTab, ProgrammeSection,
-    CompetenceBlock, CompetenceItem, RequiredDocument, ProgrammeRequiredDocument
+    Cycle,
+    Diploma,
+    Filiere,
+    Programme,
+    ProgrammeYear,
+    Fee,
+    RequiredDocument,
+    ProgrammeRequiredDocument,
+    ProgrammeQuickFact,
+    ProgrammeTab,
+    ProgrammeSection,
+    CompetenceBlock,
+    CompetenceItem,
 )
 
 
 # ==================================================
-# INLINES
+# INLINE : FAITS RAPIDES
 # ==================================================
-
-class ProgrammeYearInline(admin.TabularInline):
-    model = ProgrammeYear
-    extra = 1
-
-
-class FeeInline(admin.TabularInline):
-    model = Fee
-    extra = 1
-
-
 class ProgrammeQuickFactInline(admin.TabularInline):
     model = ProgrammeQuickFact
-    extra = 1
+    extra = 0
+    ordering = ("order",)
+    min_num = 0
 
 
-class ProgrammeRequiredDocumentInline(admin.TabularInline):
-    model = ProgrammeRequiredDocument
-    extra = 1
-
-
+# ==================================================
+# INLINE : ITEMS DE COMPÉTENCES
+# ==================================================
 class CompetenceItemInline(admin.TabularInline):
     model = CompetenceItem
-    extra = 1
+    extra = 0
+    ordering = ("order",)
+    min_num = 0
 
 
+# ==================================================
+# INLINE : BLOCS DE COMPÉTENCES
+# ==================================================
+class CompetenceBlockInline(admin.TabularInline):
+    model = CompetenceBlock
+    extra = 0
+    ordering = ("order",)
+    min_num = 0
+
+
+# ==================================================
+# INLINE : SECTIONS DANS UN ONGLET
+# ==================================================
 class ProgrammeSectionInline(admin.TabularInline):
     model = ProgrammeSection
-    extra = 1
+    extra = 0
+    ordering = ("order",)
+    min_num = 0
 
 
 # ==================================================
-# ADMIN MODELS
+# INLINE : ONGLETS
 # ==================================================
+class ProgrammeTabInline(admin.TabularInline):
+    model = ProgrammeTab
+    extra = 0
+    ordering = ("order",)
+    min_num = 0
 
+
+# ==================================================
+# INLINE : ANNÉES DU PROGRAMME
+# ==================================================
+class ProgrammeYearInline(admin.TabularInline):
+    model = ProgrammeYear
+    extra = 0
+    ordering = ("year_number",)
+    min_num = 1
+
+
+# ==================================================
+# INLINE : FRAIS PAR ANNÉE
+# ==================================================
+class FeeInline(admin.TabularInline):
+    model = Fee
+    extra = 0
+    ordering = ("amount",)
+    min_num = 0
+
+
+# ==================================================
+# INLINE : DOCUMENTS REQUIS PAR PROGRAMME
+# ==================================================
+class ProgrammeRequiredDocumentInline(admin.TabularInline):
+    model = ProgrammeRequiredDocument
+    extra = 0
+    autocomplete_fields = ("document",)
+
+
+# ==================================================
+# CYCLE
+# ==================================================
 @admin.register(Cycle)
 class CycleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'min_duration_years', 'max_duration_years', 'theme', 'is_active']
-    list_filter = ['is_active', 'theme']
-    search_fields = ['name']
-    prepopulated_fields = {'slug': ('name',)}
+    list_display = ("name", "theme", "min_duration_years", "max_duration_years", "is_active")
+    list_filter = ("theme", "is_active")
+    search_fields = ("name",)
+    ordering = ("min_duration_years",)
+    prepopulated_fields = {"slug": ("name",)}
+    fieldsets = (
+        ("Identification", {"fields": ("name", "slug", "description")}),
+        ("Configuration visuelle", {"fields": ("theme",)}),
+        ("Durée & statut", {"fields": ("min_duration_years", "max_duration_years", "is_active")}),
+    )
+    list_per_page = 25
 
 
+# ==================================================
+# DIPLÔME
+# ==================================================
 @admin.register(Diploma)
 class DiplomaAdmin(admin.ModelAdmin):
-    list_display = ['name', 'level']
-    list_filter = ['level']
-    search_fields = ['name']
+    list_display = ("name", "level")
+    list_filter = ("level",)
+    search_fields = ("name",)
+    list_per_page = 25
 
 
+# ==================================================
+# FILIÈRE
+# ==================================================
 @admin.register(Filiere)
 class FiliereAdmin(admin.ModelAdmin):
-    list_display = ['name', 'is_active']
-    list_filter = ['is_active']
-    search_fields = ['name']
+    list_display = ("name", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name",)
+    ordering = ("name",)
+    list_per_page = 25
 
 
+# ==================================================
+# PROGRAMME
+# ==================================================
 @admin.register(Programme)
-class ProgrammeAdmin(admin.ModelAdmin):
-    list_display = [
-        'title',
-        'display_school',  # NOUVEAU
-        'filiere',
-        'cycle',
-        'duration_years',
-        'is_active',
-        'is_featured'
-    ]
+class ProgrammeAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
+    list_select_related = ("school", "cycle", "filiere", "diploma_awarded")
+    list_display = (
+        "title",
+        "cycle",
+        "filiere",
+        "diploma_awarded",
+        "duration_years",
+        "is_active",
+        "is_featured",
+        "created_at",
+    )
+    list_filter = ("school", "cycle", "filiere", "diploma_awarded", "is_active", "is_featured")
+    search_fields = (
+        "title",
+        "short_description",
+        "description",
+        "learning_outcomes",
+        "career_opportunities",
+        "program_structure",
+    )
+    prepopulated_fields = {"slug": ("title",)}
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("title",)
 
-    list_filter = [
-        'school',  # NOUVEAU - Filtre par école
-        'cycle',
-        'filiere',
-        'is_active',
-        'is_featured'
-    ]
-
-    search_fields = ['title', 'short_description', 'school__short_name']
-
-    list_editable = ['is_active', 'is_featured']
-
-    prepopulated_fields = {'slug': ('title',)}
-
-    autocomplete_fields = ['school', 'filiere', 'cycle', 'diploma_awarded']
-
-    readonly_fields = ['created_at', 'updated_at']
-
-    inlines = [
+    inlines = (
         ProgrammeYearInline,
-        ProgrammeQuickFactInline,
         ProgrammeRequiredDocumentInline,
-    ]
-
-    fieldsets = (
-        ('Informations principales', {
-            'fields': ('title', 'slug', 'school', 'filiere', 'cycle', 'diploma_awarded', 'duration_years')
-        }),
-        ('Description', {
-            'fields': ('short_description', 'description', 'illustration')
-        }),
-        ('Contenu détaillé', {
-            'fields': ('learning_outcomes', 'career_opportunities', 'program_structure'),
-            'classes': ('collapse',)
-        }),
-        ('Paramètres', {
-            'fields': ('is_active', 'is_featured')
-        }),
-        ('Métadonnées', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        ProgrammeQuickFactInline,
+        ProgrammeTabInline,
+        CompetenceBlockInline,
     )
 
-    def display_school(self, obj):
-        if obj.school:
-            return format_html(
-                '<span style="background-color: {}; color: white; '
-                'padding: 3px 8px; border-radius: 4px; font-size: 11px;">{}</span>',
-                obj.school.primary_color,
-                obj.school.short_name
-            )
-        return "-"
+    fieldsets = (
+        ("Identification", {
+            "fields": ("title", "slug", "school", "cycle", "filiere", "diploma_awarded")
+        }),
+        ("Durée & statut", {
+            "fields": ("duration_years", "is_active", "is_featured")
+        }),
+        ("Présentation générale", {
+            "fields": ("short_description", "description")
+        }),
+        # =============================================
+        # SECTION OBJECTIFS - VISIBLE PAR DÉFAUT
+        # =============================================
+        ("Objectifs de la formation (JSON)", {
+            "fields": ("learning_outcomes",),
+            "description": """
+            <strong>Format JSON requis :</strong><br>
+            <code>[{"icon": "chart", "color": "secondary", "title": "Titre", "desc": "Description"}]</code><br><br>
+            <strong>Icônes disponibles :</strong> chart, users, trending, lightbulb, target, briefcase, globe, code<br>
+            <strong>Couleurs disponibles :</strong> secondary (turquoise), accent (orange), primary (bleu)
+            """,
+        }),
+        ("Autres contenus Landing Page", {
+            "fields": ("career_opportunities", "program_structure", "illustration"),
+            "classes": ("collapse",),
+        }),
+        ("Système", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",),
+        }),
+    )
+    list_per_page = 25
 
-    display_school.short_description = "École"
-    display_school.admin_order_field = "school"
 
-
+# ==================================================
+# ANNÉES DU PROGRAMME
+# ==================================================
 @admin.register(ProgrammeYear)
 class ProgrammeYearAdmin(admin.ModelAdmin):
-    list_display = ['programme', 'year_number']
-    list_filter = ['programme__school', 'year_number']  # NOUVEAU - Filtre par école
-    search_fields = ['programme__title']
-    inlines = [FeeInline]
+    list_display = ("programme", "year_number")
+    list_filter = ("year_number",)
+    search_fields = ("programme__title",)
+    ordering = ("programme", "year_number")
+    inlines = (FeeInline,)
+    list_per_page = 25
 
 
+# ==================================================
+# FRAIS
+# ==================================================
 @admin.register(Fee)
 class FeeAdmin(admin.ModelAdmin):
-    list_display = ['programme_year', 'label', 'amount', 'due_month']
-    list_filter = ['programme_year__programme__school']  # NOUVEAU - Filtre par école
-    search_fields = ['label', 'programme_year__programme__title']
+    list_display = ("programme_year", "label", "amount", "due_month")
+    list_filter = ("due_month",)
+    search_fields = ("programme_year__programme__title", "label")
+    ordering = ("programme_year", "amount")
+    list_per_page = 25
 
 
-@admin.register(ProgrammeTab)
-class ProgrammeTabAdmin(admin.ModelAdmin):
-    list_display = ['programme', 'title', 'tab_type', 'order', 'is_active']
-    list_filter = ['programme__school', 'tab_type', 'is_active']  # NOUVEAU
-    search_fields = ['title', 'programme__title']
-    inlines = [ProgrammeSectionInline]
-
-
-@admin.register(CompetenceBlock)
-class CompetenceBlockAdmin(admin.ModelAdmin):
-    list_display = ['programme', 'title', 'order']
-    list_filter = ['programme__school']  # NOUVEAU
-    search_fields = ['title', 'programme__title']
-    inlines = [CompetenceItemInline]
-
-
+# ==================================================
+# DOCUMENTS REQUIS
+# ==================================================
 @admin.register(RequiredDocument)
 class RequiredDocumentAdmin(admin.ModelAdmin):
-    list_display = ['name', 'is_mandatory']
-    list_filter = ['is_mandatory']
-    search_fields = ['name']
+    list_display = ("name", "is_mandatory")
+    list_filter = ("is_mandatory",)
+    search_fields = ("name",)
+    list_per_page = 25
+
+
+# ==================================================
+# LIAISON PROGRAMME ↔ DOCUMENT
+# ==================================================
+@admin.register(ProgrammeRequiredDocument)
+class ProgrammeRequiredDocumentAdmin(admin.ModelAdmin):
+    list_display = ("programme", "document")
+    list_filter = ("programme",)
+    search_fields = ("programme__title", "document__name")
+    autocomplete_fields = ("programme", "document")
+    list_per_page = 25
+
+
+# ==================================================
+# FAITS RAPIDES
+# ==================================================
+@admin.register(ProgrammeQuickFact)
+class ProgrammeQuickFactAdmin(admin.ModelAdmin):
+    list_display = ("programme", "icon", "label", "value", "order")
+    list_filter = ("icon",)
+    search_fields = ("programme__title", "label", "value")
+    ordering = ("programme", "order")
+    list_per_page = 25
+
+
+# ==================================================
+# ONGLETS
+# ==================================================
+@admin.register(ProgrammeTab)
+class ProgrammeTabAdmin(admin.ModelAdmin):
+    list_display = ("programme", "title", "tab_type", "slug", "order", "is_active")
+    list_filter = ("tab_type", "is_active")
+    search_fields = ("programme__title", "title")
+    ordering = ("programme", "order")
+    inlines = (ProgrammeSectionInline,)
+    list_per_page = 25
+
+
+# ==================================================
+# SECTIONS
+# ==================================================
+@admin.register(ProgrammeSection)
+class ProgrammeSectionAdmin(admin.ModelAdmin):
+    list_display = ("tab", "section_type", "title", "order")
+    list_filter = ("section_type",)
+    search_fields = ("tab__title", "title", "content")
+    ordering = ("tab", "order")
+    list_per_page = 25
+
+
+# ==================================================
+# BLOCS DE COMPÉTENCES
+# ==================================================
+@admin.register(CompetenceBlock)
+class CompetenceBlockAdmin(admin.ModelAdmin):
+    list_display = ("programme", "title", "order")
+    search_fields = ("programme__title", "title", "description")
+    ordering = ("programme", "order")
+    inlines = (CompetenceItemInline,)
+    list_per_page = 25
+
+
+# ==================================================
+# ITEMS DE COMPÉTENCES
+# ==================================================
+@admin.register(CompetenceItem)
+class CompetenceItemAdmin(admin.ModelAdmin):
+    list_display = ("block", "title", "order")
+    search_fields = ("block__title", "title", "description")
+    ordering = ("block", "order")
+    list_per_page = 25

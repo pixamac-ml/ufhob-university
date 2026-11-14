@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "includes": ["academic_reference.json"],
+  "objects": [
+    {"id": "branch_djb", "model": "branches.Branch", "lookup": {"code": "DJB"}, "fields": {"name": "Bamako Djélibougou", "slug": "bamako-djelibougou", "city": "Bamako / Djélibougou", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_mbg", "model": "branches.Branch", "lookup": {"code": "MBG"}, "fields": {"name": "Bamako Moribabougou", "slug": "bamako-moribabougou", "city": "Bamako / Moribabougou", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_kbc", "model": "branches.Branch", "lookup": {"code": "KBC"}, "fields": {"name": "Bamako Kalaban Coura", "slug": "bamako-kalaban-coura", "city": "Bamako / Kalaban Coura", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_sgb", "model": "branches.Branch", "lookup": {"code": "SGB"}, "fields": {"name": "Bamako Sangarébougou", "slug": "bamako-sangarebougou", "city": "Bamako / Sangarébougou", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_bgn", "model": "branches.Branch", "lookup": {"code": "BGN"}, "fields": {"name": "Bougouni", "slug": "bougouni", "city": "Bougouni", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_ktl", "model": "branches.Branch", "lookup": {"code": "KTL"}, "fields": {"name": "Koutiala", "slug": "koutiala", "city": "Koutiala", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_kkr", "model": "branches.Branch", "lookup": {"code": "KKR"}, "fields": {"name": "Koulikoro", "slug": "koulikoro", "city": "Koulikoro", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_seg", "model": "branches.Branch", "lookup": {"code": "SEG"}, "fields": {"name": "Ségou", "slug": "segou", "city": "Ségou", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_san", "model": "branches.Branch", "lookup": {"code": "SAN"}, "fields": {"name": "San", "slug": "san", "city": "San", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_sk1", "model": "branches.Branch", "lookup": {"code": "SK1"}, "fields": {"name": "Sikasso I", "slug": "sikasso-1", "city": "Sikasso", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_sk2", "model": "branches.Branch", "lookup": {"code": "SK2"}, "fields": {"name": "Sikasso II", "slug": "sikasso-2", "city": "Sikasso", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_kdl", "model": "branches.Branch", "lookup": {"code": "KDL"}, "fields": {"name": "Kadiolo", "slug": "kadiolo", "city": "Kadiolo", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_kys", "model": "branches.Branch", "lookup": {"code": "KYS"}, "fields": {"name": "Kayes", "slug": "kayes", "city": "Kayes", "phone": "", "email": "", "address": "", "is_active": true}},
+    {"id": "branch_mpt", "model": "branches.Branch", "lookup": {"code": "MPT"}, "fields": {"name": "Mopti", "slug": "mopti", "city": "Mopti", "phone": "", "email": "", "address": "", "is_active": true}}
+  ]
+}

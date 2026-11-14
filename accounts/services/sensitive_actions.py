@@ -1,0 +1,262 @@
+"""Workflow OTP anti-fraude pour la modification d'operations financieres deja finalisees.
+
+Regle metier : la creation d'une operation (paiement, fiche de paie, ...) n'est
+jamais bloquee. C'est uniquement quand la gestionnaire tente de MODIFIER ou
+ANNULER une operation deja validee/payee que ce workflow s'active : un code
+OTP est envoye au DG et a la DGA, et la modification reelle n'est appliquee
+qu'apres saisie du bon code dans le delai imparti (5 minutes).
+"""
+import hashlib
+import secrets
+
+from django.db import transaction
+from django.urls import reverse
+from django.utils import timezone
+
+from accounts.models import FinancialAuditLog, Profile, SensitiveActionRequest
+from notifier.models import NotificationMessage
+from notifier.services import NotificationBus
+
+
+class SensitiveActionError(Exception):
+    pass
+
+
+def _hash_code(code):
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def _generate_code():
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+DG_POSITIONS = ["executive_director", "deputy_executive_director"]
+
+
+def _approvers_for_branch(branch):
+    return list(
+        Profile.objects.select_related("user")
+        .filter(position__in=DG_POSITIONS, user__is_active=True)
+        .values_list("user", flat=True)
+    )
+
+
+def request_sensitive_action(
+    *,
+    branch,
+    action_type,
+    target_model,
+    target_id,
+    previous_state,
+    requested_state,
+    requested_by,
+    reason="",
+):
+    """Cree la demande, genere l'OTP, et notifie DG + DGA. Ne modifie rien."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    approver_ids = _approvers_for_branch(branch)
+    approvers = list(User.objects.filter(pk__in=approver_ids, is_active=True))
+    if not approvers:
+        raise SensitiveActionError(
+            "Aucun DG ou DGA actif n'est configure pour valider cette action. "
+            "Contactez l'administrateur du systeme."
+        )
+
+    code = _generate_code()
+    is_payment_correction = action_type == SensitiveActionRequest.ACTION_PAYMENT_EDIT
+    expires_at = timezone.now() + timezone.timedelta(minutes=SensitiveActionRequest.OTP_VALIDITY_MINUTES)
+
+    request_obj = SensitiveActionRequest.objects.create(
+        branch=branch,
+        action_type=action_type,
+        target_model=target_model,
+        target_id=target_id,
+        reason=reason,
+        previous_state=previous_state,
+        requested_state=requested_state,
+        requested_by=requested_by,
+        otp_code_hash=_hash_code(code),
+        otp_display_code=code if is_payment_correction else "",
+        expires_at=expires_at,
+    )
+    approval_url = reverse("accounts:financial_approval_detail", args=[request_obj.pk])
+
+    action_label = dict(SensitiveActionRequest.ACTION_CHOICES).get(action_type, action_type)
+    if is_payment_correction:
+        # Les corrections de paiement suivent le circuit de détention du code :
+        # le DG/DGA lit le code dans Coupons puis le transmet verbalement au
+        # gestionnaire. Une notification ne doit jamais transporter cet OTP.
+        from payments.models import Payment
+
+        payment = Payment.objects.select_related(
+            "inscription__candidature__programme__school",
+        ).get(pk=target_id)
+        candidature = payment.inscription.candidature
+        student = candidature.full_name
+        school = candidature.programme.school
+        old_amount = previous_state.get("amount", "")
+        new_amount = requested_state.get("amount", "")
+        delta = requested_state.get("delta", "")
+        approval_url = (
+            f"{reverse('accounts_portal:portal_dg')}?section=coupons&"
+            f"financial_correction_id={request_obj.pk}"
+        )
+        title = "Demande de correction de paiement"
+        body = (
+            f"Gestionnaire : {requested_by.get_full_name() or requested_by.username}\n"
+            f"Annexe : {branch}\n"
+            f"École : {school.display_name if school else 'Non renseignée'}\n"
+            f"Programme : {candidature.programme.title}\n"
+            f"Année académique : {candidature.academic_year}\n"
+            f"Étudiant : {student}\n"
+            f"Référence paiement : {payment.reference}\n"
+            f"Montant actuel : {old_amount} FCFA\n"
+            f"Nouveau montant : {new_amount} FCFA\n"
+            f"Différence : {delta} FCFA\n"
+            f"Motif : {reason or 'non précisé'}\n\n"
+            f"Consultez la demande dans Finance > Coupons > Corrections financières."
+        )
+    else:
+        title = f"Validation requise - {action_label}"
+        body = (
+            f"La gestionnaire {requested_by.get_full_name() or requested_by.username} de l'annexe "
+            f"{branch} demande : {action_label} sur {target_model} #{target_id}.\n\n"
+            f"Etat actuel : {previous_state}\n"
+            f"Etat demande : {requested_state}\n"
+            f"Motif : {reason or 'non precise'}\n\n"
+            f"Code de validation : {code}\n"
+            f"Ce code expire dans {SensitiveActionRequest.OTP_VALIDITY_MINUTES} minutes.\n"
+            f"Valider depuis votre session direction : {approval_url}"
+        )
+
+    for approver in approvers:
+        NotificationBus.notify(
+            recipient=approver,
+            actor=requested_by,
+            event_type="sensitive_action_otp",
+            title=title,
+            body=body,
+            source_app="accounts",
+            priority=NotificationMessage.PRIORITY_HIGH,
+            channels=(
+                NotificationMessage.CHANNEL_IN_APP,
+                NotificationMessage.CHANNEL_WEBSOCKET,
+            ),
+            metadata={
+                "sensitive_action_request_id": request_obj.pk,
+                "branch_id": branch.pk,
+                "action_type": action_type,
+                "approval_url": approval_url,
+                **({"action_url": approval_url} if is_payment_correction else {}),
+            },
+            legacy_source="sensitive_action_request",
+            legacy_object_id=str(request_obj.pk),
+        )
+        if approver.email and not is_payment_correction:
+            NotificationBus.send_email(
+                subject=f"[ESFE] Validation requise - {action_label} - {branch}",
+                recipient=approver,
+                recipient_email=approver.email,
+                actor=requested_by,
+                source_app="accounts",
+                event_type="sensitive_action_otp",
+                body=body,
+                legacy_source="sensitive_action_request",
+                legacy_object_id=str(request_obj.pk),
+            )
+
+    return request_obj
+
+
+def confirm_sensitive_action(
+    *,
+    request_id,
+    code,
+    approver,
+    apply_callback,
+    skip_financial_audit=False,
+    allow_requester_code_holder=False,
+):
+    """Verifie le code OTP et applique la modification via apply_callback si valide.
+
+    apply_callback(request_obj) -> dict (new_state) : fonction qui applique
+    reellement la modification metier et retourne le nouvel etat pour l'audit.
+
+    skip_financial_audit : a utiliser quand l'action n'est pas financiere
+    (ex: publication de semestre) et que l'appelant ecrit deja son propre
+    journal d'audit (ex: AcademicAuditLog) dans apply_callback - on evite
+    alors de creer un FinancialAuditLog hors-sujet.
+    """
+    error_message = None
+
+    with transaction.atomic():
+        request_obj = (
+            SensitiveActionRequest.objects.select_for_update().get(pk=request_id)
+        )
+
+        is_direction = Profile.objects.filter(
+            user=approver,
+            user__is_active=True,
+            position__in=DG_POSITIONS,
+        ).exists()
+        is_requester_code_holder = (
+            allow_requester_code_holder
+            and request_obj.action_type == SensitiveActionRequest.ACTION_PAYMENT_EDIT
+            and approver.pk == request_obj.requested_by_id
+        )
+        authorized = (is_direction and approver.pk != request_obj.requested_by_id) or is_requester_code_holder
+        if not authorized:
+            error_message = "Cette correction doit etre approuvee depuis le compte du DG ou de la DGA."
+        elif request_obj.status != SensitiveActionRequest.STATUS_PENDING:
+            error_message = "Cette demande n'est plus en attente de validation."
+        elif timezone.now() > request_obj.expires_at:
+            request_obj.status = SensitiveActionRequest.STATUS_EXPIRED
+            request_obj.resolved_at = timezone.now()
+            request_obj.otp_display_code = ""
+            request_obj.save(update_fields=["status", "resolved_at", "otp_display_code"])
+            error_message = "Le code n'a pas ete entre a temps. Veuillez recommencer la demande."
+        else:
+            request_obj.attempts += 1
+            if _hash_code(code) != request_obj.otp_code_hash:
+                request_obj.save(update_fields=["attempts"])
+                error_message = "Code de validation incorrect."
+            else:
+                new_state = apply_callback(request_obj)
+
+                request_obj.status = SensitiveActionRequest.STATUS_APPROVED
+                request_obj.approved_by = approver if is_direction else None
+                request_obj.resolved_at = timezone.now()
+                request_obj.otp_display_code = ""
+                request_obj.save(update_fields=["status", "approved_by", "resolved_at", "attempts", "otp_display_code"])
+
+                if not skip_financial_audit:
+                    FinancialAuditLog.objects.create(
+                        branch=request_obj.branch,
+                        action_type=request_obj.action_type,
+                        target_model=request_obj.target_model,
+                        target_id=request_obj.target_id,
+                        previous_state=request_obj.previous_state,
+                        new_state=new_state or request_obj.requested_state,
+                        performed_by=request_obj.requested_by,
+                        approved_by=approver if is_direction else None,
+                        sensitive_action_request=request_obj,
+                    )
+
+    # Note : l'exception est levee APRES la sortie du bloc atomic, pour que les
+    # mises a jour deja faites (compteur d'essais, expiration) restent commitees
+    # meme quand la demande est finalement rejetee.
+    if error_message:
+        raise SensitiveActionError(error_message)
+
+    return request_obj
+
+
+def expire_stale_requests():
+    """A appeler periodiquement (cron) pour marquer expirees les demandes oubliees."""
+    stale = SensitiveActionRequest.objects.filter(
+        status=SensitiveActionRequest.STATUS_PENDING,
+        expires_at__lt=timezone.now(),
+    )
+    return stale.update(status=SensitiveActionRequest.STATUS_EXPIRED, resolved_at=timezone.now(), otp_display_code="")

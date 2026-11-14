@@ -57,7 +57,14 @@ class CandidatureForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.programme = kwargs.pop("programme", None)
         super().__init__(*args, **kwargs)
+        if self.programme is not None and self.programme.school_id:
+            self.fields["branch"].queryset = self.fields["branch"].queryset.filter(
+                school_branches__school_id=self.programme.school_id,
+                school_branches__school__is_active=True,
+                school_branches__is_active=True,
+            )
 
         base_input_classes = (
             "w-full rounded-lg border border-gray-300 "

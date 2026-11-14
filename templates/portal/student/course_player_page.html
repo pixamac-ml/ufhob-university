@@ -1,0 +1,40 @@
+{% load component_tags %}
+<div id="course-player-page" data-course-player-page class="min-h-screen bg-ui-surface-muted text-ui-text">
+  <header class="sticky top-0 z-30 border-b border-ui-border bg-ui-surface/95 backdrop-blur">
+    <div class="mx-auto flex min-h-16 max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div class="flex min-w-0 items-center gap-3">
+        <a href="{{ back_to_courses_url }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-ui-button bg-ui-primary text-sm font-black text-ui-on-primary" aria-label="UFHOB">U</a>
+        <a href="{{ back_to_courses_url }}" class="ui-focus-ring inline-flex min-h-10 shrink-0 items-center gap-2 rounded-ui-button px-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover"><i data-lucide="arrow-left" class="h-4 w-4"></i><span class="hidden sm:inline">Mes cours</span></a>
+        <div class="min-w-0 border-l border-ui-border pl-3"><h1 class="truncate text-base font-bold sm:text-lg">{{ ec.title }}</h1><p class="truncate text-xs text-ui-text-muted">{{ enrollment.academic_class.display_name }} · {{ ec.ue.title }}</p></div>
+      </div>
+      <div class="hidden shrink-0 text-right sm:block"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-text-muted">Progression</p><p class="mt-1 text-sm font-bold text-ui-primary">{{ course_progress_percent }} %</p></div>
+    </div>
+  </header>
+
+  <div class="mx-auto grid min-h-[calc(100vh-4rem)] max-w-[1800px] min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+    <main class="min-w-0 bg-ui-surface">
+      <div class="border-b border-ui-border p-3 lg:hidden" x-data="{ open: false }">
+        <button type="button" @click="open = true" class="flex min-h-11 w-full items-center justify-between rounded-ui-button border border-ui-border px-3 text-sm font-semibold"><span class="inline-flex items-center gap-2"><i data-lucide="list-tree" class="h-4 w-4"></i>Contenu du cours</span><span>{{ total_completed_content_count }}/{{ total_active_content_count }}</span></button>
+        <div x-show="open" x-cloak class="fixed inset-0 z-50 bg-ui-surface" role="dialog" aria-modal="true" aria-label="Sommaire du cours"><header class="flex h-16 items-center justify-between border-b border-ui-border px-4"><strong>Contenu du cours</strong><button type="button" @click="open = false" class="grid h-10 w-10 place-items-center rounded-ui-button border border-ui-border" aria-label="Fermer"><i data-lucide="x" class="h-5 w-5"></i></button></header><div class="h-[calc(100vh-4rem)] overflow-y-auto">{% include "portal/student/partials/course_player_toc.html" %}</div></div>
+      </div>
+      <nav class="flex gap-1 overflow-x-auto border-b border-ui-border px-4 sm:px-7 lg:px-10" aria-label="Sections du cours">
+        <a href="{{ course_url }}?tab=course{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-get="{{ course_url }}?tab=course{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-target="#course-player-page" hx-swap="outerHTML" hx-push-url="true" class="ui-focus-ring min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold {% if player_tab == 'course' %}border-ui-primary text-ui-primary{% else %}border-transparent text-ui-text-muted hover:text-ui-text{% endif %}">Cours</a>
+        <a href="{{ course_url }}?tab=resources{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-get="{{ course_url }}?tab=resources{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-target="#course-player-page" hx-swap="outerHTML" hx-push-url="true" class="ui-focus-ring min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold {% if player_tab == 'resources' %}border-ui-primary text-ui-primary{% else %}border-transparent text-ui-text-muted hover:text-ui-text{% endif %}">Ressources <span class="ml-1 text-ui-micro">{{ course_resources|length }}</span></a>
+        <a href="{{ course_url }}?tab=questions{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-get="{{ course_url }}?tab=questions{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-target="#course-player-page" hx-swap="outerHTML" hx-push-url="true" class="ui-focus-ring min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold {% if player_tab == 'questions' %}border-ui-primary text-ui-primary{% else %}border-transparent text-ui-text-muted hover:text-ui-text{% endif %}">Questions &amp; réponses</a>
+        <a href="{{ course_url }}?tab=exercises{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-get="{{ course_url }}?tab=exercises{% if selected_content %}&content_id={{ selected_content.id }}{% endif %}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-target="#course-player-page" hx-swap="outerHTML" hx-push-url="true" class="ui-focus-ring min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold {% if player_tab == 'exercises' %}border-ui-primary text-ui-primary{% else %}border-transparent text-ui-text-muted hover:text-ui-text{% endif %}">QCM / Exercices</a>
+      </nav>
+      <div class="min-w-0 px-4 py-6 sm:px-7 lg:px-10 lg:py-10">
+        {% if player_tab == 'course' %}
+          {% if selected_content %}{% include "portal/student/partials/course_player_lesson.html" %}{% elif chapters_available %}{% component "ui_core.empty_state" title="Aucune leçon publiée" message="Les leçons apparaîtront ici dès leur publication." icon="book-open" %}{% endcomponent %}{% else %}{% component "ui_core.empty_state" title="Lecteur non disponible" message="Les contenus pédagogiques détaillés ne sont pas disponibles dans cet environnement." icon="book-x" %}{% endcomponent %}{% endif %}
+        {% elif player_tab == 'resources' %}
+          {% include "portal/student/partials/course_player_resources.html" %}
+        {% elif player_tab == 'questions' %}
+          {% include "portal/student/partials/course_player_questions.html" %}
+        {% else %}
+          {% component "ui_core.empty_state" title="QCM / Exercices bientôt disponibles" message="Les exercices seront ajoutés à ce cours lorsqu’un module pédagogique réel sera publié." icon="list-checks" %}{% endcomponent %}
+        {% endif %}
+      </div>
+    </main>
+    <aside class="hidden min-h-0 border-l border-ui-border bg-ui-surface-soft lg:block"><div class="sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto">{% include "portal/student/partials/course_player_toc.html" %}</div></aside>
+  </div>
+</div>

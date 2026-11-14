@@ -1,0 +1,72 @@
+/* Admission-only presentation; all colours use the public UFHOB tokens. */
+.admission-shell {
+  --funnel-ink: rgb(var(--ufhob-primary-rgb));
+  --funnel-line: rgb(var(--ufhob-border-rgb));
+  color: rgb(var(--ufhob-text-rgb));
+  background: rgb(var(--ufhob-ivory-rgb));
+}
+.admission-shell *, .admission-shell *::before, .admission-shell *::after { box-sizing: border-box; }
+.admission-shell [class*="rounded-"], .admission-shell button, .admission-shell input { border-radius: 0 !important; }
+.admission-shell [class*="shadow-"] { box-shadow: none !important; }
+.admission-shell button, .admission-shell a, .admission-shell input { touch-action: manipulation; }
+.admission-shell button:focus-visible, .admission-shell a:focus-visible, .admission-shell input:focus-visible {
+  outline: 2px solid rgb(var(--ufhob-secondary-dark-rgb)); outline-offset: 3px;
+}
+.admission-shell button:disabled { opacity: .45; cursor: not-allowed; }
+.tunnel-split { display: grid; grid-template-columns: minmax(240px, .7fr) minmax(0, 1.7fr); max-width: 1600px; margin: auto; min-height: 720px; }
+.tunnel-media-pane { position: relative; min-width: 0; overflow: hidden; padding: clamp(28px, 4vw, 64px); color: white; background: var(--funnel-ink); }
+.tunnel-media-pane::after { content: ''; position: absolute; inset: 120px -120px -180px 80px; border: 1px solid rgb(255 255 255 / .13); transform: rotate(-24deg); pointer-events: none; }
+.tunnel-identity { position: sticky; top: 100px; z-index: 1; }
+.tunnel-wordmark { font-size: clamp(36px, 4vw, 66px); font-weight: 800; letter-spacing: -.04em; }
+.tunnel-kicker { text-transform: uppercase; font-size: 11px; letter-spacing: .18em; font-weight: 700; }
+.tunnel-identity h2 { font-size: clamp(23px, 2.5vw, 34px); line-height: 1.2; margin: 48px 0 22px; color: white !important; }
+.tunnel-destination { border-top: 1px solid rgb(255 255 255 / .3); margin-top: 40px; padding-top: 22px; display: grid; gap: 12px; }
+.tunnel-destination dt { font-size: 10px; text-transform: uppercase; letter-spacing: .15em; opacity: .65; }
+.tunnel-destination dd { margin: 3px 0 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.tunnel-form-pane { min-width: 0; padding: clamp(22px, 3.5vw, 54px); background: rgb(var(--ufhob-surface-rgb)); }
+.tunnel-stepper { display: flex; flex-wrap: wrap; gap: 8px 18px; border-bottom: 1px solid var(--funnel-line); padding: 0 0 18px; margin-bottom: 32px; list-style: none; }
+.tunnel-stepper li { position: relative; padding-bottom: 3px; font-size: 11px; color: rgb(var(--ufhob-text-muted-rgb)); transition: color 180ms ease; }
+.tunnel-stepper li[aria-current="step"] { color: var(--funnel-ink); font-weight: 800; }
+.tunnel-stepper li[aria-current="step"]::after { position: absolute; right: 0; bottom: -19px; left: 0; height: 3px; content: ''; background: var(--ufhob-accent); }
+.tunnel-step-shell { display: flex; flex-direction: column; min-width: 0; min-height: 520px; }
+.tunnel-step-shell h2 { font-size: clamp(24px, 2.3vw, 34px) !important; line-height: 1.2 !important; letter-spacing: -.025em; }
+.tunnel-scroll { flex: 1; min-width: 0; overflow: visible; }
+.tunnel-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 28px; border-top: 1px solid var(--funnel-line); margin-top: 28px; flex-wrap: wrap; }
+.tunnel-btn-next, .tunnel-btn-prev { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 12px 20px; font-size: 13px; font-weight: 700; border: 1px solid var(--funnel-ink); transition: background-color 200ms ease, color 200ms ease, transform 200ms ease; }
+.tunnel-btn-next { background: var(--funnel-ink); color: white; margin-left: auto; }
+.tunnel-btn-next:hover { background: rgb(var(--ufhob-primary-hover-rgb)); }
+.tunnel-btn-prev { background: transparent; color: var(--funnel-ink); }
+.tunnel-btn-prev:hover { background: rgb(var(--ufhob-primary-soft-rgb)); }
+.tunnel-btn-next:hover, .tunnel-btn-prev:hover { transform: translateY(-1px); }
+.funnel-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.funnel-programme { display: flex; flex-direction: column; border: 1px solid var(--funnel-line); padding: 18px; min-height: 180px; background: white; }
+.funnel-programme h3 { font-size: 17px; line-height: 1.3; margin: 10px 0; font-weight: 700; color: var(--funnel-ink); }
+.funnel-programme[aria-selected="true"] { border: 2px solid var(--funnel-ink); padding: 17px; background: rgb(var(--ufhob-primary-soft-rgb)); }
+.funnel-programme-meta { font-size: 11px; color: rgb(var(--ufhob-text-muted-rgb)); }
+.funnel-programme-actions { margin-top: auto; padding-top: 16px; display: flex; gap: 16px; align-items: center; font-size: 12px; }
+.funnel-programme-actions button { font-weight: 700; color: var(--funnel-ink); border-bottom: 2px solid rgb(var(--ufhob-secondary-rgb)); padding: 4px 0; }
+.funnel-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; font-size: 12px; }
+.funnel-pagination button { padding: 8px 12px; border: 1px solid var(--funnel-line); }
+.funnel-selected { padding: 12px 0; border-bottom: 1px solid var(--funnel-line); font-size: 12px; margin-bottom: 16px; }
+.funnel-document { border-top: 1px solid var(--funnel-line); padding: 18px 0; }
+.funnel-document label { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; color: var(--funnel-ink); }
+.funnel-document label span { font-size: 10px; font-weight: 500; text-transform: uppercase; }
+.funnel-document input { width: 100%; min-width: 0; font-size: 12px; padding: 12px 0; }
+.funnel-document input::file-selector-button { padding: 8px 12px; border: 1px solid var(--funnel-line); background: white; color: var(--funnel-ink); margin-right: 12px; cursor: pointer; }
+.funnel-document small { font-size: 11px; color: rgb(var(--ufhob-text-muted-rgb)); }
+.funnel-file-error, .funnel-error { color: #a32222; font-size: 13px; }
+.funnel-deferral { display: flex; align-items: flex-start; gap: 12px; padding: 18px; border: 1px solid var(--funnel-line); font-size: 13px; }
+.funnel-deferral input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--funnel-ink); }
+.funnel-summary { border-top: 2px solid var(--funnel-ink); margin-top: 24px; padding-top: 18px; }
+.funnel-summary h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .13em; font-weight: 700; margin-bottom: 12px; color: var(--funnel-ink); }
+.funnel-summary dl > div { display: grid; grid-template-columns: minmax(100px, .65fr) minmax(0, 1fr); gap: 16px; border-bottom: 1px solid var(--funnel-line); padding: 10px 0; font-size: 13px; }
+.funnel-summary dt { color: rgb(var(--ufhob-text-muted-rgb)); }
+.funnel-summary dd { overflow-wrap: anywhere; font-weight: 500; }
+.admission-shell .htmx-indicator { font-size: 12px; color: rgb(var(--ufhob-text-muted-rgb)); }
+.admission-shell .htmx-request button { pointer-events: none; opacity: .5; }
+.tunnel-hero-compact section { padding-top: 28px; padding-bottom: 28px; }
+.tunnel-hero-compact h1 { font-size: 28px; }
+@media (max-width: 1024px) { .tunnel-split { grid-template-columns: 240px minmax(0, 1fr); } .tunnel-form-pane { padding: 28px; } .tunnel-media-pane { padding: 28px; } }
+@media (max-width: 800px) { .tunnel-split { display: block; min-height: 0; } .tunnel-media-pane { padding: 18px 24px; } .tunnel-wordmark { font-size: 28px; } .tunnel-identity { position: relative; top: 0; display: flex; gap: 24px; align-items: center; } .tunnel-identity > h2, .tunnel-identity > p, .tunnel-destination { display: none; } .tunnel-step-shell { min-height: 0; } }
+@media (max-width: 540px) { .tunnel-form-pane { padding: 24px 18px; } .funnel-options { grid-template-columns: 1fr; } .funnel-programme { min-height: 145px; } .tunnel-nav { align-items: stretch; } .tunnel-btn-prev, .tunnel-btn-next { padding: 12px 14px; } .tunnel-stepper { gap: 8px 12px; } .tunnel-stepper li[aria-current="step"]::after { bottom: -19px; } .funnel-summary dl > div { grid-template-columns: 100px minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .admission-shell *, .admission-shell *::before, .admission-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

@@ -1,5 +1,6 @@
 # inscriptions/admin.py
 
+from accounts.admin_scoping import UniversityScopeAdminMixin
 from django.contrib import admin, messages
 from django.db import transaction
 from django.utils.html import format_html
@@ -7,7 +8,6 @@ from django.utils import timezone
 import secrets
 
 from .models import Inscription, StatusHistory
-from inscriptions.services import create_inscription_from_candidature
 from admissions.models import Candidature
 
 
@@ -15,10 +15,10 @@ from admissions.models import Candidature
 # ACTION : ACCEPTER CANDIDATURE
 # ==================================================
 
-@admin.action(description="Accepter la candidature et creer l'inscription")
+@admin.action(description="Accepter la candidature")
 def accepter_candidature(modeladmin, request, queryset):
 
-    created = 0
+    accepted = 0
     skipped = 0
 
     for candidature in queryset:
@@ -31,26 +31,18 @@ def accepter_candidature(modeladmin, request, queryset):
             skipped += 1
             continue
 
-        programme = candidature.programme
-        amount_due = programme.total_price
-
         with transaction.atomic():
 
             candidature.status = "accepted"
             candidature.reviewed_at = timezone.now()
             candidature.save(update_fields=["status", "reviewed_at"])
 
-            create_inscription_from_candidature(
-                candidature=candidature,
-                amount_due=amount_due
-            )
+        accepted += 1
 
-        created += 1
-
-    if created:
+    if accepted:
         modeladmin.message_user(
             request,
-            f"{created} inscription(s) creee(s).",
+            f"{accepted} candidature(s) acceptee(s). Creer ensuite les inscriptions avec le positionnement academique.",
             messages.SUCCESS
         )
 
@@ -139,7 +131,7 @@ def mark_completed(modeladmin, request, queryset):
 # ==================================================
 
 @admin.register(Inscription)
-class InscriptionAdmin(admin.ModelAdmin):
+class InscriptionAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
 
     # ==================================================
     # LIST DISPLAY

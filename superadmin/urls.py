@@ -13,14 +13,47 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
 
     # ============================================================================
+    # PILOTAGE DU SITE PUBLIC
+    # ============================================================================
+    path('site-public/', views.public_site_dashboard, name='public_site_dashboard'),
+    path('site-public/ecoles/', views.public_school_list, name='public_school_list'),
+    path('site-public/ecoles/nouvelle/', views.public_school_create, name='public_school_create'),
+    path('site-public/ecoles/<int:pk>/modifier/', views.public_school_edit, name='public_school_edit'),
+    path('site-public/ecoles/<int:pk>/implantation/', views.school_implantation_editor, name='school_implantation_editor'),
+    path('site-public/ecoles/<int:pk>/visibilite/', views.public_school_toggle, name='public_school_toggle'),
+    path('site-public/valeurs/', views.public_value_list, name='public_value_list'),
+    path('site-public/valeurs/nouvelle/', views.public_value_form, name='public_value_create'),
+    path('site-public/valeurs/<int:pk>/modifier/', views.public_value_form, name='public_value_edit'),
+    path('site-public/valeurs/<int:pk>/visibilite/', views.public_value_toggle, name='public_value_toggle'),
+    path('site-public/mot-direction/', views.director_message_list, name='director_message_list'),
+    path('site-public/mot-direction/nouveau/', views.director_message_form, name='director_message_create'),
+    path('site-public/mot-direction/<int:pk>/modifier/', views.director_message_form, name='director_message_edit'),
+    path('site-public/mot-direction/<int:pk>/visibilite/', views.director_message_toggle, name='director_message_toggle'),
+    path('site-public/infrastructures/', views.public_infrastructure_list, name='public_infrastructure_list'),
+    path('site-public/infrastructures/nouvelle/', views.public_infrastructure_form, name='public_infrastructure_create'),
+    path('site-public/infrastructures/<int:pk>/modifier/', views.public_infrastructure_form, name='public_infrastructure_edit'),
+    path('site-public/infrastructures/<int:pk>/visibilite/', views.public_infrastructure_toggle, name='public_infrastructure_toggle'),
+    path('site-public/vie-universitaire/', views.university_life_list, name='university_life_list'),
+    path('site-public/vie-universitaire/nouveau/', views.university_life_form, name='university_life_create'),
+    path('site-public/vie-universitaire/<int:pk>/modifier/', views.university_life_form, name='university_life_edit'),
+    path('site-public/vie-universitaire/<int:pk>/visibilite/', views.university_life_toggle, name='university_life_toggle'),
+    path('site-public/personnel/', views.public_staff_list, name='public_staff_list'),
+    path('site-public/personnel/nouveau/', views.public_staff_form, name='public_staff_create'),
+    path('site-public/personnel/<int:pk>/modifier/', views.public_staff_form, name='public_staff_edit'),
+    path('site-public/personnel/<int:pk>/visibilite/', views.public_staff_toggle, name='public_staff_toggle'),
+
+    # ============================================================================
     # FORMATIONS
     # ============================================================================
     path('formations/', views.formation_list, name='formation_list'),
     path('formations/create/', views.formation_create, name='formation_create'),
     path('formations/<int:pk>/', views.formation_detail, name='formation_detail'),
+    path('formations/<int:pk>/annees/', views.formation_related_section, {'section': 'years'}, name='formation_years'),
+    path('formations/<int:pk>/frais/', views.formation_related_section, {'section': 'fees'}, name='formation_fees'),
+    path('formations/<int:pk>/documents/', views.formation_related_section, {'section': 'documents'}, name='formation_documents'),
     path('formations/<int:pk>/edit/', views.formation_edit, name='formation_edit'),
     path('formations/<int:pk>/delete/', views.formation_delete, name='formation_delete'),
-    path('formations/<int:pk>/toggle/', views.toggle_formation, name='formation_toggle'),
+    path('formations/<int:pk>/toggle/', views.toggle_formation, name='toggle_formation'),
 
     # ============================================================================
     # CYCLES
@@ -51,16 +84,28 @@ urlpatterns = [
     # ============================================================================
     path('candidatures/', views.candidature_list, name='candidature_list'),
     path('admissions/', views.candidature_list, name='admission_list'),  # ALIAS
+    path('candidatures/create/', views.candidature_create, name='candidature_create'),
     path('candidatures/<int:pk>/', views.candidature_detail, name='candidature_detail'),
     path('candidatures/<int:pk>/status/', views.candidature_status, name='candidature_status'),
+    path('candidatures/<int:pk>/edit/', views.candidature_edit, name='candidature_edit'),
     path('candidatures/<int:pk>/delete/', views.candidature_delete, name='candidature_delete'),
+    path('candidatures/bulk-action/', views.candidature_bulk_action, name='candidature_bulk_action'),
 
     # ============================================================================
     # INSCRIPTIONS
     # ============================================================================
     path('inscriptions/', views.inscription_list, name='inscription_list'),
+    path('inscriptions/create/', views.inscription_create, name='inscription_create'),
     path('inscriptions/<int:pk>/', views.inscription_detail, name='inscription_detail'),
     path('inscriptions/<int:pk>/status/', views.inscription_status, name='inscription_status'),
+    path('inscriptions/<int:pk>/certificate/', views.inscription_certificate, name='inscription_certificate'),
+    path('inscriptions/<int:pk>/confirm-payment/', views.inscription_confirm_payment, name='inscription_confirm_payment'),
+    path('inscriptions/<int:pk>/relance/', views.inscription_relance, name='inscription_relance'),
+    path('inscriptions/<int:pk>/regenerate-access-code/', views.inscription_regenerate_access_code, name='inscription_regenerate_access_code'),
+    path('inscriptions/<int:pk>/archive-toggle/', views.inscription_archive_toggle, name='inscription_archive_toggle'),
+    path('inscriptions/<int:pk>/edit/', views.inscription_edit, name='inscription_edit'),
+    path('inscriptions/<int:pk>/delete/', views.inscription_delete, name='inscription_delete'),
+    path('inscriptions/bulk-action/', views.inscription_bulk_action, name='inscription_bulk_action'),
 
     # ============================================================================
     # STUDENTS
@@ -68,12 +113,24 @@ urlpatterns = [
     path('students/', views.student_list, name='student_list'),
     path('students/<int:pk>/', views.student_detail, name='student_detail'),
     path('students/<int:pk>/edit/', views.student_edit, name='student_edit'),
+    path('students/<int:pk>/delete/', views.student_delete, name='student_delete'),
 
     # ============================================================================
     # PAYMENTS
     # ============================================================================
     path('payments/', views.payment_list, name='payment_list'),
     path('payments/<int:pk>/', views.payment_detail, name='payment_detail'),
+    path('payments/<int:pk>/validate/', views.payment_validate, name='payment_validate'),
+    path('payments/<int:pk>/receipt/', views.payment_receipt_pdf, name='payment_receipt_pdf'),
+    path('payments/<int:pk>/notify/', views.payment_notify_student, name='payment_notify_student'),
+    path('payments/<int:pk>/edit/', views.payment_edit, name='payment_edit'),
+    path('payments/<int:pk>/delete/', views.payment_delete, name='payment_delete'),
+    path('payments/agents/', views.payment_agent_list, name='payment_agent_list'),
+    path('payments/agents/create/', views.payment_agent_create, name='payment_agent_create'),
+    path('payments/agents/<int:pk>/edit/', views.payment_agent_edit, name='payment_agent_edit'),
+    path('payments/agents/<int:pk>/toggle/', views.payment_agent_toggle, name='payment_agent_toggle'),
+    path('payments/cash-sessions/', views.payment_cash_session_list, name='payment_cash_session_list'),
+    path('payments/cash-sessions/<int:pk>/mark-used/', views.payment_cash_session_mark_used, name='payment_cash_session_mark_used'),
 
     # ============================================================================
     # FEES
@@ -91,7 +148,7 @@ urlpatterns = [
     path('articles/<int:pk>/', views.article_detail, name='article_detail'),
     path('articles/<int:pk>/edit/', views.article_edit, name='article_edit'),
     path('articles/<int:pk>/delete/', views.article_delete, name='article_delete'),
-    path('articles/<int:pk>/toggle/', views.toggle_article, name='article_toggle'),
+    path('articles/<int:pk>/toggle/', views.toggle_article, name='toggle_article'),
 
     # ============================================================================
     # CATEGORIES (Blog)
@@ -110,7 +167,16 @@ urlpatterns = [
     path('news/<int:pk>/', views.news_detail, name='news_detail'),
     path('news/<int:pk>/edit/', views.news_edit, name='news_edit'),
     path('news/<int:pk>/delete/', views.news_delete, name='news_delete'),
-    path('news/<int:pk>/toggle/', views.toggle_news, name='news_toggle'),
+    path('news/<int:pk>/toggle/', views.toggle_news, name='toggle_news'),
+
+    # ============================================================================
+    # RESULTS (Résultats académiques)
+    # ============================================================================
+    path('results/', views.result_list, name='result_list'),
+    path('results/create/', views.result_create, name='result_create'),
+    path('results/<int:pk>/edit/', views.result_edit, name='result_edit'),
+    path('results/<int:pk>/delete/', views.result_delete, name='result_delete'),
+    path('results/<int:pk>/toggle/', views.toggle_result, name='toggle_result'),
 
     # ============================================================================
     # EVENTS (Événements)
@@ -120,7 +186,18 @@ urlpatterns = [
     path('events/<int:pk>/', views.event_detail, name='event_detail'),
     path('events/<int:pk>/edit/', views.event_edit, name='event_edit'),
     path('events/<int:pk>/delete/', views.event_delete, name='event_delete'),
-    path('events/<int:pk>/toggle/', views.toggle_event, name='event_toggle'),
+    path('events/<int:pk>/toggle/', views.toggle_event, name='toggle_event'),
+
+    # ============================================================================
+    # GALLERY (Galerie événements)
+    # ============================================================================
+    path('gallery/', views.gallery_list, name='gallery_list'),
+    path('gallery/bulk/', views.gallery_bulk_upload, name='gallery_bulk_upload'),
+    path('gallery/bulk-action/', views.gallery_bulk_action, name='gallery_bulk_action'),
+    path('gallery/create/', views.gallery_create, name='gallery_create'),
+    path('gallery/<int:pk>/edit/', views.gallery_edit, name='gallery_edit'),
+    path('gallery/<int:pk>/delete/', views.gallery_delete, name='gallery_delete'),
+    path('gallery/<int:pk>/featured/', views.gallery_toggle_featured, name='gallery_toggle_featured'),
 
     # ============================================================================
     # PAGES (Legal / Institutionnelles)
@@ -138,7 +215,7 @@ urlpatterns = [
     path('partners/create/', views.partner_create, name='partner_create'),
     path('partners/<int:pk>/edit/', views.partner_edit, name='partner_edit'),
     path('partners/<int:pk>/delete/', views.partner_delete, name='partner_delete'),
-    path('partners/<int:pk>/toggle/', views.toggle_partner, name='partner_toggle'),
+    path('partners/<int:pk>/toggle/', views.toggle_partner, name='toggle_partner'),
 
     # ============================================================================
     # TESTIMONIALS (Témoignages)
@@ -147,7 +224,7 @@ urlpatterns = [
     path('testimonials/create/', views.testimonial_create, name='testimonial_create'),
     path('testimonials/<int:pk>/edit/', views.testimonial_edit, name='testimonial_edit'),
     path('testimonials/<int:pk>/delete/', views.testimonial_delete, name='testimonial_delete'),
-    path('testimonials/<int:pk>/toggle/', views.toggle_testimonial, name='testimonial_toggle'),
+    path('testimonials/<int:pk>/toggle/', views.toggle_testimonial, name='toggle_testimonial'),
 
     # ============================================================================
     # BRANCHES (Campus)
@@ -157,7 +234,18 @@ urlpatterns = [
     path('branches/create/', views.branch_create, name='branch_create'),
     path('branches/<int:pk>/edit/', views.branch_edit, name='branch_edit'),
     path('branches/<int:pk>/delete/', views.branch_delete, name='branch_delete'),
-    path('branches/<int:pk>/toggle/', views.toggle_branch, name='branch_toggle'),
+    path('branches/<int:pk>/toggle/', views.toggle_branch, name='toggle_branch'),
+
+    # ============================================================================
+    # MEMOIRES
+    # ============================================================================
+    path('memoires/', views.memoire_list, name='memoire_list'),
+    path('memoires/create/', views.memoire_create, name='memoire_create'),
+    path('memoires/<int:pk>/edit/', views.memoire_edit, name='memoire_edit'),
+    path('memoires/<int:pk>/delete/', views.memoire_delete, name='memoire_delete'),
+    path('memoires/<int:pk>/toggle-publication/', views.toggle_memoire_publication, name='toggle_memoire_publication'),
+    path('memoires/<int:pk>/toggle-avant/', views.toggle_memoire_avant, name='toggle_memoire_avant'),
+    path('memoires/<int:pk>/regenerer-pages/', views.memoire_regenerate_pages, name='memoire_regenerate_pages'),
 
     # ============================================================================
     # MESSAGES (Contact)
@@ -168,10 +256,25 @@ urlpatterns = [
     path('messages/<int:pk>/delete/', views.message_delete, name='message_delete'),
 
     # ============================================================================
+    # USERS (Gestion des comptes staff)
+    # ============================================================================
+    path('users/', views.user_list, name='user_list'),
+    path('users/create/', views.user_create, name='user_create'),
+    path('users/<int:pk>/', views.user_detail, name='user_detail'),
+    path('users/<int:pk>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
+
+    # ============================================================================
     # SETTINGS (Paramètres Institution)
     # ============================================================================
     path('settings/', views.settings, name='settings'),
     path('parametres/', views.settings, name='parametres'),  # ALIAS FR
+
+    # ============================================================================
+    # AUDITS ET JOURNAUX (LECTURE SEULE)
+    # ============================================================================
+    path('audits/', views.audit_center, name='audit_center'),
+    path('audits/<str:source>/<int:pk>/', views.audit_detail, name='audit_detail'),
 
     # ============================================================================
     # UTILITIES (Recherche, Actions groupées, Export)
@@ -179,5 +282,106 @@ urlpatterns = [
     path('search/', views.search_global, name='search_global'),
     path('bulk-action/', views.bulk_action, name='bulk_action'),
     path('export/<str:model_type>/', views.export_data, name='export_data'),
+    path('cockpit/preferences/', views.cockpit_preferences_update, name='cockpit_preferences_update'),
+    path('dashboard/widgets/mini/', views.dashboard_widgets_fragment, name='dashboard_widgets_fragment'),
+    path('dashboard/widgets/notifications/action/', views.dashboard_notifications_action, name='dashboard_notifications_action'),
+    path('dashboard/widgets/content/action/', views.dashboard_content_quick_action, name='dashboard_content_quick_action'),
+
+    # ============================================================================
+    # PROGRAMME YEARS
+    # ============================================================================
+    path('programme-years/', views.programme_year_list, name='programme_year_list'),
+    path('programme-years/create/', views.programme_year_create, name='programme_year_create'),
+    path('programme-years/<int:pk>/edit/', views.programme_year_edit, name='programme_year_edit'),
+    path('programme-years/<int:pk>/delete/', views.programme_year_delete, name='programme_year_delete'),
+
+    # ============================================================================
+    # PROGRAMME QUICK FACTS
+    # ============================================================================
+    path('quick-facts/', views.quick_fact_list, name='quick_fact_list'),
+    path('quick-facts/create/', views.quick_fact_create, name='quick_fact_create'),
+    path('quick-facts/<int:pk>/edit/', views.quick_fact_edit, name='quick_fact_edit'),
+    path('quick-facts/<int:pk>/delete/', views.quick_fact_delete, name='quick_fact_delete'),
+
+    # ============================================================================
+    # PROGRAMME TABS
+    # ============================================================================
+    path('programme-tabs/', views.programme_tab_list, name='programme_tab_list'),
+    path('programme-tabs/create/', views.programme_tab_create, name='programme_tab_create'),
+    path('programme-tabs/<int:pk>/edit/', views.programme_tab_edit, name='programme_tab_edit'),
+    path('programme-tabs/<int:pk>/delete/', views.programme_tab_delete, name='programme_tab_delete'),
+
+    # ============================================================================
+    # PROGRAMME SECTIONS
+    # ============================================================================
+    path('programme-sections/', views.programme_section_list, name='programme_section_list'),
+    path('programme-sections/create/', views.programme_section_create, name='programme_section_create'),
+    path('programme-sections/<int:pk>/edit/', views.programme_section_edit, name='programme_section_edit'),
+    path('programme-sections/<int:pk>/delete/', views.programme_section_delete, name='programme_section_delete'),
+
+    # ============================================================================
+    # COMPETENCE BLOCKS
+    # ============================================================================
+    path('competence-blocks/', views.competence_block_list, name='competence_block_list'),
+    path('competence-blocks/create/', views.competence_block_create, name='competence_block_create'),
+    path('competence-blocks/<int:pk>/edit/', views.competence_block_edit, name='competence_block_edit'),
+    path('competence-blocks/<int:pk>/delete/', views.competence_block_delete, name='competence_block_delete'),
+
+    # ============================================================================
+    # COMPETENCE ITEMS
+    # ============================================================================
+    path('competence-items/', views.competence_item_list, name='competence_item_list'),
+    path('competence-items/create/', views.competence_item_create, name='competence_item_create'),
+    path('competence-items/<int:pk>/edit/', views.competence_item_edit, name='competence_item_edit'),
+    path('competence-items/<int:pk>/delete/', views.competence_item_delete, name='competence_item_delete'),
+
+    # ============================================================================
+    # REQUIRED DOCUMENTS
+    # ============================================================================
+    path('required-documents/', views.required_document_list, name='required_document_list'),
+    path('required-documents/create/', views.required_document_create, name='required_document_create'),
+    path('required-documents/<int:pk>/edit/', views.required_document_edit, name='required_document_edit'),
+    path('required-documents/<int:pk>/delete/', views.required_document_delete, name='required_document_delete'),
+
+    # ============================================================================
+    # PROGRAMME REQUIRED DOCUMENTS
+    # ============================================================================
+    path('programme-required-documents/', views.programme_required_document_list, name='programme_required_document_list'),
+    path('programme-required-documents/create/', views.programme_required_document_create, name='programme_required_document_create'),
+    path('programme-required-documents/<int:pk>/delete/', views.programme_required_document_delete, name='programme_required_document_delete'),
+
+    # ============================================================================
+    # CANDIDATURE DOCUMENTS
+    # ============================================================================
+    path('candidatures/<int:pk>/documents/add/', views.candidature_document_add, name='candidature_document_add'),
+    path('candidatures/<int:pk>/documents/<int:doc_pk>/delete/', views.candidature_document_delete, name='candidature_document_delete'),
+    path('candidatures/<int:pk>/documents/<int:doc_pk>/validate/', views.candidature_document_validate, name='candidature_document_validate'),
+
+    # ============================================================================
+    # COMMUNITY CATEGORIES
+    # ============================================================================
+    path('community/categories/', views.community_category_list, name='community_category_list'),
+    path('community/categories/create/', views.community_category_create, name='community_category_create'),
+    path('community/categories/<int:pk>/edit/', views.community_category_edit, name='community_category_edit'),
+    path('community/categories/<int:pk>/delete/', views.community_category_delete, name='community_category_delete'),
+    path('community/categories/<int:pk>/toggle/', views.toggle_community_category, name='toggle_community_category'),
+
+    # ============================================================================
+    # COMMUNITY TOPICS
+    # ============================================================================
+    path('community/topics/', views.community_topic_list, name='community_topic_list'),
+    path('community/topics/<int:pk>/', views.community_topic_detail, name='community_topic_detail'),
+    path('community/topics/<int:pk>/edit/', views.community_topic_edit, name='community_topic_edit'),
+    path('community/topics/<int:pk>/delete/', views.community_topic_delete, name='community_topic_delete'),
+    path('community/topics/<int:pk>/toggle/', views.toggle_community_topic, name='toggle_community_topic'),
+
+    # ============================================================================
+    # COMMUNITY ANSWERS
+    # ============================================================================
+    path('community/answers/', views.community_answer_list, name='community_answer_list'),
+    path('community/answers/<int:pk>/', views.community_answer_detail, name='community_answer_detail'),
+    path('community/answers/<int:pk>/edit/', views.community_answer_edit, name='community_answer_edit'),
+    path('community/answers/<int:pk>/delete/', views.community_answer_delete, name='community_answer_delete'),
+    path('community/answers/<int:pk>/toggle/', views.toggle_community_answer, name='toggle_community_answer'),
 
 ]

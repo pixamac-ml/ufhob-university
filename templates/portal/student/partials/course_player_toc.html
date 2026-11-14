@@ -1,0 +1,17 @@
+<nav class="min-h-0 p-4" aria-label="Sommaire du cours">
+  <div class="mb-5"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-text-muted">Contenu du cours</p><div class="mt-2 flex items-center justify-between text-xs font-semibold text-ui-text-muted"><span>Progression</span><span>{{ total_completed_content_count }}/{{ total_active_content_count }}</span></div><div class="mt-2 h-2 overflow-hidden rounded-full bg-ui-surface-muted"><div class="h-full rounded-full bg-ui-primary" style="width:{{ course_progress_percent }}%"></div></div></div>
+  <div class="space-y-5">
+    {% for chapter in chapters %}
+      <section>
+        <p class="mb-2 px-2 text-ui-micro font-bold uppercase tracking-ui-label text-ui-text-muted">{{ chapter.title }}</p>
+        <div class="space-y-1">
+          {% for content in chapter.active_contents %}
+            <a href="{{ course_url }}?tab=course&content_id={{ content.id }}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-get="{{ course_url }}?tab=course&content_id={{ content.id }}{% if selected_academic_year_id %}&academic_year_id={{ selected_academic_year_id }}{% endif %}" hx-target="#course-player-page" hx-swap="outerHTML" hx-push-url="true" class="ui-focus-ring flex min-h-11 w-full items-start gap-2 rounded-ui-button px-2 py-2 text-left text-sm font-semibold {% if selected_content.id == content.id %}bg-ui-primary-soft font-bold text-ui-primary{% else %}text-ui-text hover:bg-ui-surface-hover{% endif %}">
+              <span class="grid h-7 w-7 shrink-0 place-items-center rounded-ui-button border border-ui-border bg-ui-surface text-xs">{% if content.student_is_completed %}<i data-lucide="check" class="h-3.5 w-3.5 text-ui-success"></i>{% else %}{{ forloop.counter }}{% endif %}</span><span class="min-w-0"><span class="block leading-snug">{{ content.title }}</span><span class="mt-0.5 block text-ui-micro font-semibold uppercase text-ui-text-muted">{{ content.get_content_type_display }} · {{ content.student_progress_percent }}%</span></span>
+            </a>
+          {% empty %}<p class="px-2 text-sm text-ui-text-muted">Aucune leçon publiée.</p>{% endfor %}
+        </div>
+      </section>
+    {% empty %}<p class="text-sm text-ui-text-muted">Aucun chapitre publié.</p>{% endfor %}
+  </div>
+</nav>

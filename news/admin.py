@@ -153,6 +153,7 @@ class ResultSessionAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = ("created_at",)
+    actions = ("publish_results", "unpublish_results")
 
     ordering = ("-annee_academique", "-created_at")
 
@@ -195,6 +196,16 @@ class ResultSessionAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    @admin.action(description="Publier les résultats sélectionnés")
+    def publish_results(self, request, queryset):
+        updated = queryset.update(is_published=True)
+        self.message_user(request, f"{updated} résultat(s) publiés avec succès.")
+
+    @admin.action(description="Dépublier les résultats sélectionnés")
+    def unpublish_results(self, request, queryset):
+        updated = queryset.update(is_published=False)
+        self.message_user(request, f"{updated} résultat(s) passés en brouillon.")
 
 
 
@@ -269,6 +280,8 @@ class EventAdmin(admin.ModelAdmin):
         "event_type",
         "event_date",
         "is_published",
+        "is_featured",
+        "is_archived",
         "media_count_display",
         "image_count_display",
         "video_count_display",
@@ -278,6 +291,8 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = (
         "event_type",
         "is_published",
+        "is_featured",
+        "is_archived",
         "event_date",
         "created_at",
     )

@@ -1,0 +1,23 @@
+# UFHOB — Matrice initiale d’alignement des dashboards
+
+Audit du 9 septembre 2026, avant les corrections de la mission transversale. Les périmètres ci-dessous viennent du registre des positions, d’InstitutionalProfile, d’AccessContext et des sélecteurs inspectés. Un rôle ne reçoit pas un périmètre plus large par son seul intitulé.
+
+| Rôle réel | Entrée / moteur | Source du périmètre | École / campus | Année | Risque initial constaté ou à vérifier |
+|---|---|---|---|---|---|
+| DG / DGA | `accounts_portal:portal_dg`, `portal/dg`, `views.dg_*` | Affectation globale + contexte de navigation Phase 3A | GLOBAL, SCHOOL, BRANCH, SCHOOL_BRANCH | `DgDashboardContext` | Vérifier les acquis, détails, exports et mémoire HTMX ; ne pas reconstruire |
+| DE | `portal_director`, `portal_dashboard`, services `director/*` | InstitutionalProfile puis AccessContext ; repli legacy | BRANCH par défaut ; SCHOOL/SCHOOL_BRANCH si affecté | Sélection du workspace et AcademicYear commun | Branch encore dominante dans des relations secondaires et formulaires ; indicateur école absent |
+| Gestionnaire | `portal_annex_manager`, `accounts/dashboards/manager_dashboard.py` | Contrat d’accès gestionnaire + `request.branch` | Campus opérationnel, école lorsqu’affectée | Périodes financières et années de réinscription | Ventilation des dossiers vs écritures physiques ; choix et exports à vérifier |
+| Finance / agent paiement | `portal_finance`, `accounts:finance_dashboard` | Permissions Finance distinctes d’`is_global_viewer` | BRANCH par défaut ; contexte explicite prioritaire | Filtres métier existants | Risque de confondre rôle Finance et accès global ; paiement dérivé du dossier |
+| Admissions | `portal_admissions`, moteur admissions partagé | AccessContext et `get_base_queryset` | Programme.school + candidature.branch | Année de candidature | Choix programme/campus et actions HTMX |
+| Secrétaire | `portal_secretary` → `secretary_dashboard`, `secretary/selectors.py` | Affectation + auteur/dossier lié | BRANCH/SCHOOL_BRANCH ; SCHOOL possible | Dates des documents / parcours étudiant | `_branch_user_queryset` propose encore tout le personnel du campus ; anciens OR campus peuvent déborder |
+| IT | `portal_it_v2`, `it_workflows`, `it_support_service` | Affectation + permissions techniques | BRANCH/SCHOOL_BRANCH/SCHOOL selon affectation | Année des classes/imports | Recherche personnel, tickets et audit non filtrés par école dans plusieurs sélecteurs |
+| Enseignant | `portal_teacher`, `teacher_dashboard_service` | Cours, planning, affectations pédagogiques | Plusieurs écoles/campus possibles | Année des classes | Dashboard limité au campus du profil ; affectations directes à Semester/UE/EC partiellement ignorées |
+| Moniteur/Monitrice | Même moteur enseignant (`TEACHING_POSITIONS`) | Même source pédagogique + statut salarié existant | Plusieurs écoles/campus possibles | Année des classes | Même restriction de campus ; conserver les règles salariales et d’honoraires |
+| Surveillant | `portal_dashboard`, `views/supervisor.py`, services supervisor | AccessContext + classes/planning | BRANCH/SCHOOL_BRANCH/SCHOOL selon affectation | Année et planning sélectionnés | Contrôler présences, recherches, détails et actions avec des identifiants étrangers |
+| Étudiant | `portal_student:dashboard`, `portal/student/services.py` | Enrollment/Inscription de l’utilisateur | School via Programme ; Branch du parcours | Année du parcours demandé | Afficher l’école et préserver l’ancien parcours après changement ; vérifier cours/documents personnels |
+| Marketing | `marketing:dashboard` | Position globale par défaut, affectation explicite à vérifier | Institutionnel par défaut | Périodes métier | Auditer les audiences/dossiers ; aucun accès local implicite à transformer en global |
+| Super administration | `superadmin:dashboard` | Rôle et affectation centrale | Institutionnel | Référentiels communs | Conserver les contrôles globaux, ne pas ouvrir ces opérations aux rôles locaux |
+
+Le shell certifié est partagé (`portal/services/certified_dashboard_shell.py`, `portal/staff/director_dashboard.html`). Les notifications sont personnelles. SchoolBranch demeure plusieurs-à-plusieurs ; aucun champ School redondant n’est nécessaire.
+
+La recette utilisera le Client Django, les vraies routes et les templates/partials rendus sur une base SQLite de test isolée : deux écoles sur un campus, une école sur deux campus, enseignants transversaux et parcours historiques. Les résultats et les limites seront consignés dans le rapport final ; cette matrice initiale ne constitue pas une certification de tous les endpoints.

@@ -1,0 +1,73 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}{% if event %}Modifier événement{% else %}Nouvel événement{% endif %}{% endblock %}
+{% block page_subtitle %}Configurer les informations de l'événement{% endblock %}
+
+{% block content_main %}
+<section class="card max-w-4xl rounded-xl border border-slate-100 shadow-sm">
+    <div class="card-header">
+        <div>
+            <h3 class="text-base font-semibold text-slate-900 mb-1">Fiche evenement</h3>
+            <p class="text-sm text-slate-500 mb-0">Renseignez les informations principales et une couverture de qualite.</p>
+        </div>
+        <a href="{% url 'superadmin:event_list' %}" class="btn btn-outline btn-sm">Retour liste</a>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="card-body space-y-4">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="form-label">Titre *</label>
+                <input type="text" name="title" required class="form-input" value="{{ event.title|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label">Type *</label>
+                <select name="event_type" required class="form-input">
+                    <option value="">Choisir...</option>
+                    {% for t in event_types %}
+                    <option value="{{ t.pk }}" {% if event and event.event_type_id == t.pk %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="form-label">Date de début *</label><input type="date" name="event_date" required class="form-input" value="{{ event.event_date|date:'Y-m-d'|default:'' }}"></div>
+            <div><label class="form-label">Date de fin</label><input type="date" name="end_date" class="form-input" value="{{ event.end_date|date:'Y-m-d'|default:'' }}"></div>
+            <div><label class="form-label">Heure de début</label><input type="time" name="start_time" class="form-input" value="{{ event.start_time|time:'H:i'|default:'' }}"></div>
+            <div><label class="form-label">Heure de fin</label><input type="time" name="end_time" class="form-input" value="{{ event.end_time|time:'H:i'|default:'' }}"></div>
+            <div><label class="form-label">Lieu</label><input name="venue" class="form-input" value="{{ event.venue|default:'' }}"></div>
+            <div><label class="form-label">Organisateur</label><input name="organizer" class="form-input" value="{{ event.organizer|default:'' }}"></div>
+            <div>
+                <label class="form-label">Image de couverture</label>
+                <input type="file" name="cover_image" accept="image/*" class="form-input">
+                <p class="form-help">Conseil qualite: image nette, largeur recommandee 2000px minimum.</p>
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label">Description</label>
+            <textarea name="description" rows="6" class="form-input">{{ event.description|default:'' }}</textarea>
+        </div>
+
+        <fieldset class="space-y-3 rounded-xl border border-slate-200 p-4">
+            <legend class="px-2 text-sm font-semibold">Participation</legend>
+            <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="registration_enabled" {% if event.registration_enabled %}checked{% endif %}> Activer les inscriptions</label>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2"><div><label class="form-label">Texte du bouton</label><input name="registration_label" class="form-input" value="{{ event.registration_label|default:'Participer' }}"></div><div><label class="form-label">Lien (route interne ou URL)</label><input name="registration_url" class="form-input" value="{{ event.registration_url|default:'' }}" placeholder="/contact/ ou https://…"></div><div><label class="form-label">Date limite</label><input type="datetime-local" name="registration_deadline" class="form-input" value="{{ event.registration_deadline|date:'Y-m-d\\TH:i'|default:'' }}"></div></div>
+        </fieldset>
+
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="is_published" {% if not event or event.is_published %}checked{% endif %}>
+            Publier immédiatement
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="is_featured" {% if event.is_featured %}checked{% endif %}> Mettre en avant</label>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="is_archived" {% if event.is_archived %}checked{% endif %}> Archiver (masquer de la vitrine)</label>
+
+        <div class="flex items-center gap-2 pt-2 form-actions">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a href="{% url 'superadmin:event_list' %}" class="btn btn-outline">Annuler</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

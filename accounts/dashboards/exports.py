@@ -7,9 +7,10 @@ Fonctions d'export CSV pour les dashboards.
 - Export paiements
 - Export rapport exécutif
 """
+from accounts.scoping import scoped
 
 import csv
-from datetime import timedelta
+from datetime import datetime
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -52,12 +53,15 @@ def export_candidatures_csv(request):
         get_base_queryset(user, "candidature")
         .filter(is_deleted=False)
         .select_related("programme", "branch")
-        .order_by("-created_at")
+        .order_by("-submitted_at")
     )
 
     # Filtres depuis GET
     status = request.GET.get("status")
     programme_id = request.GET.get("programme")
+
+    if status == "pending":
+        status = "submitted"
 
     if status:
         candidatures = candidatures.filter(status=status)
@@ -96,6 +100,7 @@ def export_candidatures_csv(request):
         "under_review": "En révision",
         "to_complete": "À compléter",
         "accepted": "Acceptée",
+        "accepted_with_reserve": "Acceptée sous réserve",
         "rejected": "Rejetée",
     }
 
@@ -109,7 +114,7 @@ def export_candidatures_csv(request):
             c.programme.title if c.programme else "",
             c.branch.name if c.branch else "",
             status_labels.get(c.status, c.status),
-            c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "",
+            c.submitted_at.strftime("%d/%m/%Y %H:%M") if c.submitted_at else "",
             c.reviewed_at.strftime("%d/%m/%Y %H:%M") if c.reviewed_at else "",
             c.reviewed_by.get_full_name() if c.reviewed_by else "",
         ])
@@ -129,7 +134,10 @@ def export_payments_csv(request):
 
     user = request.user
 
-    if not check_finance_access(user):
+    from accounts.services.manager_workspace_access import resolve_manager_workspace_access
+
+    workspace_access = resolve_manager_workspace_access(user, request=request)
+    if not check_finance_access(user) and not (workspace_access and workspace_access.can("view_payments")):
         messages.error(request, "Accès refusé.")
         return redirect("accounts:finance_dashboard")
 
@@ -140,11 +148,12 @@ def export_payments_csv(request):
             "inscription",
             "inscription__candidature",
             "inscription__candidature__programme",
+            "inscription__candidature__programme__school",
             "inscription__candidature__branch",
             "agent",
-            "validated_by",
         )
-        .order_by("-created_at")
+        .prefetch_related("corrections")
+        .order_by("-paid_at")
     )
 
     # Filtres depuis GET
@@ -178,12 +187,19 @@ def export_payments_csv(request):
     writer.writerow([
         "Référence",
         "Montant (FCFA)",
+        "Montant initial (FCFA)",
+        "Ajustement cumule (FCFA)",
+        "Paiement ajuste",
         "Méthode",
         "Statut",
         "Inscription",
         "Étudiant",
         "Programme",
+        "Ecole",
         "Annexe",
+        "Annee academique",
+        "Total paye dossier (FCFA)",
+        "Reste a payer (FCFA)",
         "Agent",
         "Date paiement",
         "Validé par",
@@ -205,19 +221,31 @@ def export_payments_csv(request):
     # Données
     for p in payments:
         candidature = p.inscription.candidature if p.inscription else None
+        corrections = list(p.corrections.all())
+        initial_amount = corrections[0].old_amount if corrections else p.amount
+        adjustment_total = sum(correction.delta_amount for correction in corrections)
+        programme = candidature.programme if candidature else None
+        school = getattr(programme, "school", None)
 
         writer.writerow([
             p.reference,
             p.amount,
+            initial_amount,
+            adjustment_total,
+            "Oui" if corrections else "Non",
             method_labels.get(p.method, p.method),
             status_labels.get(p.status, p.status),
             p.inscription.public_token if p.inscription else "",
             candidature.full_name if candidature else "",
-            candidature.programme.title if candidature and candidature.programme else "",
+            programme.title if programme else "",
+            getattr(school, "display_name", "") or getattr(school, "code", ""),
             candidature.branch.name if candidature and candidature.branch else "",
+            candidature.academic_year if candidature else "",
+            p.inscription.amount_paid if p.inscription else "",
+            p.inscription.balance if p.inscription else "",
             p.agent.user.get_full_name() if p.agent else "",
             p.paid_at.strftime("%d/%m/%Y %H:%M") if p.paid_at else "",
-            p.validated_by.get_full_name() if p.validated_by else "",
+            "",
         ])
 
     return response
@@ -252,7 +280,7 @@ def export_executive_csv(request):
     today = timezone.now().date()
     month_start = today.replace(day=1)
     month_start_dt = timezone.make_aware(
-        timezone.datetime.combine(month_start, timezone.datetime.min.time())
+        datetime.combine(month_start, datetime.min.time())
     )
 
     # ========================================
@@ -261,15 +289,15 @@ def export_executive_csv(request):
     writer.writerow(["=== RÉSUMÉ GLOBAL ==="])
     writer.writerow(["Métrique", "Valeur"])
 
-    total_candidatures = Candidature.objects.filter(is_deleted=False).count()
-    total_inscriptions = Inscription.objects.count()
+    total_candidatures = scoped(Candidature, user=request.user).filter(is_deleted=False).count()
+    total_inscriptions = scoped(Inscription, user=request.user).count()
     total_revenue = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(status="validated")
         .aggregate(total=Sum("amount"))["total"] or 0
     )
     monthly_revenue = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(status="validated", paid_at__gte=month_start_dt)
         .aggregate(total=Sum("amount"))["total"] or 0
     )
@@ -300,18 +328,18 @@ def export_executive_csv(request):
         "Revenus Mois (FCFA)"
     ])
 
-    branches = Branch.objects.filter(is_active=True)
+    branches = scoped(Branch, user=request.user).filter(is_active=True)
 
     for branch in branches:
 
-        branch_candidatures = Candidature.objects.filter(
+        branch_candidatures = scoped(Candidature, user=request.user).filter(
             branch=branch,
             is_deleted=False
         )
         candidatures_count = branch_candidatures.count()
         candidatures_accepted = branch_candidatures.filter(status="accepted").count()
 
-        inscriptions_count = Inscription.objects.filter(
+        inscriptions_count = scoped(Inscription, user=request.user).filter(
             candidature__branch=branch
         ).count()
 
@@ -321,7 +349,7 @@ def export_executive_csv(request):
         ).count()
 
         branch_revenue = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(
                 status="validated",
                 inscription__candidature__branch=branch
@@ -330,7 +358,7 @@ def export_executive_csv(request):
         )
 
         branch_monthly = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(
                 status="validated",
                 inscription__candidature__branch=branch,
@@ -377,19 +405,19 @@ def export_executive_csv(request):
     for agent in all_agents:
 
         session_ids = (
-            CashPaymentSession.objects
+            scoped(CashPaymentSession, user=request.user)
             .filter(agent=agent, is_used=True)
             .values_list("inscription_id", flat=True)
         )
 
         agent_revenue = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(inscription_id__in=session_ids, status="validated")
             .aggregate(total=Sum("amount"))["total"] or 0
         )
 
         agent_monthly = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(
                 inscription_id__in=session_ids,
                 status="validated",
@@ -399,7 +427,7 @@ def export_executive_csv(request):
         )
 
         sessions_total = (
-            CashPaymentSession.objects
+            scoped(CashPaymentSession, user=request.user)
             .filter(agent=agent, is_used=True)
             .count()
         )
@@ -435,7 +463,7 @@ def export_executive_csv(request):
     writer.writerow(["Rang", "Programme", "Inscriptions", "Revenus (FCFA)"])
 
     programmes_stats = (
-        Inscription.objects
+        scoped(Inscription, user=request.user)
         .values("candidature__programme__title")
         .annotate(
             count=Count("id"),
@@ -461,7 +489,7 @@ def export_executive_csv(request):
     writer.writerow(["Statut", "Nombre", "Pourcentage"])
 
     status_stats = (
-        Candidature.objects
+        scoped(Candidature, user=request.user)
         .filter(is_deleted=False)
         .values("status")
         .annotate(count=Count("id"))

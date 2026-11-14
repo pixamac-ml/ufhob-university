@@ -1,0 +1,64 @@
+{% load component_tags humanize %}
+<div class="space-y-5">
+  {% if closure_error %}{% component "ui_core.alert" title="Clôture impossible" message=closure_error tone="danger" %}{% endcomponent %}{% endif %}
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    {% component "ui_core.stat_card" label="Recettes" value=period_summary.total_revenue|default:0|intcomma unit="FCFA" icon="trending-up" tone="success" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Charges" value=period_summary.total_expenses|default:0|intcomma unit="FCFA" icon="trending-down" tone="danger" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Résultat" value=period_summary.net_result|default:0|intcomma unit="FCFA" icon="scale" tone="primary" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Caisse" value=available_cash_balance|default:0|intcomma unit="FCFA" icon="vault" tone="info" compact=True %}{% endcomponent %}
+  </div>
+
+  {% component "ui_core.alert" title="Clôture et versement sont séparés" message="Le comptage clôture la période ; chaque versement vers la banque est enregistré séparément et diminue immédiatement la caisse." tone="info" %}{% endcomponent %}
+
+  {% if report_closure_blockers %}
+    {% component "ui_core.alert" title="Clôture bloquée" message="Des anomalies financières doivent être corrigées avant de préparer cette période." tone="danger" %}{% endcomponent %}
+    <a href="?section=rapport&report_month={{ report_period.month }}&report_year={{ report_period.year }}" class="inline-flex h-ui-control items-center rounded-ui-button border border-ui-danger px-4 text-sm font-semibold text-ui-danger hover:bg-ui-danger-soft">Consulter les alertes financières</a>
+  {% endif %}
+
+  <form method="post" action="{% url 'accounts:htmx_manager_monthly_closure_create' %}" class="space-y-4" hx-boost="false">
+    {% csrf_token %}
+    {% include "accounts/dashboard/partials/dg_form_fields.html" with form=closure_form %}
+    {% component "ui_core.alert" title="Archive sans suppression" message="La clôture archive la période et préserve tout l'historique consultable." tone="warning" %}{% endcomponent %}
+    <button type="submit" class="inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong" {% if report_closure_blockers %}disabled aria-disabled="true"{% endif %}><i data-lucide="lock" class="h-4 w-4"></i>{% if report_closure_blockers %}Clôture bloquée{% else %}Préparer la clôture{% endif %}</button>
+  </form>
+
+  {% component "ui_core.panel" title="Préparer le versement" subtitle="La référence ESFE est générée automatiquement ; le versement diminue uniquement la caisse." %}
+    {% fill "default" %}
+      <form method="post" action="{% url 'accounts:htmx_manager_bank_transfer_create' %}" enctype="multipart/form-data" class="space-y-5" hx-post="{% url 'accounts:htmx_manager_bank_transfer_create' %}" hx-target="#manager-cloture-subcontent" hx-swap="none" hx-indicator="#bank-transfer-feedback" x-data="{ available: {{ available_cash_balance|default:0 }}, amount: 0 }">
+        {% csrf_token %}
+        {{ transfer_form.request_token }}
+        <div class="grid gap-4 lg:grid-cols-2">
+          <section class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4">
+            <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">A. Versement</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              {% component "ui_core.django_form_field" field=transfer_form.bank_name %}{% endcomponent %}
+              {% component "ui_core.django_form_field" field=transfer_form.amount %}{% endcomponent %}
+              {% component "ui_core.django_form_field" field=transfer_form.transfer_date %}{% endcomponent %}
+            </div>
+            <p class="mt-3 text-xs text-ui-text-muted">Pays déterminé depuis la configuration institutionnelle. La référence interne sera créée après validation.</p>
+          </section>
+          <section class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4">
+            <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">B. Informations complémentaires</p>
+            <div class="mt-3 grid gap-3">
+              {% component "ui_core.django_form_field" field=transfer_form.proof %}{% endcomponent %}
+              {% component "ui_core.django_form_field" field=transfer_form.comment %}{% endcomponent %}
+            </div>
+            <p class="text-xs text-ui-text-muted">Le justificatif bancaire est externe et facultatif. Le bordereau ESFE est généré séparément.</p>
+          </section>
+        </div>
+        <section class="rounded-ui-card border border-ui-primary/25 bg-ui-primary-soft p-4">
+          <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">C. Récapitulatif</p>
+          <div class="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+            <div><span class="block text-ui-text-muted">Disponible en caisse</span><strong class="tabular-nums">{{ available_cash_balance|default:0|intcomma }} FCFA</strong></div>
+            <div><span class="block text-ui-text-muted">Versement</span><strong class="tabular-nums" x-text="(amount || 0).toLocaleString('fr-FR') + ' FCFA'">0 FCFA</strong></div>
+            <div><span class="block text-ui-text-muted">Reste prévisionnel</span><strong class="tabular-nums" x-text="Math.max(available - (amount || 0), 0).toLocaleString('fr-FR') + ' FCFA'">{{ available_cash_balance|default:0|intcomma }} FCFA</strong></div>
+          </div>
+          <p x-show="amount > available" x-cloak class="mt-3 text-sm font-semibold text-ui-danger" role="alert">Le montant dépasse le disponible en caisse. Corrigez-le avant validation.</p>
+          <p id="bank-transfer-feedback" class="mt-3 min-h-0 text-sm" aria-live="polite"></p>
+          <button type="submit" :disabled="amount < 1 || amount > available" class="mt-3 inline-flex h-ui-control w-full items-center justify-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong disabled:cursor-not-allowed disabled:opacity-50"><i data-lucide="landmark" class="h-4 w-4"></i>Valider le versement</button>
+        </section>
+      </form>
+    {% endfill %}
+  {% endcomponent %}
+</div>

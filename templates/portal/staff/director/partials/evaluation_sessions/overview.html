@@ -1,0 +1,39 @@
+{% load component_tags %}
+{% include "portal/staff/director/partials/evaluation_sessions/_counts_oob.html" %}
+<div class="space-y-5">
+  {% if selected_evaluation_campaign %}
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div><p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Session ouverte</p><h2 class="mt-1 text-xl font-bold text-ui-text">{{ selected_evaluation_campaign.title }}</h2><p class="mt-1 text-sm text-ui-text-muted">{{ selected_evaluation_campaign.get_kind_display }} · {{ selected_evaluation_campaign.calendar_entry.start_datetime|date:"d/m/Y" }} au {{ selected_evaluation_campaign.calendar_entry.end_datetime|date:"d/m/Y" }} · Annexe {{ branch.name }}</p></div>
+      {% component "ui_core.status_badge" label=selected_evaluation_campaign.get_status_display tone="info" %}{% endcomponent %}
+    </div>
+    <div class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {% component "ui_core.stat_card" label="Classes" value=campaign_scope_classes|length icon="school" tone="primary" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="EC" value=campaign_workflow.subjects_total icon="book-open-check" tone="info" description="Maquette concernée" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Épreuves" value=campaign_workflow.events_count icon="calendar-clock" tone="success" description="Planifiées" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Surveillance" value=campaign_workflow.covered_events icon="shield-check" tone="warning" description="Épreuves couvertes" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Copies suivies" value=campaign_workflow.copies_tracked icon="files" tone="neutral" description="Sur les épreuves" compact=True %}{% endcomponent %}
+    </div>
+    {% component "ui_core.panel" title="Progression de la session" subtitle="Les compteurs viennent des sujets, épreuves, surveillants et copies réellement enregistrés." tone="primary" %}
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=subjects&campaign_id={{ selected_evaluation_campaign.id }}" class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4 hover:border-ui-primary/40"><div class="flex items-center justify-between gap-3"><strong class="text-sm text-ui-text">Sujets</strong><span class="text-sm font-bold text-ui-text">{{ campaign_workflow.subjects_received }}/{{ campaign_workflow.subjects_total }}</span></div>{% component "ui_core.progress_bar" value=campaign_workflow.subjects_percent label="Réception" tone="success" compact=True %}{% endcomponent %}</a>
+        <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=scheduled&campaign_id={{ selected_evaluation_campaign.id }}" class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4 hover:border-ui-primary/40"><div class="flex items-center justify-between gap-3"><strong class="text-sm text-ui-text">Épreuves planifiées</strong><span class="text-sm font-bold text-ui-text">{{ campaign_workflow.events_count }}/{{ campaign_workflow.subjects_total }}</span></div>{% component "ui_core.progress_bar" value=campaign_workflow.planning_percent label="Planning" tone="info" compact=True %}{% endcomponent %}</a>
+        <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=supervision&campaign_id={{ selected_evaluation_campaign.id }}" class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4 hover:border-ui-primary/40"><div class="flex items-center justify-between gap-3"><strong class="text-sm text-ui-text">Surveillance</strong><span class="text-sm font-bold text-ui-text">{{ campaign_workflow.covered_events }}/{{ campaign_workflow.events_count }}</span></div>{% component "ui_core.progress_bar" value=campaign_workflow.proctor_percent label="Couverture" tone="warning" compact=True %}{% endcomponent %}</a>
+        <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=copies&campaign_id={{ selected_evaluation_campaign.id }}" class="rounded-ui-card border border-ui-border bg-ui-surface-muted p-4 hover:border-ui-primary/40"><div class="flex items-center justify-between gap-3"><strong class="text-sm text-ui-text">Copies suivies</strong><span class="text-sm font-bold text-ui-text">{{ campaign_workflow.copies_tracked }}/{{ campaign_workflow.copies_total }}</span></div><p class="mt-3 text-xs text-ui-text-muted">Voir et compléter le suivi des copies.</p></a>
+      </div>
+    {% endcomponent %}
+    {% component "ui_core.panel" title="Prochaine action" subtitle="Le système indique le prochain travail utile à partir de l'état réel de cette session." tone=campaign_workflow.next_action_tone %}
+      <div class="flex flex-wrap items-center justify-between gap-3"><p class="text-base font-semibold text-ui-text">{{ campaign_workflow.next_action }}</p><div class="flex flex-wrap gap-2"><a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=subjects&campaign_id={{ selected_evaluation_campaign.id }}" class="ui-focus-ring inline-flex h-ui-control items-center rounded-ui-button border border-ui-border px-4 text-sm font-semibold text-ui-text">Sujets</a><a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=scheduled&campaign_id={{ selected_evaluation_campaign.id }}" class="ui-focus-ring inline-flex h-ui-control items-center rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Épreuves</a></div></div>
+    {% endcomponent %}
+  {% else %}
+    <div class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {% component "ui_core.stat_card" label="Sessions officielles" value=exam_session_total icon="calendar-range" tone="primary" description="Examens et rattrapages" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Sessions à venir" value=exam_session_upcoming_count icon="clock-3" tone="info" description="Périodes non terminées" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Épreuves planifiées" value=eval_event_total icon="clipboard-check" tone="success" description="Par classe et matière" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Épreuves à venir" value=eval_event_upcoming_count icon="calendar-clock" tone="warning" description="Hors annulations" compact=True %}{% endcomponent %}
+    </div>
+    {% component "ui_core.panel" title="Commencer par ouvrir une session" subtitle="Une fois ouverte, la session restera active dans les onglets Sujets, Épreuves, Surveillance et Copies." tone="primary" %}
+      <div class="flex flex-wrap items-center justify-between gap-4"><p class="max-w-2xl text-sm text-ui-text-muted">Le dossier regroupe l'année, l'annexe, les classes et les EC concernés. Vous ne devrez pas les ressaisir dans chaque étape.</p><a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=sessions" hx-get="{% url 'accounts_portal:director_exam_sessions_subcontent' %}?view=sessions" hx-target="#director-session-subcontent" hx-swap="innerHTML" hx-push-url="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=sessions" class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary"><i data-lucide="folder-open" class="h-4 w-4" aria-hidden="true"></i>Voir les sessions</a></div>
+    {% endcomponent %}
+    {% if not exam_session_total and not eval_event_total %}{% component "ui_core.alert" title="Aucune session ouverte" message="Commencez par ouvrir une période officielle depuis Sessions." tone="neutral" %}{% endcomponent %}{% endif %}
+  {% endif %}
+</div>

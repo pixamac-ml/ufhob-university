@@ -1,0 +1,305 @@
+from io import BytesIO
+
+from django.core.files.base import ContentFile
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle
+
+from core.pdf_documents import generate_pdf as generate_esfe_pdf
+
+from accounts.models import AccountingDocumentSequence, BranchCashMovement, PaymentSignatureSession
+from accounts.services.financial_integrity import assert_financial_period_open
+
+
+PREFIX_BY_TYPE = {
+    AccountingDocumentSequence.DOCUMENT_EXPENSE: "DEP",
+    AccountingDocumentSequence.DOCUMENT_CASH: "CAI",
+    AccountingDocumentSequence.DOCUMENT_BANK_TRANSFER: "VBT",
+}
+
+
+def _branch_code(branch):
+    return (getattr(branch, "code", "") or "GEN").upper()
+
+
+def next_accounting_reference(branch, document_type, *, document_date=None):
+    document_date = document_date or timezone.localdate()
+    year = document_date.year
+    with transaction.atomic():
+        sequence, _ = (
+            AccountingDocumentSequence.objects
+            .select_for_update()
+            .get_or_create(
+                branch=branch,
+                document_type=document_type,
+                year=year,
+                defaults={"last_number": 0},
+            )
+        )
+        sequence.last_number += 1
+        sequence.save(update_fields=["last_number", "updated_at"])
+    prefix = PREFIX_BY_TYPE[document_type]
+    return f"{prefix}-{_branch_code(branch)}-{year}-{sequence.last_number:06d}"
+
+
+def ensure_expense_reference(expense):
+    if expense.reference:
+        return expense.reference
+    expense.reference = next_accounting_reference(
+        expense.branch,
+        AccountingDocumentSequence.DOCUMENT_EXPENSE,
+        document_date=expense.expense_date,
+    )
+    expense.save(update_fields=["reference", "updated_at"])
+    return expense.reference
+
+
+def ensure_cash_movement_reference(movement):
+    updates = []
+    if not movement.reference:
+        movement.reference = next_accounting_reference(
+            movement.branch,
+            AccountingDocumentSequence.DOCUMENT_CASH,
+            document_date=movement.movement_date,
+        )
+        updates.append("reference")
+    if not movement.receipt_number:
+        movement.receipt_number = movement.reference
+        updates.append("receipt_number")
+    if updates:
+        movement.save(update_fields=updates)
+    return movement.reference
+
+
+def next_bank_transfer_reference(branch, *, transfer_date=None):
+    """Return the next branch-scoped, immutable internal deposit reference."""
+
+    return next_accounting_reference(
+        branch,
+        AccountingDocumentSequence.DOCUMENT_BANK_TRANSFER,
+        document_date=transfer_date,
+    )
+
+
+def build_bank_transfer_slip(transfer, *, request=None):
+    """Render ESFE's internal deposit slip, never the external bank proof."""
+
+    from core.models import Institution
+
+    institution = Institution.objects.filter(is_active=True).first()
+    actor = transfer.created_by or transfer.validated_by
+    actor_name = ""
+    if actor:
+        actor_name = actor.get_full_name().strip() or actor.username
+    return generate_esfe_pdf("esfe_bank_transfer_slip", {
+        "institution_name": institution.name if institution else "ESFE",
+        "institution_short_name": institution.short_name if institution and institution.short_name else "ESFE",
+        "branch_name": transfer.branch.name if transfer.branch_id else "",
+        "reference": transfer.reference,
+        "transfer_date": transfer.transfer_date.strftime("%d/%m/%Y"),
+        "bank_name": transfer.bank_name,
+        "bank_country": transfer.bank_country,
+        "amount": f"{transfer.amount:,}".replace(",", " "),
+        "cash_source": "Caisse de l'annexe",
+        "cash_before": f"{transfer.cash_balance_before:,}".replace(",", " "),
+        "cash_after": f"{transfer.cash_balance_after:,}".replace(",", " "),
+        "author": actor_name,
+        "comment": transfer.comment or "",
+        "status": transfer.get_status_display(),
+        "validated_at": transfer.validated_at.strftime("%d/%m/%Y %H:%M") if transfer.validated_at else "",
+        "generated_at": timezone.localtime().strftime("%d/%m/%Y %H:%M"),
+    }, request=request)
+
+
+def _safe(value, fallback="-"):
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    return text or fallback
+
+
+def _money(value):
+    return f"{value or 0:,} FCFA".replace(",", " ")
+
+
+def render_cash_movement_receipt_pdf(movement):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    margin = 16 * mm
+    content_w = width - (2 * margin)
+    top = height - margin
+
+    pdf.setFillColor(colors.HexColor("#EEF4FB"))
+    pdf.rect(0, 0, width, height, fill=1, stroke=0)
+    pdf.setFillColor(colors.white)
+    pdf.setStrokeColor(colors.HexColor("#D8E2EF"))
+    pdf.roundRect(margin, margin, content_w, height - (2 * margin), 8, fill=1, stroke=1)
+
+    x = margin + 10 * mm
+    right = width - margin - 10 * mm
+    y = top - 10 * mm
+
+    pdf.setFillColor(colors.HexColor("#1D4F79"))
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(x, y, "PIECE DE CAISSE")
+    pdf.setFont("Helvetica", 9)
+    pdf.setFillColor(colors.HexColor("#4B5563"))
+    pdf.drawString(x, y - 14, "Ecole de Sante Felix Houphouet-Boigny (ESFe)")
+
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.setFillColor(colors.HexColor("#1F2937"))
+    pdf.drawRightString(right, y, _safe(movement.receipt_number or movement.reference))
+    pdf.setFont("Helvetica", 9)
+    pdf.drawRightString(right, y - 14, movement.created_at.strftime("%d/%m/%Y %H:%M"))
+    y -= 34
+
+    table_data = [
+        ["Champ", "Valeur"],
+        ["Annexe", _safe(movement.branch.name)],
+        ["Reference comptable", _safe(movement.reference)],
+        ["Type", movement.get_movement_type_display()],
+        ["Source", movement.get_source_display()],
+        ["Date operation", movement.movement_date.strftime("%d/%m/%Y")],
+        ["Libelle", _safe(movement.label)],
+        ["Montant", _money(movement.amount)],
+        ["Agent", _safe(movement.created_by.get_full_name() if movement.created_by_id else "")],
+        ["Observation", _safe(movement.notes)],
+    ]
+    table = Table(table_data, colWidths=[48 * mm, content_w - 68 * mm])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F7FC")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#1D4F79")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 1), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#D6DFEA")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+    table.wrapOn(pdf, content_w - 20 * mm, y)
+    table.drawOn(pdf, x, y - 88 * mm)
+
+    footer_y = margin + 18 * mm
+    pdf.setStrokeColor(colors.HexColor("#D6DFEA"))
+    pdf.line(x, footer_y + 10, right, footer_y + 10)
+    pdf.setFillColor(colors.HexColor("#6B7280"))
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(x, footer_y, "Document genere automatiquement par ESFe.")
+    pdf.drawRightString(right, footer_y, "Signature / cachet")
+    pdf.line(right - 45 * mm, footer_y + 22, right, footer_y + 22)
+
+    pdf.showPage()
+    pdf.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def ensure_cash_movement_receipt(movement):
+    ensure_cash_movement_reference(movement)
+    if movement.receipt_pdf:
+        return movement.receipt_pdf
+
+    is_personnel_withdrawal = movement.source in {
+        BranchCashMovement.SOURCE_PAYROLL,
+        BranchCashMovement.SOURCE_HONORARIUM,
+    }
+    beneficiary = ""
+    if is_personnel_withdrawal and " - " in (movement.label or ""):
+        beneficiary = movement.label.split(" - ", 1)[1].strip()
+    signature = movement.payment_signature_sessions.filter(
+        status=PaymentSignatureSession.STATUS_COMPLETED,
+    ).order_by("-completed_at", "-pk").first()
+
+    pdf_bytes = generate_esfe_pdf("esfe_cash_receipt", {
+        "receipt_number": movement.receipt_number or movement.reference,
+        "reference": movement.reference or "",
+        "date": movement.created_at.strftime("%d/%m/%Y %H:%M"),
+        "branch_name": movement.branch.name if movement.branch_id else "",
+        "movement_type": movement.get_movement_type_display(),
+        "source": movement.get_source_display(),
+        "operation_date": movement.movement_date.strftime("%d/%m/%Y"),
+        "label": movement.label or "",
+        "amount": f"{movement.amount:,}".replace(",", " "),
+        "agent": movement.created_by.get_full_name() if movement.created_by_id else "",
+        "notes": movement.notes or "",
+        "document_title": "BORDEREAU DE RETRAIT" if is_personnel_withdrawal else "PIECE DE CAISSE",
+        "beneficiary": beneficiary,
+        "beneficiary_label": "Beneficiaire" if beneficiary else "",
+        "is_personnel_withdrawal": is_personnel_withdrawal,
+        "signature_data": signature.signature_data if signature else "",
+        "signature_name": signature.beneficiary.get_full_name() or signature.beneficiary.username if signature else "",
+        "signature_date": signature.signed_at.strftime("%d/%m/%Y %H:%M") if signature and signature.signed_at else "",
+        "signature_hash_short": signature.signature_sha256[:16] if signature else "",
+    })
+    movement.receipt_pdf.save(
+        f"piece-caisse-{movement.receipt_number}.pdf",
+        ContentFile(pdf_bytes),
+        save=True,
+    )
+    return movement.receipt_pdf
+
+
+def finalize_cash_movement_document(movement):
+    ensure_cash_movement_reference(movement)
+    ensure_cash_movement_receipt(movement)
+    return movement
+
+
+def create_cash_movement(**kwargs):
+    """Create one ledger movement, safely retryable by HTMX and synchronizers.
+
+    ``source_reference`` is the business idempotency key of an automatic
+    operation. A repeated request therefore returns the original movement
+    rather than altering the branch balance a second time.
+    """
+    branch = kwargs["branch"]
+    movement_date = kwargs.get("movement_date") or timezone.localdate()
+    assert_financial_period_open(branch, movement_date)
+    source_reference = (kwargs.get("source_reference") or "").strip()
+
+    if not source_reference:
+        movement = BranchCashMovement.objects.create(**kwargs)
+        return finalize_cash_movement_document(movement)
+
+    lookup = {
+        "branch": branch,
+        "source": kwargs.get("source", BranchCashMovement.SOURCE_MANUAL),
+        "source_reference": source_reference,
+    }
+    defaults = {**kwargs, "source_reference": source_reference}
+    try:
+        with transaction.atomic():
+            movement, created = BranchCashMovement.objects.get_or_create(
+                **lookup,
+                defaults=defaults,
+            )
+    except IntegrityError:
+        movement = BranchCashMovement.objects.get(**lookup)
+        created = False
+
+    if not created:
+        expected = {
+            "movement_type": kwargs.get("movement_type"),
+            "amount": kwargs.get("amount"),
+        }
+        actual = {
+            "movement_type": movement.movement_type,
+            "amount": movement.amount,
+        }
+        if expected != actual:
+            raise ValidationError(
+                "Cette reference de caisse existe deja avec des donnees differentes. "
+                "Une correction doit passer par une contre-ecriture tracee."
+            )
+        return movement
+
+    return finalize_cash_movement_document(movement)

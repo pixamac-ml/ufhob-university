@@ -1,0 +1,78 @@
+<div
+  data-payroll-calculator
+  data-payroll-base-field="{{ base_field|default_if_none:'base_salary' }}"
+  data-payroll-allowances-field="{{ allowances_field|default_if_none:'allowances' }}"
+  data-payroll-deductions-field="{{ deductions_field|default_if_none:'deductions' }}"
+  class="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+  <div class="flex items-start gap-3">
+    <div class="min-w-0">
+      <p class="font-semibold">Calcul automatique des retenues sociales</p>
+      <p class="mt-1 text-xs text-sky-800">
+        Les taux AMO et INPS définis dans la fiche RH sont appliqués automatiquement. Aucun montant de retenue en FCFA n'est à saisir.
+      </p>
+    </div>
+  </div>
+  <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-xl bg-white/80 px-3 py-2">
+      <span class="block text-xs text-sky-700">Brut</span>
+      <strong data-payroll-preview="gross" class="block tabular-nums">0 FCFA</strong>
+    </div>
+    <div class="rounded-xl bg-white/80 px-3 py-2">
+      <span class="block text-xs text-sky-700">Montant AMO calculé</span>
+      <strong data-payroll-preview="amo" class="block tabular-nums">0 FCFA</strong>
+    </div>
+    <div class="rounded-xl bg-white/80 px-3 py-2">
+      <span class="block text-xs text-sky-700">Montant INPS calculé</span>
+      <strong data-payroll-preview="inps" class="block tabular-nums">0 FCFA</strong>
+    </div>
+    <div class="rounded-xl bg-white/80 px-3 py-2">
+      <span class="block text-xs text-sky-700">Net estimé</span>
+      <strong data-payroll-preview="net" class="block tabular-nums">0 FCFA</strong>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const formatAmount = (value) => `${Math.max(0, Math.round(value || 0)).toLocaleString('fr-FR')} FCFA`;
+  const numberValue = (form, name) => {
+    if (!name) return 0;
+    const field = form.querySelector(`[name="${name}"]`);
+    const value = field ? Number.parseFloat(String(field.value || '').replace(',', '.')) : 0;
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const refreshPayrollPreview = (form) => {
+    const calculator = form.querySelector('[data-payroll-calculator]');
+    if (!calculator) return;
+    const gross = numberValue(form, calculator.dataset.payrollBaseField) + numberValue(form, calculator.dataset.payrollAllowancesField);
+    const amoRate = numberValue(form, 'amo_rate');
+    const inpsRate = numberValue(form, 'inps_rate');
+    const amoEnabled = Boolean(form.querySelector('[name="amo_applicable"]')?.checked);
+    const inpsEnabled = Boolean(form.querySelector('[name="inps_applicable"]')?.checked);
+    const amo = amoEnabled ? Math.round(gross * amoRate / 100) : 0;
+    const inps = inpsEnabled ? Math.round(gross * inpsRate / 100) : 0;
+    const net = Math.max(
+      gross - amo - inps - numberValue(form, calculator.dataset.payrollDeductionsField) - numberValue(form, 'advances'),
+      0,
+    );
+    calculator.querySelector('[data-payroll-preview="gross"]').textContent = formatAmount(gross);
+    calculator.querySelector('[data-payroll-preview="amo"]').textContent = formatAmount(amo);
+    calculator.querySelector('[data-payroll-preview="inps"]').textContent = formatAmount(inps);
+    calculator.querySelector('[data-payroll-preview="net"]').textContent = formatAmount(net);
+  };
+
+  const initPayrollCalculators = (container = document) => {
+    container.querySelectorAll('form').forEach((form) => {
+      if (!form.querySelector('[data-payroll-calculator]') || form.dataset.payrollCalculatorReady) return;
+      form.dataset.payrollCalculatorReady = 'true';
+      form.addEventListener('input', () => refreshPayrollPreview(form));
+      form.addEventListener('change', () => refreshPayrollPreview(form));
+      refreshPayrollPreview(form);
+    });
+  };
+
+  initPayrollCalculators();
+  document.body.addEventListener('htmx:afterSwap', (event) => initPayrollCalculators(event.target));
+})();
+</script>

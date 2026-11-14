@@ -1,9 +1,11 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
+{% load component_tags %}
 {% load static %}
 {% load humanize %}
 {% load custom_filters %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/app/tokens.css' %}">
 <style>
     :root {
         --primary: #1e4f6f;
@@ -26,6 +28,10 @@
         min-height: 100vh;
         display: flex;
         background-color: var(--soft);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
     }
 
     /* ========================================
@@ -109,8 +115,9 @@
     }
 
     .sidebar-user-role {
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8125rem;
+        line-height: 1.35;
+        color: rgba(255, 255, 255, 0.72);
     }
 
     .sidebar-nav {
@@ -124,10 +131,10 @@
     }
 
     .sidebar-nav-title {
-        font-size: 0.625rem;
+        font-size: 0.6875rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: rgba(255, 255, 255, 0.4);
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.55);
         padding: 0 1rem;
         margin-bottom: 0.5rem;
         font-weight: 600;
@@ -176,7 +183,8 @@
 
     .sidebar-link-text {
         font-weight: 500;
-        font-size: 0.875rem;
+        font-size: 0.9375rem;
+        line-height: 1.35;
     }
 
     .sidebar-link-badge {
@@ -205,6 +213,7 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        min-width: 0;
     }
 
     /* ========================================
@@ -255,8 +264,9 @@
     }
 
     .header-title p {
-        font-size: 0.875rem;
-        color: #64748b;
+        font-size: 0.9375rem;
+        line-height: 1.45;
+        color: #475569;
         margin: 0.25rem 0 0 0;
     }
 
@@ -376,6 +386,7 @@
     .page-content {
         padding: 2rem;
         flex: 1;
+        color: #334155;
     }
 
     /* ========================================
@@ -637,11 +648,11 @@
     .data-table thead th {
         text-align: left;
         padding: 0.875rem 1rem;
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
+        text-transform: none;
+        letter-spacing: 0.01em;
+        color: #475569;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
     }
@@ -657,7 +668,8 @@
 
     .data-table tbody td {
         padding: 1rem;
-        font-size: 0.875rem;
+        font-size: 0.9375rem;
+        line-height: 1.45;
         color: #334155;
         vertical-align: middle;
     }
@@ -720,6 +732,7 @@
     ======================================== */
     @media (max-width: 1024px) {
         .sidebar {
+            width: 280px;
             transform: translateX(-100%);
         }
 
@@ -729,6 +742,7 @@
 
         .main-content {
             margin-left: 0;
+            width: 100%;
         }
 
         .menu-toggle {
@@ -746,19 +760,71 @@
         .sidebar-overlay.open {
             display: block;
         }
+
+        .dashboard-header {
+            padding: 0.9rem 1rem;
+        }
+
+        .header-right {
+            gap: 0.35rem;
+        }
+
+        .card-header {
+            align-items: stretch;
+        }
+
+        .card-header .search-box,
+        .card-header .filter-tabs {
+            width: 100%;
+        }
+
+        .card-body {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            min-width: 760px;
+        }
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
         .page-content {
             padding: 1rem;
         }
 
         .dashboard-header {
-            padding: 1rem;
+            padding: 0.8rem;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+
+        .header-left,
+        .header-right {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .header-title h1 {
+            font-size: 1.1rem;
+        }
+
+        .header-title p {
+            font-size: 0.78rem;
         }
 
         .header-date {
             display: none;
+        }
+
+        .header-btn {
+            width: 38px;
+            height: 38px;
+        }
+
+        .header-avatar {
+            width: 38px;
+            height: 38px;
         }
 
         .search-box {
@@ -768,16 +834,63 @@
         .filter-tabs {
             width: 100%;
             overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .btn,
+        .btn-primary,
+        .btn-secondary,
+        .btn-accent,
+        .btn-outline {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .sidebar {
+            width: min(86vw, 320px);
+        }
+
+        .sidebar-header,
+        .sidebar-user,
+        .sidebar-footer {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .sidebar-nav {
+            padding: 0.75rem;
+        }
+
+        .stat-card,
+        .card {
+            border-radius: 12px;
+        }
+
+        .card-header,
+        .card-body {
+            padding: 0.9rem;
         }
     }
 </style>
 {% endblock %}
 
+{% block public_navbar %}{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+{% block public_footer %}{% endblock %}
+{% block public_cookie_consent %}{% endblock %}
+
 {% block content %}
 <!-- Overlay mobile -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-<div class="dashboard-layout">
+<div class="dashboard-layout" data-app-shell>
     <!-- ========================================
          SIDEBAR
     ======================================== -->
@@ -786,7 +899,7 @@
         <div class="sidebar-header">
             <a href="{% url 'core:home' %}" class="flex items-center gap-3 text-white no-underline">
                 <div class="sidebar-logo">
-                    <i class="fas fa-graduation-cap"></i>
+                    {% component "icon" name="graduation-cap" %}{% endcomponent %}
                 </div>
                 <span class="sidebar-brand">ESFE Dashboard</span>
             </a>
@@ -796,7 +909,7 @@
         <div class="sidebar-user">
             <div class="sidebar-avatar">
                 {% if user.profile.avatar %}
-                    <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="w-full h-full rounded-full object-cover">
+                    <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="w-full h-full rounded-full object-cover" data-user-avatar>
                 {% else %}
                     {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
                 {% endif %}
@@ -820,7 +933,7 @@
                 <a href="{% url 'accounts:admissions_dashboard' %}"
                    class="sidebar-link {% if dashboard_type == 'admissions' %}active{% endif %}">
                     <div class="sidebar-link-icon">
-                        <i class="fas fa-file-alt"></i>
+                        {% component "icon" name="file-text" %}{% endcomponent %}
                     </div>
                     <span class="sidebar-link-text">Candidatures</span>
                     {% if pending_candidatures_count %}
@@ -833,7 +946,7 @@
                 <a href="{% url 'accounts:finance_dashboard' %}"
                    class="sidebar-link {% if dashboard_type == 'finance' %}active{% endif %}">
                     <div class="sidebar-link-icon">
-                        <i class="fas fa-money-bill-wave"></i>
+                        {% component "icon" name="banknote" %}{% endcomponent %}
                     </div>
                     <span class="sidebar-link-text">Paiements</span>
                     {% if pending_payments_count %}
@@ -842,11 +955,24 @@
                 </a>
                 {% endif %}
 
+                {% if request.user|has_group:'gestionnaire' or request.user|has_group:'manager' %}
+                <a href="{% url 'accounts:manager_dashboard' %}"
+                   class="sidebar-link {% if dashboard_type == 'manager' %}active{% endif %}">
+                    <div class="sidebar-link-icon">
+                        {% component "icon" name="briefcase-business" %}{% endcomponent %}
+                    </div>
+                    <span class="sidebar-link-text">Gestionnaire</span>
+                    {% if pending_candidatures_count or pending_payments_count %}
+                    <span class="sidebar-link-badge">{{ pending_candidatures_count|default:0|add:pending_payments_count|default:0 }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+
                 {% if request.user|has_group:'executive_director' or request.user.is_superuser %}
                 <a href="{% url 'accounts:executive_dashboard' %}"
                    class="sidebar-link {% if dashboard_type == 'executive' %}active{% endif %}">
                     <div class="sidebar-link-icon">
-                        <i class="fas fa-chart-line"></i>
+                        {% component "icon" name="chart-no-axes-combined" %}{% endcomponent %}
                     </div>
                     <span class="sidebar-link-text">Vue Globale</span>
                 </a>
@@ -860,7 +986,7 @@
 
                 <a href="{% url 'admin:index' %}" class="sidebar-link" target="_blank">
                     <div class="sidebar-link-icon">
-                        <i class="fas fa-cog"></i>
+                        {% component "icon" name="settings" %}{% endcomponent %}
                     </div>
                     <span class="sidebar-link-text">Admin Django</span>
                 </a>
@@ -872,7 +998,7 @@
         <div class="sidebar-footer">
             <a href="{% url 'core:home' %}" class="sidebar-link">
                 <div class="sidebar-link-icon">
-                    <i class="fas fa-home"></i>
+                    {% component "icon" name="house" %}{% endcomponent %}
                 </div>
                 <span class="sidebar-link-text">Retour au site</span>
             </a>
@@ -881,7 +1007,7 @@
                 {% csrf_token %}
                 <button type="submit" class="sidebar-link" style="width: 100%; border: none; background: none; cursor: pointer; text-align: left;">
                     <div class="sidebar-link-icon">
-                        <i class="fas fa-sign-out-alt"></i>
+                        {% component "icon" name="log-out" %}{% endcomponent %}
                     </div>
                     <span class="sidebar-link-text">Déconnexion</span>
                 </button>
@@ -897,7 +1023,7 @@
         <header class="dashboard-header">
             <div class="header-left">
                 <button class="menu-toggle" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
+                    {% component "icon" name="menu" %}{% endcomponent %}
                 </button>
                 <div class="header-title">
                     <h1>{% block dashboard_title %}Dashboard{% endblock %}</h1>
@@ -907,32 +1033,27 @@
 
             <div class="header-right">
                 <div class="header-date">
-                    <i class="fas fa-calendar-alt"></i>
+                    {% component "icon" name="calendar" %}{% endcomponent %}
                     <span>{{ now|date:"d M Y" }}</span>
                 </div>
 
                 <!-- Notifications -->
-                <button class="header-btn" id="notificationsBtn" title="Notifications">
-                    <i class="fas fa-bell"></i>
-                    {% if notifications_count %}
-                    <span class="badge"></span>
-                    {% endif %}
-                </button>
+                <div data-portal-notification-slot></div>
 
                 <!-- Export -->
                 <button class="header-btn" id="exportBtn" title="Exporter">
-                    <i class="fas fa-download"></i>
+                    {% component "icon" name="download" %}{% endcomponent %}
                 </button>
 
                 <!-- Refresh -->
                 <button class="header-btn" onclick="location.reload()" title="Actualiser">
-                    <i class="fas fa-sync-alt"></i>
+                    {% component "icon" name="sync-alt" %}{% endcomponent %}
                 </button>
 
                 <!-- Avatar -->
                 <div class="header-avatar" title="{{ user.get_full_name }}">
                     {% if user.profile.avatar %}
-                        <img src="{{ user.profile.avatar.url }}" alt="Avatar">
+                        <img src="{{ user.profile.avatar.url }}" alt="Avatar" data-user-avatar>
                     {% else %}
                         {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
                     {% endif %}
@@ -954,11 +1075,7 @@
                     {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
                     {% elif message.tags == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
                     {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
-                    <i class="fas
-                        {% if message.tags == 'success' %}fa-check-circle
-                        {% elif message.tags == 'error' %}fa-times-circle
-                        {% elif message.tags == 'warning' %}fa-exclamation-triangle
-                        {% else %}fa-info-circle{% endif %}"></i>
+                    {% component "icon" name="award" class_str="{% if message.tags == 'success' %}circle-check {% elif message.tags == 'error' %}circle-x {% elif message.tags == 'warning' %}triangle-alert {% else %}circle-info{% endif %}" %}{% endcomponent %}
                     <span>{{ message }}</span>
                 </div>
                 {% endfor %}
@@ -971,9 +1088,6 @@
     </main>
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3"></div>
-
 <!-- ========================================
      SCRIPTS
 ======================================== -->
@@ -985,7 +1099,7 @@ function toggleSidebar() {
 }
 
 // Toast Notifications
-function showToast(message, type = 'info') {
+function legacyDashboardToastUnused(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const colors = {
         success: 'bg-green-500',
@@ -994,19 +1108,19 @@ function showToast(message, type = 'info') {
         info: 'bg-cyan-500'
     };
     const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        warning: 'fa-exclamation-circle',
-        info: 'fa-info-circle'
+        success: 'circle-check',
+        error: 'circle-x',
+        warning: 'circle-alert',
+        info: 'circle-info'
     };
 
     const toast = document.createElement('div');
     toast.className = `${colors[type]} text-white px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0`;
     toast.innerHTML = `
-        <i class="fas ${icons[type]} text-lg"></i>
+        <i data-lucide="${icons[type]}" class="h-[18px] w-[18px]" aria-hidden="true"></i>
         <span class="font-medium">${message}</span>
         <button onclick="this.parentElement.remove()" class="ml-auto hover:opacity-75">
-            <i class="fas fa-times"></i>
+            <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
         </button>
     `;
 
@@ -1025,7 +1139,7 @@ function showToast(message, type = 'info') {
 }
 
 // Écouter les événements HTMX pour les toasts
-document.body.addEventListener('htmx:afterRequest', function(event) {
+document.body.addEventListener('esfe:legacy-toast-disabled', function(event) {
     const trigger = event.detail.xhr.getResponseHeader('HX-Trigger');
     if (trigger) {
         try {

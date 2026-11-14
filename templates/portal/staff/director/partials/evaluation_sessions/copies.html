@@ -1,0 +1,33 @@
+{% load component_tags %}
+{% include "portal/staff/director/partials/evaluation_sessions/_counts_oob.html" %}
+<div class="space-y-5">
+  {% if toast %}{% component "ui_core.alert" title="Copies et correction" message=toast.message tone=toast.level %}{% endcomponent %}{% endif %}
+  {% if not selected_evaluation_campaign %}
+    {% component "ui_core.empty_state" title="Aucune session active" message="Ouvrez une session depuis Sessions pour suivre les copies épreuve par épreuve." icon="folder-search" %}{% endcomponent %}
+    <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations_calendar&view=sessions" class="ui-focus-ring inline-flex h-ui-control rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Ouvrir Sessions</a>
+  {% else %}
+    {% component "ui_core.panel" title="Présences réelles" subtitle="Les copies attendues sont recalculées depuis les étudiants présents." padding=False %}
+      <div class="divide-y divide-ui-border">
+      {% for row in campaign_execution_rows %}
+        <details class="group p-4"><summary class="flex cursor-pointer list-none items-center gap-3"><span class="min-w-0 flex-1"><strong class="block text-sm text-ui-text">{{ row.event.academic_class.display_name }} · {{ row.event.ec.title }}</strong><span class="text-xs text-ui-text-muted">{{ row.recorded_count }}/{{ row.enrollments|length }} présences saisies · {{ row.present_count }} présent(s) · {{ row.absent_count }} absent(s) · {{ row.copies_received }}/{{ row.present_count }} copies</span></span>{% if row.copy_anomaly %}{% component "ui_core.status_badge" label="Écart de copies" tone="warning" %}{% endcomponent %}{% endif %}<i data-lucide="chevron-down" class="h-4 w-4 text-ui-text-muted group-open:rotate-180"></i></summary>
+          <form method="post" hx-post="{% url 'accounts_portal:director_exam_session_action' %}" hx-target="#director-session-subcontent" hx-swap="innerHTML" class="mt-4 space-y-2 border-t border-ui-border pt-3">{% csrf_token %}<input type="hidden" name="action" value="record_exam_attendance"><input type="hidden" name="return_view" value="copies"><input type="hidden" name="campaign_id" value="{{ selected_evaluation_campaign.id }}"><input type="hidden" name="event_id" value="{{ row.event.id }}">{% for enrollment in row.enrollments %}<label class="grid gap-2 text-xs text-ui-text sm:grid-cols-[1fr_11rem] sm:items-center"><span>{{ enrollment.student.student_profile.matricule|default:enrollment.student.username }} · {{ enrollment.student.get_full_name|default:enrollment.student.username }}</span><select name="student_{{ enrollment.student_id }}" class="h-ui-control rounded-ui-input border border-ui-border bg-ui-surface px-2 text-sm"><option value="">Non renseigné</option><option value="present" {% if enrollment.exam_attendance_status == 'present' %}selected{% endif %}>Présent</option><option value="absent" {% if enrollment.exam_attendance_status == 'absent' %}selected{% endif %}>Absent</option><option value="late" {% if enrollment.exam_attendance_status == 'late' %}selected{% endif %}>Retard</option></select></label>{% endfor %}<button class="ui-focus-ring h-ui-control rounded-ui-button border border-ui-border px-4 text-sm font-semibold text-ui-text">Enregistrer les présences</button></form>
+        </details>
+      {% empty %}<div class="p-5 text-sm text-ui-text-muted">Aucune épreuve planifiée pour cette campagne.</div>{% endfor %}
+      </div>
+    {% endcomponent %}
+    {% component "ui_core.panel" title="Suivi des copies" subtitle="Le nombre prévu provient des inscriptions actives. Ajustez-le uniquement s'il y a une exception." tone="primary" padding=False %}
+      <div class="divide-y divide-ui-border">
+      {% for event in selected_evaluation_campaign.schedule_events.all %}
+        <form method="post" enctype="multipart/form-data" hx-post="{% url 'accounts_portal:director_exam_session_action' %}" hx-target="#director-session-subcontent" hx-swap="innerHTML" hx-encoding="multipart/form-data" class="grid gap-3 p-4 lg:grid-cols-[minmax(15rem,1fr)_8rem_8rem_minmax(11rem,1fr)_auto] lg:items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="update_script_batch"><input type="hidden" name="return_view" value="copies"><input type="hidden" name="campaign_id" value="{{ selected_evaluation_campaign.id }}"><input type="hidden" name="event_id" value="{{ event.id }}">
+          <div><strong class="block text-sm text-ui-text">{{ event.academic_class.display_name }} · {{ event.ec.title }}</strong><span class="text-xs text-ui-text-muted">{{ event.start_datetime|date:"d/m/Y H:i" }} · {{ event.script_batch.get_status_display|default:"À préparer" }}</span></div>
+          <label class="text-xs font-semibold text-ui-text">Prévues<input name="expected_count" type="number" min="0" value="{{ event.script_batch.expected_count|default:0 }}" class="mt-1 h-ui-control w-full rounded-ui-input border border-ui-border px-3 text-sm"></label>
+          <label class="text-xs font-semibold text-ui-text">Reçues<input name="received_count" type="number" min="0" value="{{ event.script_batch.received_count|default:0 }}" class="mt-1 h-ui-control w-full rounded-ui-input border border-ui-border px-3 text-sm"></label>
+          <label class="text-xs font-semibold text-ui-text">Étape<select name="script_status" class="mt-1 h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm">{% for value,label in script_batch_status_choices %}<option value="{{ value }}" {% if event.script_batch.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <button class="ui-focus-ring h-ui-control rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Mettre à jour</button>
+        </form>
+      {% empty %}<div class="p-5 text-sm text-ui-text-muted">Aucune épreuve planifiée pour cette campagne.</div>{% endfor %}
+      </div>
+    {% endcomponent %}
+  {% endif %}
+</div>

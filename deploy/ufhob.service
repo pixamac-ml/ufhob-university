@@ -1,0 +1,32 @@
+[Unit]
+Description=UFHOB ASGI application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ufhob
+Group=ufhob
+SupplementaryGroups=www-data
+WorkingDirectory=/srv/ufhob
+Environment=DJANGO_SETTINGS_MODULE=config.settings_production
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/ufhob/production.env
+ExecStart=/srv/ufhob/.venv/bin/daphne -b 127.0.0.1 -p 8002 --proxy-headers --access-log - config.asgi:application
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/ufhob/media /srv/ufhob/private_media /srv/ufhob/logs
+CacheDirectory=ufhob
+Environment=XDG_CACHE_HOME=/var/cache/ufhob
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ufhob
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+{% load component_tags %}
+{% if selected_class %}
+  {% component "ui_core.panel" title="Grille hebdomadaire publiée" subtitle=selected_class.display_name padding=False %}
+    {% fill "header" %}
+      <div class="flex flex-wrap items-center gap-2">
+        {% component "ui_core.status_badge" label="Référence DE" tone="primary" icon="calendar-range" %}{% endcomponent %}
+        {% component "ui_core.status_badge" label="Lecture seule" tone="neutral" icon="lock" %}{% endcomponent %}
+      </div>
+    {% endfill %}
+    {% fill "default" %}
+      <div class="border-y border-ui-border bg-ui-surface-muted/40 px-4 py-3 text-center">
+        <p class="text-sm font-bold text-ui-text">Du {{ supervisor_timetable_grid.week_start|date:"d/m/Y" }} au {{ supervisor_timetable_grid.week_end|date:"d/m/Y" }}</p>
+        <p class="mt-1 text-xs text-ui-text-muted">{{ supervisor_timetable_grid.slots|length }} cours configuré(s) · {{ supervisor_timetable_grid.total_hours }} h / semaine</p>
+      </div>
+      {% include "portal/staff/director/partials/timetable/_grid.html" with timetable_grid=supervisor_timetable_grid editable=0 %}
+    {% endfill %}
+  {% endcomponent %}
+  {% if not supervisor_timetable_grid.slots %}
+    {% component "ui_core.empty_state" icon="calendar-x" title="Grille non configurée" message="Le Directeur des études n'a pas encore publié de créneau hebdomadaire pour cette classe." %}{% endcomponent %}
+  {% endif %}
+  {% component "ui_core.alert" title="Planning officiel en lecture seule" message="Cette grille est exactement celle configurée par le Directeur des études. Pour toute modification, transmettez un signalement plutôt que de modifier les créneaux." tone="neutral" %}{% endcomponent %}
+{% else %}
+  {% component "ui_core.empty_state" icon="school" title="Sélectionnez une classe" message="Choisissez une classe dans la barre supérieure pour afficher sa grille hebdomadaire officielle." %}{% endcomponent %}
+{% endif %}

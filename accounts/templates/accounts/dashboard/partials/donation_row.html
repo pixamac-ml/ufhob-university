@@ -1,0 +1,11 @@
+{% load humanize %}
+<tr id="donation-row-{{ donation.id }}">
+  <td style="font-weight:800;">{{ donation.donor_name }}</td>
+  <td>{{ donation.amount|intcomma }} FCFA</td>
+  <td>{{ donation.get_motif_display }}</td>
+  <td>{{ donation.get_payment_method_display }}</td>
+  <td>{{ donation.date|date:"d/m/Y" }}</td>
+  <td>
+    <a class="inline-flex h-7 items-center rounded-ui-button border border-ui-border px-2 text-xs font-semibold text-ui-text no-underline transition hover:bg-ui-surface-hover" href="{% url 'accounts:manager_donation_receipt_pdf' donation.id %}" hx-boost="false" title="Reçu de don">Reçu</a>
+  </td>
+</tr>

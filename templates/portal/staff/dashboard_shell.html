@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block public_navbar %}{% endblock %}
+{% block public_footer %}{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block main_stylesheet %}<link rel="stylesheet" href="{% static 'app/css/main.css' %}">{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/app/tokens.css' %}">
+<style>
+  .portal-dashboard-page {
+    --school-primary: var(--primary);
+    --school-primary-dark: #123145;
+    --school-primary-soft: var(--primary-soft);
+    --school-secondary: var(--focus-ring);
+    --school-secondary-soft: rgba(29, 181, 176, 0.14);
+    --school-accent: #f39c12;
+    --school-accent-soft: rgba(243, 156, 18, 0.14);
+    --bg-deep: #f3f6f9;
+    --bg-deep-2: #edf2f6;
+    --sidebar-main: var(--primary-hover);
+    --sidebar-rail: #123145;
+    --card: var(--surface-elevated);
+    --line: var(--border);
+    --text: var(--primary-active);
+    --muted: var(--input-placeholder);
+  }
+
+  .portal-dashboard-page {
+    min-height: 100vh;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--bg-deep), var(--bg-deep-2));
+  }
+
+  .portal-stage {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .portal-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: 100vh;
+    overflow: hidden;
+    background: var(--surface);
+    transition: grid-template-columns .2s ease;
+  }
+
+  .portal-shell.portal-shell-collapsed {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .portal-sidebar {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    overflow: hidden;
+    color: var(--sidebar-text);
+    background: linear-gradient(180deg, var(--sidebar-main), var(--school-primary-dark));
+    transition: grid-template-columns .2s ease, width .2s ease, transform .2s ease;
+  }
+
+  .portal-sidebar.portal-sidebar-collapsed {
+    grid-template-columns: 72px 0fr;
+  }
+
+  .portal-main {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: 64px minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .portal-topbar {
+    position: relative;
+    z-index: 60;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--navbar-bg) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .portal-content {
+    position: relative;
+    z-index: 1;
+    overflow: auto;
+    overflow-x: auto;
+    width: 100%;
+    padding: 1rem;
+    display: block;
+  }
+
+  .portal-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 4px 12px rgb(var(--shadow-color) / .08);
+    min-width: 0;
+  }
+
+  .portal-card-pad {
+    padding: 1rem;
+  }
+
+  .portal-hero {
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, .72fr);
+    min-height: 136px;
+  }
+
+  .portal-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    border-radius: 999px;
+    background: var(--school-secondary-soft);
+    color: var(--school-primary-dark);
+    padding: .48rem .76rem;
+    font-size: .75rem;
+    font-weight: 800;
+  }
+
+  .portal-grid-two {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 1rem;
+  }
+
+  .portal-section-title {
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .portal-section-kicker {
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    color: var(--school-primary);
+  }
+
+  .portal-list-link {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    border-radius: 12px;
+    padding: .85rem .9rem;
+    color: rgba(255,255,255,.92);
+    background: rgba(255,255,255,.06);
+    transition: background .15s ease, transform .15s ease;
+  }
+
+  .portal-list-link:hover {
+    background: rgba(255,255,255,.14);
+    transform: translateX(1px);
+  }
+
+  .portal-list-link.active {
+    background: rgba(255,255,255,.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+
+  .portal-sidebar.portal-sidebar-collapsed .portal-list-link {
+    justify-content: center;
+    padding-left: .75rem;
+    padding-right: .75rem;
+  }
+
+  .portal-sidebar.portal-sidebar-collapsed .portal-list-link span,
+  .portal-sidebar.portal-sidebar-collapsed h1,
+  .portal-sidebar.portal-sidebar-collapsed p,
+  .portal-sidebar.portal-sidebar-collapsed .text-xs,
+  .portal-sidebar.portal-sidebar-collapsed .text-sm {
+    display: none;
+  }
+
+  .portal-sidebar.portal-sidebar-collapsed nav {
+    display: grid;
+    justify-items: center;
+  }
+
+  .portal-stat {
+    min-width: 0;
+  }
+
+  @media (max-width: 1100px) {
+    .portal-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .portal-sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 220px;
+      z-index: 80;
+      transform: translateX(-100%);
+      grid-template-columns: 1fr;
+    }
+
+    .portal-sidebar.portal-sidebar-mobile-open {
+      transform: translateX(0);
+    }
+
+    .portal-sidebar.portal-sidebar-collapsed {
+      grid-template-columns: 1fr;
+    }
+
+    .portal-hero,
+    .portal-grid-two {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div
+  class="portal-dashboard-page"
+  data-app-shell
+  x-data="{
+    userMenuOpen: false,
+    sidebarCollapsed: false,
+    mobileSidebarOpen: false,
+    activeSection: window.location.hash ? window.location.hash.replace('#', '') : '',
+    setSection(section) {
+      this.activeSection = section;
+      window.location.hash = section;
+      this.mobileSidebarOpen = false;
+    }
+  }"
+  @hashchange.window="activeSection = window.location.hash ? window.location.hash.replace('#', '') : ''"
+>
+  <div class="portal-stage">
+    <div class="portal-shell" :class="{ 'portal-shell-collapsed': sidebarCollapsed }">
+      <aside
+        class="portal-sidebar"
+        :class="{
+          'portal-sidebar-collapsed': sidebarCollapsed,
+          'portal-sidebar-mobile-open': mobileSidebarOpen
+        }"
+      >
+        <div class="bg-[var(--sidebar-rail)] px-3 py-4 flex flex-col items-center gap-3">
+          <div class="h-12 w-12 rounded-2xl bg-white/10 grid place-items-center font-black text-lg">ES</div>
+          <button
+            type="button"
+            class="grid h-10 w-10 place-items-center rounded-2xl bg-white/10 text-white/90 transition hover:bg-white/20"
+            @click="sidebarCollapsed = !sidebarCollapsed"
+          >
+            <i data-lucide="panel-left-close" x-show="!sidebarCollapsed" style="width:18px;height:18px;"></i>
+            <i data-lucide="panel-left-open" x-show="sidebarCollapsed" style="width:18px;height:18px;display:none;"></i>
+          </button>
+        </div>
+        <div class="px-4 py-4 flex flex-col min-w-0">
+          <div x-show="!sidebarCollapsed" x-transition.opacity.duration.150ms>
+            <p class="text-xs font-bold uppercase tracking-[0.22em] text-white/55">Portal</p>
+            <h1 class="mt-1 text-lg font-black text-white leading-tight">{{ page_title }}</h1>
+            <p class="mt-2 text-sm text-white/70">{{ welcome_message }}</p>
+          </div>
+          <nav class="mt-6 space-y-2">
+            {% block sidebar_nav %}{% endblock %}
+          </nav>
+          <div class="mt-auto pt-6 space-y-3">
+            <div class="text-xs text-white/55" x-show="!sidebarCollapsed" x-transition.opacity.duration.150ms>
+              <p class="font-semibold text-white/80">{{ user_display_name }}</p>
+              <p>{{ branch.name|default:"Acces global" }}</p>
+            </div>
+
+            <div class="space-y-2">
+              <a class="portal-list-link" href="{% url 'accounts:profile' %}">
+                <i data-lucide="user-cog" style="width:18px;height:18px;"></i>
+                <span class="min-w-0">
+                  <span class="font-bold">Compte</span>
+                  <span class="block text-xs text-white/60 truncate">Profil, preferences, securite</span>
+                </span>
+              </a>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="portal-list-link text-left">
+                  <i data-lucide="log-out" style="width:18px;height:18px;"></i>
+                  <span class="min-w-0">
+                    <span class="font-bold">Deconnexion</span>
+                    <span class="block text-xs text-white/60 truncate">Quitter la session</span>
+                  </span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="portal-main">
+        <header class="portal-topbar">
+          <div class="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-2xl border app-border app-surface app-text-secondary shadow-sm transition app-hover-border app-hover-text-strong"
+              @click="sidebarCollapsed = !sidebarCollapsed"
+            >
+              <i data-lucide="panel-left" style="width:18px;height:18px;"></i>
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-2xl border app-border app-surface app-text-secondary shadow-sm transition app-hover-border app-hover-text-strong lg:hidden"
+              @click="mobileSidebarOpen = !mobileSidebarOpen"
+            >
+              <i data-lucide="menu" style="width:18px;height:18px;"></i>
+            </button>
+            <div class="min-w-0">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] app-text-disabled">{{ dashboard_kind|default:"Portail academique" }}</p>
+            <p class="text-sm font-semibold app-text-strong truncate">{{ page_title }}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div data-portal-notification-slot></div>
+            {% block topbar_actions %}{% endblock %}
+            <div class="relative">
+              <button
+                type="button"
+                class="inline-flex items-center gap-3 rounded-2xl border app-border app-surface px-3 py-2 text-left shadow-sm"
+                @click="userMenuOpen = !userMenuOpen"
+                :aria-expanded="userMenuOpen"
+              >
+                <span class="grid h-9 w-9 place-items-center rounded-full app-surface-hover font-black app-text-body-strong">
+                  {{ user_display_name|default:request.user.username|slice:":1"|upper }}
+                </span>
+                <span class="hidden min-w-0 sm:block">
+                  <span class="block truncate text-sm font-bold app-text-strong">{{ user_display_name }}</span>
+                  <span class="block truncate text-xs app-text-subtle">{{ request.user.profile.get_position_display|default:"Compte staff" }}</span>
+                </span>
+                <i data-lucide="chevrons-up-down" style="width:16px;height:16px;" class="app-text-disabled"></i>
+              </button>
+
+              <div
+                x-show="userMenuOpen"
+                x-transition.opacity.duration.150ms
+                @click.outside="userMenuOpen = false"
+                class="absolute right-0 z-50 mt-3 w-[340px] rounded-3xl border app-border app-surface p-4 shadow-2xl"
+                style="display: none;"
+              >
+                <div class="flex items-start gap-3">
+                  <div class="grid h-12 w-12 place-items-center rounded-2xl app-surface-hover font-black app-text-body-strong">
+                    {{ user_display_name|default:request.user.username|slice:":1"|upper }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-base font-black app-text-strong">{{ user_display_name }}</p>
+                    <p class="truncate text-sm app-text-subtle">{{ request.user.email|default:"Email non renseigne" }}</p>
+                    <p class="mt-1 text-xs font-semibold app-text-disabled">{{ branch.name|default:"Acces global" }}</p>
+                  </div>
+                </div>
+
+                <div class="mt-4 grid gap-2 text-sm">
+                  <div class="flex items-center justify-between rounded-2xl border app-border app-surface-subtle px-3 py-3">
+                    <span class="font-semibold app-text-secondary">Code employe</span>
+                    <span class="text-right font-bold app-text-strong">{{ request.user.profile.employee_code|default:"-" }}</span>
+                  </div>
+                  <div class="flex items-center justify-between rounded-2xl border app-border app-surface-subtle px-3 py-3">
+                    <span class="font-semibold app-text-secondary">Statut</span>
+                    <span class="text-right font-bold app-text-strong">{{ request.user.profile.get_employment_status_display|default:"-" }}</span>
+                  </div>
+                  <div class="flex items-center justify-between rounded-2xl border app-border app-surface-subtle px-3 py-3">
+                    <span class="font-semibold app-text-secondary">Salaire base</span>
+                    <span class="text-right font-bold app-text-strong">{{ request.user.profile.salary_base|default:0|intcomma }} FCFA</span>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                  <a href="{% url 'accounts:edit_profile' %}" class="flex items-center justify-between rounded-2xl border app-border px-3 py-3 text-sm font-semibold app-text-body-strong transition app-hover-border app-hover-surface-subtle">
+                    <span class="inline-flex items-center gap-2">
+                      <i data-lucide="pencil-line" style="width:16px;height:16px;"></i>
+                      Modifier mes informations
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                  </a>
+                  <a href="{% url 'accounts:edit_preferences' %}" class="flex items-center justify-between rounded-2xl border app-border px-3 py-3 text-sm font-semibold app-text-body-strong transition app-hover-border app-hover-surface-subtle">
+                    <span class="inline-flex items-center gap-2">
+                      <i data-lucide="settings-2" style="width:16px;height:16px;"></i>
+                      Preferences communes
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                  </a>
+                  <a href="{% url 'accounts:profile' %}" class="flex items-center justify-between rounded-2xl border app-border px-3 py-3 text-sm font-semibold app-text-body-strong transition app-hover-border app-hover-surface-subtle">
+                    <span class="inline-flex items-center gap-2">
+                      <i data-lucide="user-round" style="width:16px;height:16px;"></i>
+                      Voir mon compte
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                  </a>
+                  <a href="{% url 'password_change' %}" class="flex items-center justify-between rounded-2xl border app-border px-3 py-3 text-sm font-semibold app-text-body-strong transition app-hover-border app-hover-surface-subtle">
+                    <span class="inline-flex items-center gap-2">
+                      <i data-lucide="key-round" style="width:16px;height:16px;"></i>
+                      Changer mot de passe
+                    </span>
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                  </a>
+                </div>
+
+                <div class="mt-4 border-t app-border-soft pt-4">
+                  <form method="post" action="{% url 'accounts:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="flex w-full items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 px-3 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100">
+                      <span class="inline-flex items-center gap-2">
+                        <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+                        Se deconnecter
+                      </span>
+                      <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="portal-content">
+          {% block dashboard_content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+{% endblock %}

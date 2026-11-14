@@ -1,0 +1,109 @@
+"""Notifications pedagogiques pour le Directeur des Etudes (cf.
+CAHIER_DES_CHARGES_DIRECTEUR_ETUDES.md, 2.4). Suit le meme pattern que
+`academics/signals.py` (post_save -> NotificationService)."""
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+
+from notifier.models import NotificationMessage
+from notifier.services import NotificationBus
+from portal.models import AccountSupportState, TeacherDocument, TransferRequest
+
+
+@receiver(pre_save, sender=AccountSupportState)
+def remember_account_restrictions(sender, instance, **kwargs):
+    if not instance.pk:
+        instance._previous_restrictions = None
+        return
+    instance._previous_restrictions = (
+        sender.objects.filter(pk=instance.pk)
+        .values_list("is_suspended", "is_blocked")
+        .first()
+    )
+
+
+@receiver(post_save, sender=AccountSupportState)
+def revoke_sessions_when_account_is_restricted(sender, instance, created, **kwargs):
+    previous = getattr(instance, "_previous_restrictions", None)
+    suspended_started = instance.is_suspended and not bool(previous and previous[0])
+    blocked_started = instance.is_blocked and not bool(previous and previous[1])
+    if not suspended_started and not blocked_started:
+        return
+    from accounts.models import AccountSecurityEvent, AccountSessionRecord
+    from accounts.session_policy import log_security_event
+    from accounts.session_security import revoke_user_sessions
+
+    if suspended_started:
+        log_security_event(user=instance.user, actor=instance.updated_by, event_type=AccountSecurityEvent.ACCOUNT_SUSPENDED)
+    if blocked_started:
+        log_security_event(user=instance.user, actor=instance.updated_by, event_type=AccountSecurityEvent.ACCOUNT_BLOCKED)
+    revoke_user_sessions(
+        instance.user,
+        reason=AccountSessionRecord.END_ACCOUNT_RESTRICTED,
+        global_scope=True,
+    )
+
+
+def _directors_of_studies_for_branch(branch):
+    from accounts.models import Profile
+
+    return list(
+        Profile.objects.select_related("user")
+        .filter(position="director_of_studies", branch=branch, user__is_active=True)
+        .values_list("user", flat=True)
+    )
+
+
+def _notify_directors(branch, *, event_type, title, body, legacy_source, legacy_object_id):
+    from django.contrib.auth import get_user_model
+
+    director_ids = _directors_of_studies_for_branch(branch)
+    if not director_ids:
+        return
+    User = get_user_model()
+    for director in User.objects.filter(pk__in=director_ids, is_active=True):
+        NotificationBus.notify(
+            recipient=director,
+            event_type=event_type,
+            title=title,
+            body=body,
+            source_app="portal",
+            priority=NotificationMessage.PRIORITY_NORMAL,
+            legacy_source=legacy_source,
+            legacy_object_id=legacy_object_id,
+        )
+
+
+@receiver(post_save, sender=TeacherDocument)
+def teacher_document_notify_pending(sender, instance, created, **kwargs):
+    if not created or instance.is_verified:
+        return
+    teacher_label = instance.teacher.get_full_name() or instance.teacher.username
+    _notify_directors(
+        instance.branch,
+        event_type="teacher_document_pending",
+        title="Document enseignant en attente",
+        body=f"{teacher_label} a transmis un document ({instance.get_document_type_display()}) en attente de verification.",
+        legacy_source="teacher_document",
+        legacy_object_id=str(instance.pk),
+    )
+
+
+@receiver(post_save, sender=TransferRequest)
+def transfer_request_notify_created(sender, instance, created, **kwargs):
+    if not created or instance.status != TransferRequest.STATUS_SUBMITTED:
+        return
+    if instance.enrollment_id:
+        student = instance.enrollment.student
+        student_label = student.get_full_name() or student.username
+        source_label = instance.source_class.display_name if instance.source_class_id else "classe non renseignée"
+        body = f"Une demande de transfert a été créée pour {student_label} ({source_label})."
+    else:
+        body = "Une demande de transfert entrant a été créée et doit faire l'objet d'une étude d'équivalence."
+    _notify_directors(
+        instance.branch,
+        event_type="transfer_request_created",
+        title="Nouvelle demande de transfert",
+        body=body,
+        legacy_source="transfer_request",
+        legacy_object_id=str(instance.pk),
+    )

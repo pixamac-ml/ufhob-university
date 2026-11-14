@@ -1,0 +1,4 @@
+# Les scripts et modeles Ubuntu doivent rester executables/lisibles sous Linux.
+*.sh text eol=lf
+/deploy/*.service text eol=lf
+/deploy/*.example text eol=lf

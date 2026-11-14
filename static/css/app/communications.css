@@ -1,0 +1,15 @@
+@keyframes communication-target-highlight {
+  0%, 70% { box-shadow: 0 0 0 3px var(--warning); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+[data-app-shell] [data-message-highlight="true"] {
+  animation: communication-target-highlight 3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-app-shell] [data-message-highlight="true"] {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--warning);
+  }
+}

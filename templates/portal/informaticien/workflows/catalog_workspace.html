@@ -1,0 +1,74 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Référentiels" title="Langues et métiers" subtitle="Gérez les référentiels utilisés par les formulaires académiques." %}{% endcomponent %}
+  <div class="band b-in_progress">
+    <div>
+      <p class="kicker">Langues / métiers</p>
+      <h3>Référentiels académiques</h3>
+      <p>Gestion simple des langues et métiers utilisés par les formulaires académiques.</p>
+    </div>
+    <span class="badge">CRUD simple</span>
+  </div>
+
+  {% if toast %}
+  <div class="panel" style="border-left:5px solid {% if toast.level == 'success' %}#059669{% elif toast.level == 'error' %}#be123c{% else %}#d97706{% endif %}">
+    <p class="text-sm font-black">{{ toast.message }}</p>
+  </div>
+  {% endif %}
+
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="panel">
+      <form method="post" hx-post="{% url 'accounts_portal:it_catalog_action' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="language">
+        <div class="wkc">
+          <label>Langue <input name="name" required class="fi"></label>
+          <label>Code <input name="code" placeholder="fr" class="fi"></label>
+        </div>
+        <button class="btn btn-primary" type="submit"><i data-lucide="plus" class="h-4 w-4"></i> Ajouter</button>
+      </form>
+      <div class="mt-4">
+        {% for language in languages %}
+        <div class="row">
+          <div class="avatar" style="background:#0e7490;width:32px;height:32px;font-size:.65rem">
+            <i data-lucide="globe" class="h-4 w-4"></i>
+          </div>
+          <div class="flex-1">
+            <b class="block">{{ language.name }}</b>
+            <span class="text-xs font-semibold text-slate-400">{{ language.code|default:"-" }}</span>
+          </div>
+        </div>
+        {% empty %}
+        <p class="py-4 text-center text-sm font-semibold text-slate-400">Aucune langue.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <form method="post" hx-post="{% url 'accounts_portal:it_catalog_action' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="profession">
+        <div class="wkc">
+          <label>Métier <input name="name" required class="fi"></label>
+          <label>Description <input name="description" class="fi"></label>
+        </div>
+        <button class="btn btn-primary" type="submit"><i data-lucide="plus" class="h-4 w-4"></i> Ajouter</button>
+      </form>
+      <div class="mt-4">
+        {% for profession in professions %}
+        <div class="row">
+          <div class="avatar" style="background:#4338ca;width:32px;height:32px;font-size:.65rem">
+            <i data-lucide="briefcase" class="h-4 w-4"></i>
+          </div>
+          <div class="flex-1">
+            <b class="block">{{ profession.name }}</b>
+            <span class="text-xs font-semibold text-slate-400">{{ profession.description|default:"-" }}</span>
+          </div>
+        </div>
+        {% empty %}
+        <p class="py-4 text-center text-sm font-semibold text-slate-400">Aucun métier.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

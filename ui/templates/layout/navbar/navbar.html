@@ -1,13 +1,14 @@
 {% load static %}
+{% url 'core:about' as about_url %}
 
-<nav class="bg-primary-500 text-white sticky top-0 z-50 shadow-md">
+<nav class="text-white">
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-4">
 
     <!-- ================= LOGO ================= -->
     <a href="{% url 'core:home' %}" class="flex items-center flex-shrink-0">
       <img src="{% static 'images/logo-esfe.png' %}"
-           alt="ESFE"
+           alt="ESFé"
            class="h-10 sm:h-12 w-auto hover:scale-105 transition">
     </a>
 
@@ -18,7 +19,7 @@
       <!-- ACCUEIL -->
       <li>
         <a href="{% url 'core:home' %}"
-           class="px-3 xl:px-4 py-2 rounded-lg hover:bg-white/10 transition">
+           class="px-3 xl:px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all duration-200">
           Accueil
         </a>
       </li>
@@ -26,33 +27,33 @@
 
       <!-- ================= L'ÉCOLE ================= -->
       <li class="relative group">
-        <button class="flex items-center gap-1 px-3 xl:px-4 py-2 rounded-lg hover:bg-white/10 transition">
+        <a href="{{ about_url }}#ecole" class="flex items-center gap-1 px-3 xl:px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all duration-200">
           L'École
           <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6"/>
           </svg>
-        </button>
+        </a>
 
         <!-- Dropdown L'École -->
-        <div class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50">
+        <div class="absolute left-0 mt-3 w-48 bg-white/95 rounded-md shadow-float border border-slate-200/80 backdrop-blur-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50 max-w-[calc(100vw-2rem)]">
           <div class="py-2">
-            <a href="{% url 'core:about' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
+            <a href="{{ about_url }}#ecole" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="info" class="w-4 h-4 text-primary-500"></i>
               À propos
             </a>
-            <a href="{% url 'core:about' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
+            <a href="{{ about_url }}#histoire" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="history" class="w-4 h-4 text-primary-500"></i>
               Notre histoire
             </a>
-            <a href="{% url 'core:about' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
+            <a href="{{ about_url }}#equipe" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="users" class="w-4 h-4 text-primary-500"></i>
               Équipe pédagogique
             </a>
-            <a href="{% url 'core:about' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
+            <a href="{{ about_url }}#annexes" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="map-pin" class="w-4 h-4 text-primary-500"></i>
               Nos annexes
             </a>
-            <a href="{% url 'core:about' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
+            <a href="{{ about_url }}#partenaires" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="handshake" class="w-4 h-4 text-primary-500"></i>
               Partenaires
             </a>
@@ -64,7 +65,7 @@
       <!-- ================= FORMATIONS (MEGA MENU) ================= -->
       <li class="relative group">
         <a href="{% url 'formations:list' %}"
-           class="flex items-center gap-1 px-3 xl:px-4 py-2 rounded-lg hover:bg-white/10 transition">
+           class="flex items-center gap-1 px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200">
           Formations
           <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6"/>
@@ -72,11 +73,11 @@
         </a>
 
         <!-- Mega Menu Formations -->
-        <div class="absolute left-1/2 -translate-x-1/2 mt-2 w-[600px] bg-white rounded-xl shadow-2xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50">
+        <div class="absolute left-1/2 -translate-x-1/2 mt-3 w-[500px] max-w-[calc(100vw-2rem)] bg-white/95 rounded-md shadow-float border border-slate-200/80 backdrop-blur-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50">
           <div class="p-6">
 
             <!-- Header -->
-            <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
               <h3 class="font-semibold text-gray-800">Nos Formations</h3>
               <a href="{% url 'formations:list' %}" class="text-sm text-primary-600 hover:text-primary-700 font-medium">
                 Voir tout →
@@ -110,7 +111,7 @@
             <!-- CTA -->
             <div class="mt-6 pt-4 border-t border-gray-100">
               <a href="{% url 'formations:list' %}"
-                 class="inline-flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-secondary-dark transition">
+                 class="inline-flex items-center gap-2 bg-secondary text-white px-5 py-3 rounded-sm text-sm font-semibold shadow-glow hover:bg-secondary-dark transition-all duration-300 hover:-translate-y-0.5">
                 <i data-lucide="graduation-cap" class="w-4 h-4"></i>
                 Candidater maintenant
               </a>
@@ -121,9 +122,17 @@
       </li>
 
 
+      <!-- ================= ACTUALITÉS ================= -->
+      <li>
+        <a href="{% url 'news:list' %}"
+           class="px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200">
+          Actualités
+        </a>
+      </li>
+
       <!-- ================= VIE ÉTUDIANTE ================= -->
       <li class="relative group">
-        <button class="flex items-center gap-1 px-3 xl:px-4 py-2 rounded-lg hover:bg-white/10 transition">
+        <button class="flex items-center gap-1 px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200">
           Vie Étudiante
           <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6"/>
@@ -131,25 +140,12 @@
         </button>
 
         <!-- Dropdown Vie Étudiante -->
-        <div class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50">
+        <div class="absolute left-0 mt-3 w-48 bg-white/95 rounded-md shadow-float border border-slate-200/80 backdrop-blur-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-50 max-w-[calc(100vw-2rem)]">
           <div class="py-2">
-            <a href="{% url 'news:list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
-              <i data-lucide="newspaper" class="w-4 h-4 text-primary-500"></i>
-              Actualités
-            </a>
-            <a href="{% url 'blog:article_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
-              <i data-lucide="pen-line" class="w-4 h-4 text-primary-500"></i>
-              Blog
-            </a>
             <a href="{% url 'news:event_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
-              <i data-lucide="calendar" class="w-4 h-4 text-primary-500"></i>
-              Événements
+              <i data-lucide="camera" class="w-4 h-4 text-primary-500"></i>
+              Galeries & événements
             </a>
-            <a href="{% url 'community:topic_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
-              <i data-lucide="message-circle" class="w-4 h-4 text-primary-500"></i>
-              Communauté
-            </a>
-            <div class="border-t border-gray-100 my-2"></div>
             <a href="{% url 'news:result_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">
               <i data-lucide="file-check" class="w-4 h-4 text-secondary"></i>
               Résultats
@@ -159,11 +155,37 @@
       </li>
 
 
+      <!-- ================= MÉMOIRES ================= -->
+      <li>
+        <a href="{% url 'memoires:liste' %}"
+           class="px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200">
+          Mémoires
+        </a>
+      </li>
+
+      {% if user.is_authenticated %}
+      <li>
+        <a href="{% url 'memoires:favoris' %}"
+           class="px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200 inline-flex items-center gap-1.5">
+          <i data-lucide="heart" class="w-3.5 h-3.5"></i>
+          Favoris
+        </a>
+      </li>
+      {% endif %}
+
       <!-- ================= CONTACT ================= -->
       <li>
         <a href="{% url 'core:contact' %}"
-           class="px-3 xl:px-4 py-2 rounded-lg hover:bg-white/10 transition">
+           class="px-3 xl:px-4 py-2.5 rounded-md hover:bg-white/10 transition-all duration-200">
           Contact
+        </a>
+      </li>
+
+      <!-- ================= CANDIDATER ================= -->
+      <li>
+        <a href="{% url 'admissions:admission_tunnel' %}"
+           class="px-3 xl:px-4 py-2.5 rounded-sm bg-secondary/90 hover:bg-secondary text-white font-semibold transition-all duration-200">
+          Candidater
         </a>
       </li>
 
@@ -172,7 +194,7 @@
 
 
     <!-- ================= RIGHT AREA ================= -->
-    <div class="flex items-center gap-2 sm:gap-4">
+    <div class="flex items-center gap-2 sm:gap-3 xl:gap-4">
 
       {% if user.is_authenticated %}
 
@@ -180,16 +202,15 @@
       <div x-data="{ open: false }" class="relative">
 
         <button @click="open = !open"
-                class="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-white/10 transition focus:outline-none"
+                class="relative flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-white/10 transition-all duration-200 focus:outline-none"
                 aria-label="Notifications">
 
           <i data-lucide="bell" class="w-5 h-5"></i>
 
-          {% if unread_notification_count > 0 %}
-          <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-            {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+          <span id="unread-notification-count"
+                class="js-notification-unread-count absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 items-center justify-center animate-pulse {% if notification_unread_count > 0 %}flex{% else %}hidden{% endif %}">
+            {% if notification_unread_count > 9 %}9+{% elif notification_unread_count > 0 %}{{ notification_unread_count }}{% endif %}
           </span>
-          {% endif %}
 
         </button>
 
@@ -202,19 +223,19 @@
              x-transition:leave="transition ease-in duration-150"
              x-transition:leave-start="opacity-100 scale-100"
              x-transition:leave-end="opacity-0 scale-95"
-             class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+             class="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white/95 rounded-md shadow-float border border-slate-200/80 backdrop-blur-xl overflow-hidden z-50"
              style="display: none;">
 
-          <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+          <div class="px-5 py-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between">
             <h3 class="font-semibold text-gray-800">Notifications</h3>
-            <a href="{% url 'community:notifications' %}" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
+            <a href="{% url 'notification_center:notifications' %}" class="text-xs text-primary-600 hover:text-primary-700 font-medium">
               Voir tout
             </a>
           </div>
 
-          <div class="max-h-80 overflow-y-auto"
-               hx-get="{% url 'community:notifications_partial' %}"
-               hx-trigger="load"
+          <div id="navbar-notifications-panel" class="max-h-80 overflow-y-auto"
+               hx-get="{% url 'notification_center:notifications_partial' %}"
+               hx-trigger="load, notifier.notification from:body"
                hx-swap="innerHTML">
             <div class="p-4 text-center text-gray-400 text-sm">
               <i class="fa-solid fa-circle-notch fa-spin"></i>
@@ -230,7 +251,7 @@
       <div x-data="{ open: false }" class="relative">
 
         <button @click="open = !open"
-                class="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/10 transition focus:outline-none">
+                class="flex items-center gap-2 px-2.5 py-2 rounded-2xl hover:bg-white/10 transition-all duration-200 focus:outline-none">
 
           <!-- Photo de profil -->
           {% if user.profile.avatar %}
@@ -263,11 +284,11 @@
              x-transition:leave="transition ease-in duration-150"
              x-transition:leave-start="opacity-100 scale-100"
              x-transition:leave-end="opacity-0 scale-95"
-             class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50"
+             class="absolute right-0 mt-3 w-64 max-w-[calc(100vw-2rem)] bg-white/95 rounded-md shadow-float border border-slate-200/80 backdrop-blur-xl overflow-hidden z-50"
              style="display: none;">
 
           <!-- Header User -->
-          <div class="px-4 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white">
+          <div class="px-5 py-5 bg-gradient-to-r from-primary-600 to-primary-500 text-white">
             <div class="flex items-center gap-3">
               {% if user.profile.avatar %}
               <img src="{{ user.profile.avatar.url }}"
@@ -322,11 +343,14 @@
             <div class="border-t border-gray-100 my-1"></div>
 
             <!-- Déconnexion -->
-            <a href="/login"
-               class="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition">
-              <i data-lucide="log-out" class="w-4 h-4"></i>
-              Déconnexion
-            </a>
+            <form action="{% url 'accounts:logout' %}" method="post" class="m-0">
+              {% csrf_token %}
+              <button type="submit"
+                      class="w-full text-left flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                Déconnexion
+              </button>
+            </form>
 
           </div>
 
@@ -339,14 +363,9 @@
 
       <!-- ================= BOUTONS CONNEXION (Non connecté) ================= -->
       <a href="{% url 'login' %}"
-         class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition">
+         class="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-2xl text-sm font-medium hover:bg-white/10 transition-all duration-200">
         <i data-lucide="log-in" class="w-4 h-4"></i>
         Connexion
-      </a>
-
-      <a href="{% url 'accounts:register' %}"
-         class="bg-secondary hover:bg-secondary-dark px-4 py-2 rounded-lg text-sm font-medium transition shadow-lg shadow-secondary/30">
-        S'inscrire
       </a>
 
       {% endif %}
@@ -354,7 +373,7 @@
 
       <!-- ================= MOBILE MENU BUTTON ================= -->
       <button id="menu-toggle"
-              class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10 transition focus:outline-none"
+              class="lg:hidden flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-white/10 transition-all duration-200 focus:outline-none"
               aria-label="Menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M4 6h16M4 12h16M4 18h16"/>
@@ -378,7 +397,7 @@
        x-transition:leave-start="opacity-100 translate-y-0"
        x-transition:leave-end="opacity-0 -translate-y-4"
        @toggle-menu.window="open = !open"
-       class="lg:hidden bg-primary-600 border-t border-white/10"
+       class="lg:hidden bg-primary-700/95 backdrop-blur-xl border-t border-white/10 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.55)]"
        style="display: none;">
 
     <div class="max-h-[70vh] overflow-y-auto">
@@ -386,7 +405,7 @@
 
         <!-- Accueil -->
         <li>
-          <a href="{% url 'core:home' %}" class="block px-4 py-3 rounded-lg hover:bg-white/10 transition">
+          <a href="{% url 'core:home' %}" class="block px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
             Accueil
           </a>
         </li>
@@ -394,24 +413,25 @@
         <!-- L'École (Accordion) -->
         <li>
           <button @click="activeSubmenu = activeSubmenu === 'ecole' ? null : 'ecole'"
-                  class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                  class="w-full flex items-center justify-between px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
             <span>L'École</span>
             <svg :class="activeSubmenu === 'ecole' ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M6 9l6 6 6-6"/>
             </svg>
           </button>
           <ul x-show="activeSubmenu === 'ecole'" x-collapse class="pl-4 space-y-1 mt-1">
-            <li><a href="{% url 'core:about' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">À propos</a></li>
-            <li><a href="{% url 'core:about' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Notre histoire</a></li>
-            <li><a href="{% url 'core:about' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Équipe pédagogique</a></li>
-            <li><a href="{% url 'core:about' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Nos annexes</a></li>
+            <li><a href="{{ about_url }}#ecole" class="block px-4 py-2 text-white/80 hover:text-white transition">À propos</a></li>
+            <li><a href="{{ about_url }}#histoire" class="block px-4 py-2 text-white/80 hover:text-white transition">Notre histoire</a></li>
+            <li><a href="{{ about_url }}#equipe" class="block px-4 py-2 text-white/80 hover:text-white transition">Équipe pédagogique</a></li>
+            <li><a href="{{ about_url }}#annexes" class="block px-4 py-2 text-white/80 hover:text-white transition">Nos annexes</a></li>
+            <li><a href="{{ about_url }}#partenaires" class="block px-4 py-2 text-white/80 hover:text-white transition">Partenaires</a></li>
           </ul>
         </li>
 
         <!-- Formations (Accordion) -->
         <li>
           <button @click="activeSubmenu = activeSubmenu === 'formations' ? null : 'formations'"
-                  class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                  class="w-full flex items-center justify-between px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
             <span>Formations</span>
             <svg :class="activeSubmenu === 'formations' ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M6 9l6 6 6-6"/>
@@ -425,37 +445,86 @@
           </ul>
         </li>
 
+        <!-- Actualités -->
+        <li>
+          <a href="{% url 'news:list' %}" class="block px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
+            Actualités
+          </a>
+        </li>
+
         <!-- Vie Étudiante (Accordion) -->
         <li>
           <button @click="activeSubmenu = activeSubmenu === 'vie' ? null : 'vie'"
-                  class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                  class="w-full flex items-center justify-between px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
             <span>Vie Étudiante</span>
             <svg :class="activeSubmenu === 'vie' ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M6 9l6 6 6-6"/>
             </svg>
           </button>
           <ul x-show="activeSubmenu === 'vie'" x-collapse class="pl-4 space-y-1 mt-1">
-            <li><a href="{% url 'news:list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Actualités</a></li>
-            <li><a href="{% url 'blog:article_list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Blog</a></li>
-            <li><a href="{% url 'news:event_list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Événements</a></li>
-            <li><a href="{% url 'community:topic_list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Communauté</a></li>
+            <li><a href="{% url 'news:event_list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Galeries & événements</a></li>
+            <li><a href="{% url 'news:result_list' %}" class="block px-4 py-2 text-white/80 hover:text-white transition">Résultats</a></li>
           </ul>
         </li>
 
+        <!-- Mémoires -->
+        <li>
+          <a href="{% url 'memoires:liste' %}" class="block px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
+            Mémoires
+          </a>
+        </li>
+
+        {% if user.is_authenticated %}
+        <li>
+          <a href="{% url 'memoires:favoris' %}" class="block px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200 inline-flex items-center gap-2">
+            <i data-lucide="heart" class="w-4 h-4"></i>
+            Mes favoris
+          </a>
+        </li>
+        {% endif %}
+
         <!-- Contact -->
         <li>
-          <a href="{% url 'core:contact' %}" class="block px-4 py-3 rounded-lg hover:bg-white/10 transition">
+          <a href="{% url 'core:contact' %}" class="block px-4 py-3 rounded-md hover:bg-white/10 transition-all duration-200">
             Contact
+          </a>
+        </li>
+
+        <!-- Candidater -->
+        <li>
+          <a href="{% url 'admissions:admission_tunnel' %}" class="block px-4 py-3 rounded-sm bg-secondary/90 text-white font-semibold hover:bg-secondary transition-all duration-200">
+            Candidater
           </a>
         </li>
 
         <!-- Divider -->
         <li class="border-t border-white/10 my-3"></li>
 
+        {% if user.is_authenticated %}
+        <li>
+          <form action="{% url 'accounts:logout' %}" method="post" class="mx-4">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-300/40 text-red-100 hover:bg-red-500/20 transition-all duration-200">
+              <i data-lucide="log-out" class="w-5 h-5"></i>
+              Deconnexion
+            </button>
+          </form>
+        </li>
+        {% else %}
+        <li>
+          <a href="{% url 'login' %}"
+             class="mx-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/25 text-white font-semibold hover:bg-white/10 transition-all duration-200">
+            <i data-lucide="log-in" class="w-5 h-5"></i>
+            Connexion
+          </a>
+        </li>
+        {% endif %}
+
         <!-- CTA Candidater -->
         <li>
-          <a href="{% url 'formations:list' %}"
-             class="flex items-center justify-center gap-2 mx-4 py-3 bg-secondary rounded-xl text-white font-medium hover:bg-secondary-dark transition">
+          <a href="{% url 'admissions:admission_tunnel' %}"
+             class="flex items-center justify-center gap-2 mx-4 py-3 bg-secondary rounded-sm text-white font-semibold hover:bg-secondary-dark transition-all duration-300 shadow-glow hover:-translate-y-0.5">
             <i data-lucide="graduation-cap" class="w-5 h-5"></i>
             Candidater
           </a>

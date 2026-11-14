@@ -1,0 +1,20 @@
+{% load component_tags %}
+<form
+    hx-post="{% url 'accounts:htmx_manager_cash_movement_create' %}"
+    hx-target="#manager-cash-movement-form"
+    hx-swap="outerHTML"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    id="manager-cash-movement-form"
+    class="space-y-4">
+    {% if cash_error %}
+    {% component "ui_core.alert" title="Mouvement refusé" message=cash_error tone="danger" %}{% endcomponent %}
+    {% endif %}
+    {% component "ui_core.alert" title="Saisie contrôlée" message="Les paiements et dépenses alimentent la caisse automatiquement. Utilisez ce formulaire uniquement pour un mouvement manuel ou un ajustement." tone="warning" %}{% endcomponent %}
+    {% include "accounts/dashboard/partials/dg_form_fields.html" with form=cash_form %}
+    <div class="flex justify-end">
+        <button type="submit" class="inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong">
+            {% component "icon" name="plus" %}{% endcomponent %}
+            Ajouter le mouvement
+        </button>
+    </div>
+</form>

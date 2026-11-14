@@ -1,0 +1,42 @@
+from django.urls import path
+
+from shop import views
+
+
+app_name = "shop"
+
+urlpatterns = [
+    path("", views.public_shop_home, name="public_home"),
+    path("<slug:branch_slug>/", views.public_shop_catalog, name="public_catalog_slug"),
+    path("<slug:branch_slug>/article/<int:pk>/commander/", views.public_shop_product_order, name="public_product_order_slug"),
+    path("annexe/<slug:branch_slug>/", views.public_shop_catalog, name="public_catalog"),
+    path("annexe/<slug:branch_slug>/article/<int:pk>/commander/", views.public_shop_product_order, name="public_product_order"),
+    path("student/required-modal/", views.student_required_modal, name="student_required_modal"),
+    path("student/order/create-required/", views.student_create_required_order, name="student_create_required_order"),
+    path("student/order/remote/modal/", views.student_remote_order_modal, name="student_remote_order_modal"),
+    path("student/order/remote/request/", views.student_remote_order_request, name="student_remote_order_request"),
+    path("student/order/remote/confirm/", views.student_remote_order_confirm, name="student_remote_order_confirm"),
+    path("student/product/<int:pk>/", views.student_product_detail, name="student_product_detail"),
+    path("student/cart/update/", views.student_cart_update, name="student_cart_update"),
+    path("student/cart/checkout/", views.student_cart_checkout, name="student_cart_checkout"),
+    path("student/order/<int:pk>/", views.student_order_detail, name="student_order_detail"),
+    path("student/order/<int:pk>/cancel/", views.student_order_cancel, name="student_order_cancel"),
+    path("student/order/<int:pk>/verify-shop-agent/", views.student_shop_verify_agent, name="student_shop_verify_agent"),
+    path("student/order/<int:pk>/pay/", views.student_order_pay, name="student_order_pay"),
+    path("payment/<int:pk>/receipt/", views.shop_payment_receipt, name="payment_receipt"),
+    path("manager/product/create/", views.manager_product_create, name="manager_product_create"),
+    path("manager/product/<int:pk>/edit/", views.manager_product_edit, name="manager_product_edit"),
+    path("manager/product/<int:pk>/delete/", views.manager_product_delete, name="manager_product_delete"),
+    path("manager/product/<int:pk>/update/", views.manager_product_update, name="manager_product_update"),
+    path("manager/product/image/<int:pk>/cover/", views.manager_product_image_cover, name="manager_product_image_cover"),
+    path("manager/product/image/<int:pk>/delete/", views.manager_product_image_delete, name="manager_product_image_delete"),
+    path("manager/stock/in/", views.manager_stock_in, name="manager_stock_in"),
+    path("manager/stock/adjust/", views.manager_stock_adjust, name="manager_stock_adjust"),
+    path("manager/order/create-counter/", views.manager_counter_order_create, name="manager_counter_order_create"),
+    path("manager/shop-cash-session/<int:pk>/regenerate/", views.manager_shop_cash_session_regenerate, name="manager_shop_cash_session_regenerate"),
+    path("manager/shop-cash-session/<int:pk>/cancel/", views.manager_shop_cash_session_cancel, name="manager_shop_cash_session_cancel"),
+    path("manager/payment/<int:pk>/validate/", views.manager_payment_validate, name="manager_payment_validate"),
+    path("manager/order/<int:pk>/collect-cash/", views.manager_order_collect_cash, name="manager_order_collect_cash"),
+    path("manager/order/<int:pk>/ready/", views.manager_order_mark_ready, name="manager_order_mark_ready"),
+    path("manager/order/<int:pk>/deliver/", views.manager_order_deliver, name="manager_order_deliver"),
+]

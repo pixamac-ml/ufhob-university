@@ -1,0 +1,24 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Detail du journal{% endblock %}
+{% block page_subtitle %}Informations techniques disponibles pour la trace selectionnee.{% endblock %}
+
+{% block content_main %}
+<div class="mx-auto max-w-4xl space-y-5">
+  <div><a class="btn btn-outline" href="{% url 'superadmin:audit_center' %}?source={{ source }}">Retour aux journaux</a></div>
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface">
+    <header class="border-b border-ui-border px-5 py-4"><h2 class="text-base font-bold text-ui-text">Contexte de la trace</h2></header>
+    <dl class="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+      <div><dt class="text-xs font-bold uppercase text-ui-text-muted">Date</dt><dd class="mt-1 text-sm text-ui-text">{{ occurred_at|date:'d/m/Y H:i' }}</dd></div>
+      <div><dt class="text-xs font-bold uppercase text-ui-text-muted">Acteur</dt><dd class="mt-1 text-sm text-ui-text">{% if actor %}<a class="text-ui-primary" href="{% url 'superadmin:user_detail' actor.pk %}">{{ actor.get_full_name|default:actor.username }}</a>{% else %}&mdash;{% endif %}</dd></div>
+      {% if target %}<div><dt class="text-xs font-bold uppercase text-ui-text-muted">Compte concerne</dt><dd class="mt-1 text-sm text-ui-text"><a class="text-ui-primary" href="{% url 'superadmin:user_detail' target.pk %}">{{ target.get_full_name|default:target.username }}</a></dd></div>{% endif %}
+      {% if ip_address %}<div><dt class="text-xs font-bold uppercase text-ui-text-muted">Adresse IP</dt><dd class="mt-1 text-sm text-ui-text">{{ ip_address }}</dd></div>{% endif %}
+      {% if user_agent %}<div class="md:col-span-2"><dt class="text-xs font-bold uppercase text-ui-text-muted">Navigateur</dt><dd class="mt-1 break-words text-sm text-ui-text">{{ user_agent }}</dd></div>{% endif %}
+    </dl>
+  </section>
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface">
+    <header class="border-b border-ui-border px-5 py-4"><h2 class="text-base font-bold text-ui-text">Donnees enregistrees</h2></header>
+    <pre class="max-h-96 overflow-auto bg-ui-surface-muted p-5 text-xs text-ui-text">{{ payload }}</pre>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% load static %}
+<article class="public-editorial-card flex h-full flex-col overflow-hidden border border-ufhob-border bg-white">
+  {% if programme.illustration %}<img src="{{ programme.illustration.url }}" alt="{{ programme.title }}" class="h-44 w-full object-cover" loading="lazy">{% endif %}
+  <div class="flex flex-1 flex-col p-6">
+    <h3 class="text-xl font-bold text-ufhob-primary">
+      {{ programme.title }}
+    </h3>
+    <p class="mt-1 text-sm font-semibold uppercase tracking-wider text-ufhob-secondary-dark">
+      {% if programme.diploma_awarded %}{{ programme.diploma_awarded.name }}{% else %}{{ programme.cycle }}{% endif %}
+    </p>
+    <p class="mt-4 text-sm leading-relaxed text-ufhob-muted">
+      {{ programme.description|striptags|default:programme.short_description|truncatewords:24 }}
+    </p>
+    <dl class="mt-5 space-y-2 text-sm">
+      {% if programme.school %}
+      <div class="flex justify-between gap-3">
+        <dt class="text-ufhob-muted">École</dt>
+        <dd class="font-semibold text-ufhob-primary">{{ programme.school.display_name }}</dd>
+      </div>
+      {% endif %}
+      {% if programme.duration_years %}
+      <div class="flex justify-between border-t border-ufhob-border/60 pt-2">
+        <dt class="text-ufhob-muted">Durée</dt>
+        <dd class="font-semibold text-ufhob-primary">{{ programme.duration_years }} an{{ programme.duration_years|pluralize }}</dd>
+      </div>
+      {% endif %}
+      {% if programme.diploma_awarded %}
+      <div class="flex justify-between">
+        <dt class="text-ufhob-muted">Cycle</dt>
+        <dd class="font-semibold text-ufhob-primary">{{ programme.cycle }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+    <div class="mt-auto flex items-center gap-6 pt-6">
+      <a href="{{ programme.get_absolute_url }}" class="public-text-link text-sm text-ufhob-primary">Découvrir la formation <span aria-hidden="true">→</span></a>
+      {% if programme.admissions_open %}
+      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="public-text-link text-sm text-ufhob-primary">Candidater <span aria-hidden="true">→</span></a>
+      {% endif %}
+    </div>
+  </div>
+</article>

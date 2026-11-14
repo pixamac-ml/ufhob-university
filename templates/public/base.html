@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}{% firstof page_title "UFHOB-Mali" %}{% endblock %}
+
+{% block public_navbar %}
+  <c-public.navbar :schools="public_schools" logo_url="{{ public_site_logo_url }}" />
+{% endblock %}
+
+{% block public_floating_widget %}{% endblock %}
+
+{% block public_footer %}
+  <c-public.footer logo_url="{{ public_site_logo_url }}" :institution="public_institution" :site_configuration="public_site_configuration" :public_legal_links="public_legal_links" />
+{% endblock %}
+
+{% block public_cookie_consent %}<c-public.cookie_banner />{% endblock %}

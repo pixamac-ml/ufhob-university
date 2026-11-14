@@ -1,10 +1,16 @@
 {% load component_tags %}
 
-<div class="mb-8 text-sm text-primary font-medium">
-{{ total_programmes }} formation{{ total_programmes|pluralize }}
+{% if programmes %}
+<div class="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-[0.18em] text-secondary">Résultats</p>
+<h2 class="mt-2 text-2xl font-bold text-primary">Les formations disponibles</h2>
 </div>
+<p class="text-sm font-medium text-slate-500">{{ total_programmes }} formation{{ total_programmes|pluralize }} affichée{{ total_programmes|pluralize }}</p>
+</div>
+{% endif %}
 
-<div class="grid md:grid-cols-2 xl:grid-cols-3 gap-10">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
 
 {% for programme in programmes %}
 {% component "programme_card"
@@ -19,8 +25,19 @@ is_featured=programme.is_featured
 %}
 {% endcomponent %}
 {% empty %}
-<div class="col-span-full text-center py-20 text-primary">
-Aucune formation trouvée.
+<div class="col-span-full rounded-md border border-dashed border-slate-300 bg-white px-8 py-16 text-center">
+  <svg class="mx-auto mb-4 h-10 w-10 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+  </svg>
+  {% if search_query or current_cycle %}
+  <p class="text-base font-semibold text-slate-700">Aucune formation ne correspond à ces critères.</p>
+  <p class="mt-2 text-sm text-slate-500">Essayez d'élargir votre recherche ou de réinitialiser les filtres.</p>
+  <a href="?" class="mt-5 inline-flex items-center gap-2 rounded-sm border border-primary/30 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white">Réinitialiser les filtres</a>
+  {% else %}
+  <p class="text-base font-semibold text-slate-700">Le catalogue académique est en cours de mise à jour.</p>
+  <p class="mt-2 text-sm text-slate-500">Les formations seront publiées prochainement. Pour toute question, contactez le secrétariat.</p>
+  <a href="/contact/" class="mt-5 inline-flex items-center gap-2 rounded-sm bg-secondary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary-dark">Contacter le secrétariat</a>
+  {% endif %}
 </div>
 {% endfor %}
 

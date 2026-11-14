@@ -1,0 +1,30 @@
+{% load component_tags %}
+{% if academic_class and semester %}
+<div class="workflow-stack">
+  <div
+    hx-get="{% url 'accounts_portal:it_notes_kpi' %}?class_id={{ academic_class.id }}&semester_id={{ semester.id }}"
+    hx-trigger="load, kpi-update from:body"
+    hx-target="#notes-kpi-container"
+    hx-swap="innerHTML"
+    id="notes-kpi-container"
+  >
+    <div class="kpi-grid-placeholder" style="padding:16px;text-align:center;color:#94a3b8;font-weight:700">Chargement des indicateurs...</div>
+  </div>
+
+  <div
+    class="workflow-section-container"
+    hx-get="{% url 'accounts_portal:it_workflow_section' %}?class_id={{ academic_class.id }}&semester_id={{ semester.id }}{% if drawer_mode %}&drawer=1{% endif %}"
+    hx-trigger="workflow-update from:body"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% include "notes/notes_workflow_section.html" %}
+  </div>
+
+  {% component "notes_grid" academic_class=academic_class semester=semester state=state %}{% endcomponent %}
+</div>
+{% else %}
+<section class="workflow-empty">
+  Selectionne une classe et un semestre pour ouvrir le workflow de notes.
+</section>
+{% endif %}

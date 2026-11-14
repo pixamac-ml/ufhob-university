@@ -1,0 +1,145 @@
+﻿{% load humanize %}
+<div class="dg-card dg-card-pad">
+  <div class="dg-section-hero">
+    <div>
+      <div class="dg-section-hero-title">
+        <i class="fa-solid fa-wave-square" style="color:#16a34a; margin-right:8px;"></i>Activite recente
+      </div>
+      <div class="dg-section-hero-sub">Donnees du jour Â· Dernier calcul : {{ realtime.last_updated_at|date:"H:i" }} Â· actualisation manuelle</div>
+    </div>
+    <div class="dg-section-actions">
+      <button type="button" class="dg-btn dg-btn-outline" onclick="dgRefreshSection('realtime')">
+        <i class="fa-solid fa-rotate-right"></i>Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div class="dg-context-bar">
+    <div>
+      <div class="dg-context-label">Activite courante</div>
+      <div class="dg-context-hint">Cette vue est un instantane du dernier calcul, pas un flux en temps reel.</div>
+    </div>
+    <div class="dg-context-main">
+      <span class="dg-scope-chip">{{ dashboard_scope_label|default:"Toutes les annexes" }}</span>
+      <span class="dg-scope-chip">{{ realtime.today_inscriptions|default:0|intcomma }} inscriptions jour</span>
+      <span class="dg-scope-chip">{{ realtime.today_payments|default:0|intcomma }} paiements jour</span>
+    </div>
+  </div>
+
+  <!-- Statistiques du dernier calcul -->
+  <div class="dg-row-4" style="margin-bottom:16px;">
+    <div class="dg-kpi-card" style="border-top:3px solid #16a34a; min-height:auto; padding:14px;">
+      <div style="font-size:.65rem; font-weight:900; color:#16a34a;">Nouvelles inscriptions</div>
+      <div style="font-size:1.8rem; font-weight:900; color:#0f172a; margin-top:4px;">+{{ realtime.today_inscriptions|default:0 }}</div>
+      <div style="font-size:.62rem; color:#94a3b8;">Aujourd'hui</div>
+      <div style="margin-top:4px; display:flex; align-items:center; gap:4px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
+        <span style="font-size:.6rem; color:#16a34a; font-weight:800;">Mis à jour</span>
+      </div>
+    </div>
+    <div class="dg-kpi-card" style="border-top:3px solid #2563eb; min-height:auto; padding:14px;">
+      <div style="font-size:.65rem; font-weight:900; color:#2563eb;">Paiements</div>
+      <div style="font-size:1.8rem; font-weight:900; color:#0f172a; margin-top:4px;">+{{ realtime.today_payments|default:0 }}</div>
+      <div style="font-size:.62rem; color:#94a3b8;">Aujourd'hui</div>
+      <div style="margin-top:4px; display:flex; align-items:center; gap:4px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>
+        <span style="font-size:.6rem; color:#2563eb; font-weight:800;">Mis à jour</span>
+      </div>
+    </div>
+    <div class="dg-kpi-card" style="border-top:3px solid #7c3aed; min-height:auto; padding:14px;">
+      <div style="font-size:.65rem; font-weight:900; color:#7c3aed;">Cours prévus</div>
+      <div style="font-size:1.8rem; font-weight:900; color:#0f172a; margin-top:4px;">{{ schedule.today_events_count|intcomma }}</div>
+      <div style="font-size:.62rem; color:#94a3b8;">Aujourd'hui</div>
+    </div>
+    <div class="dg-kpi-card" style="border-top:3px solid #f59e0b; min-height:auto; padding:14px;">
+      <div style="font-size:.65rem; font-weight:900; color:#f59e0b;">Alertes ouvertes</div>
+      <div style="font-size:1.8rem; font-weight:900; color:#0f172a; margin-top:4px;">+{{ open_alerts|default:0 }}</div>
+      <div style="font-size:.62rem; color:#94a3b8;">Périmètre actif</div>
+    </div>
+  </div>
+
+  <!-- Activité récente -->
+  <div class="dg-panel">
+    <div class="dg-section-header">
+      <div class="dg-panel-title" style="margin:0;">Fil d'activite</div>
+      <span style="font-size:.65rem; color:#94a3b8; font-weight:700;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block; animation:pulse 1.5s infinite; margin-right:4px;"></span>
+        Données calculées à {{ realtime.last_updated_at|date:"H:i" }}
+      </span>
+    </div>
+
+    <!-- Activity feed items from recent payments -->
+    {% for payment in finance.latest_payments|default:empty_list|slice:":4" %}
+    <div style="display:flex; align-items:flex-start; gap:10px; padding:10px; background:#f0fdf4; border-radius:8px; border-left:3px solid #16a34a; margin-bottom:8px;">
+      <i class="fa-solid fa-credit-card" style="color:#16a34a; margin-top:2px;"></i>
+      <div>
+        <div style="font-size:.78rem; font-weight:800;">Paiement recu â€” {{ payment.amount|intcomma }} FCFA</div>
+        <div style="font-size:.62rem; color:#94a3b8; font-weight:600;">
+          {{ payment.inscription.candidature.last_name|default:"Etudiant" }} Â·
+          {{ payment.inscription.candidature.branch.name|default:"â€”" }} Â·
+          {{ payment.paid_at|timesince }}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="padding:16px; background:#f8fafc; border-radius:8px; text-align:center; color:#64748b; font-size:.78rem; font-weight:700;">
+      Aucune activite recente a afficher pour ce perimetre.
+    </div>
+    {% endfor %}
+
+    <!-- Current status -->
+    <div style="margin-top:8px; padding:12px; background:#eff6ff; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
+        <span style="font-size:.72rem; font-weight:800; color:#1d4ed8;">Actualisation manuelle</span>
+      </div>
+      <div style="font-size:.62rem; color:#64748b; font-weight:600;">
+        Calcul : {{ realtime.last_updated_at|date:"H:i:s" }}
+      </div>
+    </div>
+  </div>
+
+  <!-- System status grid -->
+  <div class="dg-row-2" style="margin-top:14px;">
+    <div class="dg-panel">
+      <div class="dg-panel-title">Indicateurs du dernier calcul</div>
+      <div class="mb-4 rounded-lg bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+        Cette section ne presente pas de graphique car aucune serie temporelle fiable n'est encore disponible.
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div style="text-align:center; padding:12px; background:#f0fdf4; border-radius:8px;">
+          <div style="font-size:1.4rem; font-weight:900; color:#16a34a;">{{ realtime.today_inscriptions|default:0 }}</div>
+          <div style="font-size:.6rem; font-weight:800; color:#475569;">Inscriptions jour</div>
+        </div>
+        <div style="text-align:center; padding:12px; background:#eff6ff; border-radius:8px;">
+          <div style="font-size:1.4rem; font-weight:900; color:#2563eb;">{{ realtime.today_payments|default:0 }}</div>
+          <div style="font-size:.6rem; font-weight:800; color:#475569;">Paiements jour</div>
+        </div>
+        <div style="text-align:center; padding:12px; background:#f5f3ff; border-radius:8px;">
+          <div style="font-size:1.4rem; font-weight:900; color:#7c3aed;">{{ schedule.today_events_count|intcomma }}</div>
+          <div style="font-size:.6rem; font-weight:800; color:#475569;">Cours prévus</div>
+        </div>
+        <div style="text-align:center; padding:12px; background:#fef3c7; border-radius:8px;">
+          <div style="font-size:1.4rem; font-weight:900; color:#d97706;">{{ open_alerts|default:0 }}</div>
+          <div style="font-size:.6rem; font-weight:800; color:#475569;">Alertes traitement</div>
+        </div>
+      </div>
+    </div>
+    <div class="dg-panel">
+      <div class="dg-panel-title">Derniers paiements</div>
+      {% for payment in finance.latest_payments|default:empty_list|slice:":3" %}
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:8px; background:#f8fafc; border-radius:6px; margin-bottom:6px;">
+        <div>
+          <div style="font-size:.72rem; font-weight:800; color:#0f172a;">{{ payment.inscription.candidature.last_name|default:"â€”" }}</div>
+          <div style="font-size:.58rem; color:#94a3b8; font-weight:600;">{{ payment.inscription.candidature.branch.name|default:"â€”" }}</div>
+        </div>
+        <span style="font-size:.78rem; font-weight:900; color:#16a34a;">+{{ payment.amount|intcomma }}</span>
+      </div>
+      {% empty %}
+      <div style="padding:16px; background:#f8fafc; border-radius:8px; text-align:center; color:#64748b; font-size:.78rem; font-weight:700;">
+        Aucun paiement recent pour ce perimetre.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>

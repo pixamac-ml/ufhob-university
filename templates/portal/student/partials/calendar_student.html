@@ -1,0 +1,308 @@
+{% load component_tags %}
+
+<div x-data="{ calendarTab: 'overview' }" class="space-y-4">
+  <nav class="flex gap-1 overflow-x-auto border-b border-[color:var(--line)]" aria-label="Sections du calendrier">
+    <button type="button" @click="calendarTab = 'overview'" :class="calendarTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-[color:var(--muted)]'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-bold">Vue d’ensemble</button>
+    <button type="button" @click="calendarTab = 'planning'" :class="calendarTab === 'planning' ? 'border-primary text-primary' : 'border-transparent text-[color:var(--muted)]'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-bold">Mon planning</button>
+    <button type="button" @click="calendarTab = 'events'" :class="calendarTab === 'events' ? 'border-primary text-primary' : 'border-transparent text-[color:var(--muted)]'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-bold">Vie universitaire</button>
+  </nav>
+
+  <section class="rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div><p class="text-[11px] font-black uppercase tracking-wide text-[color:var(--school-primary)]">Calendrier académique officiel</p><p class="mt-1 text-sm text-[color:var(--muted)]">Périodes institutionnelles applicables à votre campus, école, programme, classe et semestres.</p></div>
+      {% if academic_calendar %}<a href="{% url 'portal_student:academic_calendar_pdf' %}{% if selected_academic_year_id %}?academic_year_id={{ selected_academic_year_id }}{% endif %}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-[color:var(--line)] px-3 py-2 text-xs font-bold text-[color:var(--school-primary)]"><i data-lucide="printer" style="width:14px;height:14px;"></i>Imprimer / PDF</a>{% endif %}
+    </div>
+    {% if academic_calendar_projection %}<div class="mt-3 space-y-3">{% for period in academic_calendar_projection %}<article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3"><div class="flex flex-wrap items-start justify-between gap-2"><div><strong class="text-sm text-[color:var(--text)]">{{ period.entry.title }}</strong><p class="mt-1 text-xs font-semibold text-[color:var(--muted)]">{{ period.start_datetime|date:"d/m/Y" }}{% if not period.is_single_day %} au {{ period.end_datetime|date:"d/m/Y" }}{% endif %} · {{ period.entry.get_event_type_display }}</p></div><span class="rounded-full bg-[color:var(--school-primary-soft)] px-2 py-1 text-[10px] font-bold text-[color:var(--school-primary)]">{{ period.entry.get_target_scope_display }}</span></div>{% if period.entry.description %}<p class="mt-2 text-xs text-[color:var(--muted)]">{{ period.entry.description }}</p>{% endif %}{% if period.details %}<div class="mt-3 border-l-2 border-[color:var(--school-primary)] pl-3"><p class="text-[10px] font-black uppercase tracking-wide text-[color:var(--school-primary)]">Épreuves programmées</p>{% for detail in period.details %}<p class="mt-1 text-xs text-[color:var(--text)]"><strong>{{ detail.start_datetime|date:"d/m/Y H:i" }}</strong> · {{ detail.event.title }}{% if detail.event.ec %} — {{ detail.event.ec.title }}{% endif %}</p>{% endfor %}</div>{% endif %}</article>{% endfor %}</div>{% elif academic_calendar %}<p class="mt-3 text-sm text-[color:var(--muted)]">Aucune période publiée ne vous concerne actuellement.</p>{% else %}<p class="mt-3 text-sm text-[color:var(--muted)]">Le calendrier officiel n’est pas encore publié pour votre année et votre campus.</p>{% endif %}
+  </section>
+
+  <section x-show="calendarTab === 'overview'" class="grid gap-4 lg:grid-cols-2">
+    <article class="rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4"><p class="text-[11px] font-black uppercase tracking-wide text-[color:var(--school-primary)]">Aujourd’hui</p>{% if today_events %}<div class="mt-3 space-y-3">{% for event in today_events %}<div class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3"><div class="flex items-start justify-between gap-2"><strong class="text-sm text-[color:var(--text)]">{{ event.title }}</strong><span class="rounded-full px-2 py-1 text-[10px] font-bold {% if event.temporal_status_theme == 'emerald' %}bg-emerald-100 text-emerald-700{% elif event.temporal_status_theme == 'slate' %}bg-slate-100 text-slate-700{% else %}bg-sky-100 text-sky-700{% endif %}">{{ event.temporal_status_label }}</span></div><p class="mt-1 text-xs font-semibold text-[color:var(--muted)]">{{ event.time_range }} · {{ event.teacher_name }}</p><p class="mt-1 text-xs text-[color:var(--muted)]">{{ event.location }}</p>{% if event.is_online and event.online_access.is_available %}<a href="{% url 'portal_student:online_session_open' event.id %}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-100"><i data-lucide="video" style="width:12px;height:12px;"></i>Rejoindre le cours en ligne</a>{% elif event.is_online %}<span class="mt-2 block text-[11px] font-bold text-[color:var(--muted)]">{{ event.online_access.label }}</span>{% endif %}</div>{% endfor %}</div>{% else %}<p class="mt-3 text-sm text-[color:var(--muted)]">Aucun cours planifié aujourd’hui.</p>{% endif %}</article>
+    <article class="rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4"><p class="text-[11px] font-black uppercase tracking-wide text-[color:var(--school-primary)]">Prochain cours</p>{% if next_course %}<div class="mt-3 rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3"><strong class="text-sm text-[color:var(--text)]">{{ next_course.title }}</strong><p class="mt-1 text-xs font-semibold text-[color:var(--muted)]">{{ next_course.weekday_label }} · {{ next_course.time_range }}</p><p class="mt-1 text-xs text-[color:var(--muted)]">{{ next_course.teacher_name }} · {{ next_course.location }}</p>{% if next_course.is_online and next_course.online_access.is_available %}<a href="{% url 'portal_student:online_session_open' next_course.id %}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-100"><i data-lucide="video" style="width:12px;height:12px;"></i>Rejoindre le cours en ligne</a>{% elif next_course.is_online %}<span class="mt-2 block text-[11px] font-bold text-[color:var(--muted)]">{{ next_course.online_access.label }}</span>{% endif %}</div>{% else %}<p class="mt-3 text-sm text-[color:var(--muted)]">Aucun prochain cours publié pour cette semaine.</p>{% endif %}</article>
+  </section>
+
+  <section x-show="calendarTab === 'events'" x-cloak class="rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4"><p class="text-[11px] font-black uppercase tracking-wide text-[color:var(--school-primary)]">Vie universitaire</p>{% if academic_events %}<div class="mt-3 grid gap-3 sm:grid-cols-2">{% for event in academic_events %}<article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3"><p class="text-xs font-black text-[color:var(--text)]">{{ event.day }} {{ event.month }} · {{ event.title }}</p><p class="mt-1 text-xs text-[color:var(--muted)]">{{ event.desc }}</p></article>{% endfor %}</div>{% else %}<p class="mt-3 text-sm text-[color:var(--muted)]">Aucun événement public à venir.</p>{% endif %}</section>
+
+  <div x-show="calendarTab === 'planning'" x-cloak>
+
+<div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+  <div>
+    <h3 class="student-section-title">Planning hebdomadaire</h3>
+    <p class="mt-1 text-sm text-[color:var(--muted)]">Votre semaine academique, organisee par jour et par creneau.</p>
+    {% if timetable.is_weekly_template %}
+      <p class="mt-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">
+        Affichage de la grille hebdomadaire officielle. Les seances datees de cette semaine ne sont pas encore materialisees.
+      </p>
+    {% elif timetable.has_weekly_template_fallback %}
+      <p class="mt-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">
+        Les creneaux officiels non encore materialises sont affiches avec les cours deja programmes.
+      </p>
+    {% elif timetable.is_nearest_available_week %}
+      <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+        {{ timetable.week_notice }}
+      </p>
+    {% endif %}
+  </div>
+  {% if timetable.week_start %}
+    {% with week_date=timetable.week_start|date:"d/m/Y" %}
+      {% with week_label="Semaine du "|add:week_date %}
+        {% component "status_badge" label=week_label tone="neutral" icon="calendar-days" %}{% endcomponent %}
+      {% endwith %}
+    {% endwith %}
+  {% endif %}
+</div>
+
+{% if timetable.events %}
+  <div class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--line)] bg-[color:var(--card-soft)] px-3 py-2">
+    <span class="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-[11px] font-extrabold text-[color:var(--text)]">
+      <i data-lucide="calendar-clock" style="width:13px;height:13px;"></i>
+      {{ timetable.summary.planned }} planifie(s)
+    </span>
+    {% if timetable.summary.ongoing %}
+      <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-extrabold text-emerald-700">
+        <i data-lucide="activity" style="width:13px;height:13px;"></i>
+        {{ timetable.summary.ongoing }} en cours
+      </span>
+    {% endif %}
+    {% if timetable.summary.postponed %}
+      <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-extrabold text-amber-700">
+        <i data-lucide="clock-3" style="width:13px;height:13px;"></i>
+        {{ timetable.summary.postponed }} reporte(s)
+      </span>
+    {% endif %}
+    {% if timetable.summary.cancelled %}
+      <span class="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1 text-[11px] font-extrabold text-rose-700">
+        <i data-lucide="circle-x" style="width:13px;height:13px;"></i>
+        {{ timetable.summary.cancelled }} annule(s)
+      </span>
+    {% endif %}
+    {% if timetable.summary.completed %}
+      <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] font-extrabold text-slate-700">
+        <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i>
+        {{ timetable.summary.completed }} termine(s)
+      </span>
+    {% endif %}
+  </div>
+
+  <section class="mb-4 rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-3">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--school-primary)]">Cours planifies</p>
+        <h4 class="mt-1 text-sm font-black text-[color:var(--text)]">Liste lisible de la semaine affichee</h4>
+      </div>
+      {% with event_count=timetable.events|length|stringformat:"s"|add:" cours" %}
+        {% component "status_badge" label=event_count tone="neutral" icon="book-open-check" %}{% endcomponent %}
+      {% endwith %}
+    </div>
+    <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+      {% for event in timetable.events %}
+        {% if event.event_type == 'exam' or event.event_type == 'practical' %}
+        <article class="rounded-lg border-2 px-3 py-2.5 {% if event.event_type == 'exam' %}border-red-400 bg-red-50{% else %}border-amber-400 bg-amber-50{% endif %}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="mb-1 flex items-center gap-1.5">
+                <i data-lucide="{% if event.event_type == 'exam' %}file-check{% else %}pen-line{% endif %}" style="width:13px;height:13px;" class="{% if event.event_type == 'exam' %}text-red-600{% else %}text-amber-600{% endif %} shrink-0"></i>
+                <span class="text-[10px] font-black uppercase tracking-wide {% if event.event_type == 'exam' %}text-red-600{% else %}text-amber-600{% endif %}">{% if event.event_type == 'exam' %}Examen{% else %}Devoir / TP{% endif %}</span>
+              </div>
+              <strong class="block truncate text-sm font-black text-[color:var(--text)]">{{ event.title }}</strong>
+              <p class="mt-1 text-xs font-bold {% if event.event_type == 'exam' %}text-red-700{% else %}text-amber-700{% endif %}">{{ event.weekday_label }} — {{ event.time_range }}</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold {% if event.event_type == 'exam' %}bg-red-100 text-red-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ event.status_label }}
+            </span>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[color:var(--muted)]">
+            <span class="inline-flex items-center gap-1.5">
+              <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
+              {{ event.location }}
+            </span>
+          </div>
+          {% if event.description %}
+          <p class="mt-2 rounded-lg bg-white/70 px-2 py-1.5 text-[11px] text-[color:var(--muted)]">
+            <span class="font-black text-[color:var(--text)]">Programme :</span> {{ event.description }}
+          </p>
+          {% endif %}
+        </article>
+        {% else %}
+        <article class="rounded-lg border px-3 py-2.5 {% if event.status_theme == 'rose' %}border-rose-200 bg-rose-50{% elif event.status_theme == 'amber' %}border-amber-200 bg-amber-50{% elif event.status_theme == 'emerald' %}border-emerald-200 bg-emerald-50{% elif event.status_theme == 'slate' %}border-slate-200 bg-slate-50{% else %}border-sky-200 bg-sky-50{% endif %}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <strong class="block truncate text-sm font-black text-[color:var(--text)]">{{ event.title }}</strong>
+              <p class="mt-1 text-xs font-semibold text-[color:var(--muted)]">{{ event.weekday_label }} - {{ event.time_range }}</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold {% if event.status_theme == 'rose' %}bg-rose-100 text-rose-700{% elif event.status_theme == 'amber' %}bg-amber-100 text-amber-700{% elif event.status_theme == 'emerald' %}bg-emerald-100 text-emerald-700{% elif event.status_theme == 'slate' %}bg-slate-100 text-slate-700{% else %}bg-sky-100 text-sky-700{% endif %}">
+              {{ event.status_label }}
+            </span>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[color:var(--muted)]">
+            <span class="inline-flex items-center gap-1.5">
+              <i data-lucide="user-round" style="width:12px;height:12px;"></i>
+              {{ event.teacher_name }}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <i data-lucide="{% if event.is_online %}video{% else %}map-pin{% endif %}" style="width:12px;height:12px;"></i>
+              {{ event.location }}
+            </span>
+            {% if event.is_online and event.online_access.is_available %}<a href="{% url 'portal_student:online_session_open' event.id %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-100"><i data-lucide="video" style="width:12px;height:12px;"></i>Rejoindre le cours en ligne</a>{% elif event.is_online %}<span class="text-[11px] font-bold text-[color:var(--muted)]" title="{{ event.online_access.detail }}">{{ event.online_access.label }}</span>{% endif %}
+          </div>
+        </article>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="overflow-x-auto rounded-xl border border-[color:var(--line)] bg-[color:var(--card)]">
+    <table class="min-w-[860px] w-full table-fixed border-collapse">
+      <thead>
+        <tr class="border-b border-[color:var(--line)] bg-[color:var(--card-soft)]">
+          <th class="w-20 px-3 py-3 text-left text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--muted)]">Heure</th>
+          {% for day in timetable.days %}
+            <th class="px-3 py-3 text-left">
+              <div class="rounded-lg px-2 py-1.5 {% if day.is_today %}bg-[color:var(--school-primary-soft)]{% endif %}">
+                <span class="block text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--muted)]">{{ day.label }}</span>
+                <span class="mt-1 block text-sm font-black text-[color:var(--text)]">{{ day.day_number }}</span>
+              </div>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for slot in timetable.slots %}
+          <tr class="border-b border-[color:var(--line)] align-top last:border-b-0">
+            <td class="bg-[color:var(--card-soft)] px-3 py-4 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--muted)]">
+              {{ slot.label }}
+            </td>
+            {% for cell in slot.cells %}
+              <td class="h-36 px-2 py-2">
+                {% if cell.events %}
+                  <div class="grid gap-2">
+                    {% for event in cell.events %}
+                      {% if event.event_type == 'exam' or event.event_type == 'practical' %}
+                      <article class="rounded-lg border-2 px-3 py-2 shadow-sm {% if event.event_type == 'exam' %}border-red-400 bg-red-50{% else %}border-amber-400 bg-amber-50{% endif %}">
+                        <div class="mb-1 flex items-center gap-1">
+                          <i data-lucide="{% if event.event_type == 'exam' %}file-check{% else %}pen-line{% endif %}" style="width:11px;height:11px;" class="{% if event.event_type == 'exam' %}text-red-600{% else %}text-amber-600{% endif %} shrink-0"></i>
+                          <span class="text-[9px] font-black uppercase tracking-wide {% if event.event_type == 'exam' %}text-red-600{% else %}text-amber-600{% endif %}">{% if event.event_type == 'exam' %}Examen{% else %}Devoir{% endif %}</span>
+                        </div>
+                        <strong class="block text-xs font-black leading-4 text-[color:var(--text)]">{{ event.title }}</strong>
+                        <p class="mt-1 truncate text-[11px] text-[color:var(--muted)]">{{ event.location }}</p>
+                        <span class="mt-1.5 block text-[10px] font-bold uppercase tracking-wide {% if event.event_type == 'exam' %}text-red-700{% else %}text-amber-700{% endif %}">{{ event.time_range }}</span>
+                        {% if event.description %}
+                        <p class="mt-1 text-[10px] text-[color:var(--muted)] line-clamp-2">{{ event.description }}</p>
+                        {% endif %}
+                      </article>
+                      {% else %}
+                      <article class="rounded-lg border px-3 py-2.5 shadow-sm {% if event.status_theme == 'rose' %}border-rose-200 bg-rose-50{% elif event.status_theme == 'amber' %}border-amber-200 bg-amber-50{% elif event.status_theme == 'emerald' %}border-emerald-200 bg-emerald-50{% elif event.status_theme == 'slate' %}border-slate-200 bg-slate-50{% else %}border-sky-200 bg-sky-50{% endif %}">
+                        <div class="flex items-start justify-between gap-2">
+                          <strong class="block text-xs font-black leading-4 text-[color:var(--text)]">{{ event.title }}</strong>
+                          <span class="shrink-0 text-[10px] font-bold text-[color:var(--muted)]">{{ event.start_time }}</span>
+                        </div>
+                        <p class="mt-2 truncate text-[11px] font-medium text-[color:var(--muted)]">{{ event.teacher_name }}</p>
+                        <p class="mt-1 truncate text-[11px] text-[color:var(--muted)]">{{ event.location }}</p>
+                        <div class="mt-2 flex items-center justify-between gap-2">
+                          <span class="text-[10px] font-bold uppercase tracking-wide text-[color:var(--muted)]">{{ event.time_range }}</span>
+                          <span class="rounded-full px-2 py-1 text-[10px] font-bold {% if event.status_theme == 'rose' %}bg-rose-100 text-rose-700{% elif event.status_theme == 'amber' %}bg-amber-100 text-amber-700{% elif event.status_theme == 'emerald' %}bg-emerald-100 text-emerald-700{% elif event.status_theme == 'slate' %}bg-slate-100 text-slate-700{% else %}bg-sky-100 text-sky-700{% endif %}">
+                            {{ event.status_label }}
+                          </span>
+                        </div>
+                        {% if event.is_online and event.online_access.is_available %}<a href="{% url 'portal_student:online_session_open' event.id %}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold text-sky-700 hover:bg-sky-100"><i data-lucide="video" style="width:11px;height:11px;"></i>Rejoindre</a>{% elif event.is_online %}<span class="mt-2 block text-[10px] font-bold text-[color:var(--muted)]">{{ event.online_access.label }}</span>{% endif %}
+                      </article>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="flex h-full min-h-[116px] items-center justify-center rounded-lg border border-dashed border-[color:var(--line)] bg-[color:var(--card-soft)] text-[11px] font-bold uppercase tracking-[0.16em] text-[color:var(--muted-2)]">
+                    Libre
+                  </div>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if timetable.has_extra_slots %}
+    <div class="mt-5 rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4">
+      <div class="mb-3">
+        <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--school-primary)]">Hors grille</p>
+        <h4 class="mt-1 text-base font-black text-[color:var(--text)]">Cours hors creneaux standards</h4>
+      </div>
+      <div class="grid gap-3">
+        {% for slot in timetable.extra_slots %}
+          <div class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3">
+            <div class="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[color:var(--muted)]">{{ slot.label }}</div>
+            <div class="grid gap-2 lg:grid-cols-3">
+              {% for cell in slot.cells %}
+                {% if cell.events %}
+                  {% for event in cell.events %}
+                    <article class="rounded-lg border bg-white px-3 py-2 {% if event.status_theme == 'rose' %}border-rose-200{% elif event.status_theme == 'amber' %}border-amber-200{% elif event.status_theme == 'emerald' %}border-emerald-200{% elif event.status_theme == 'slate' %}border-slate-200{% else %}border-sky-200{% endif %}">
+                      <div class="flex items-start justify-between gap-2">
+                        <strong class="block text-xs font-black text-[color:var(--text)]">{{ event.weekday_label }}</strong>
+                        <span class="text-[10px] font-bold text-[color:var(--muted)]">{{ event.time_range }}</span>
+                      </div>
+                      <p class="mt-2 text-sm font-bold text-[color:var(--text)]">{{ event.title }}</p>
+                      <p class="mt-1 text-[11px] text-[color:var(--muted)]">{{ event.teacher_name }}</p>
+                      <p class="mt-1 text-[11px] text-[color:var(--muted)]">{{ event.location }}</p>
+                    </article>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if timetable.empty_days %}
+    <div class="mt-5 rounded-xl border border-dashed border-[color:var(--line)] bg-[color:var(--card-soft)] px-4 py-3 text-sm text-[color:var(--muted)]">
+      Jours sans cours cette semaine :
+      {% for item in timetable.empty_days %}
+        <strong class="text-[color:var(--text)]">{{ item.date|date:"D d/m" }}</strong>{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+{% else %}
+  {% if timetable.has_unplanned_assignments %}
+    <section class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div class="mb-3 flex items-start gap-3">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700">
+          <i data-lucide="calendar-clock" style="width:18px;height:18px;"></i>
+        </div>
+        <div>
+          <h4 class="text-sm font-black text-amber-900">Planning horaire en attente</h4>
+          <p class="mt-1 text-sm font-semibold leading-6 text-amber-800">{{ timetable.week_notice }}</p>
+        </div>
+      </div>
+      <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {% for item in timetable.unplanned_assignments %}
+          <article class="rounded-lg border border-amber-200 bg-white/80 p-3">
+            <p class="text-[11px] font-black uppercase tracking-wide text-amber-700">{{ item.code|default:"EC" }}</p>
+            <h5 class="mt-1 text-sm font-black text-[color:var(--text)]">{{ item.title }}</h5>
+            <p class="mt-1 text-xs font-semibold text-[color:var(--muted)]">{{ item.teacher_name }}</p>
+            <p class="mt-2 text-[11px] font-bold text-amber-700">{{ item.room }}{% if item.planned_hours %} · {{ item.planned_hours }} h prevues{% endif %}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    {% component "empty_state" title="Aucun cours programme" message="Aucun cours programme pour cette periode." icon="calendar-x" %}{% endcomponent %}
+  {% endif %}
+{% endif %}
+{% if recent_online_events %}
+  <section class="mt-5 rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] p-4">
+    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--school-primary)]">Historique</p>
+    <h4 class="mt-1 text-sm font-black text-[color:var(--text)]">Séances en ligne récentes</h4>
+    <div class="mt-3 grid gap-2 md:grid-cols-2">
+      {% for event in recent_online_events %}
+        <article class="rounded-lg border border-[color:var(--line)] bg-[color:var(--card-soft)] p-3">
+          <div class="flex items-center justify-between gap-2"><strong class="truncate text-sm text-[color:var(--text)]">{{ event.title }}</strong><span class="text-[10px] font-bold text-sky-700">En ligne</span></div>
+          <p class="mt-1 text-xs text-[color:var(--muted)]">{{ event.class_name }} · {{ event.start_datetime|date:"d/m/Y H:i" }}–{{ event.end_datetime|date:"H:i" }}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2"><span class="text-[11px] font-bold {% if event.recording_state.tone == 'success' %}text-emerald-700{% elif event.recording_state.tone == 'danger' %}text-red-700{% elif event.recording_state.tone == 'info' %}text-sky-700{% else %}text-amber-700{% endif %}">{{ event.recording_state.label }}</span>{% for recording in event.recordings %}{% if recording.can_access_media %}<a href="{% url 'portal_student:online_recording_download' recording.id %}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-bold text-sky-700 hover:underline">Revoir le cours</a><a href="{% url 'portal_student:online_recording_download' recording.id %}?download=1" class="text-[11px] font-bold text-sky-700 hover:underline">Télécharger</a>{% endif %}{% endfor %}</div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reçu {{ payment.public_receipt_reference }}</title>
+  {% include "payments/partials/receipt_styles.html" %}
+</head>
+<body>
+  {% include "payments/partials/receipt_document.html" %}
+</body>
+</html>
+

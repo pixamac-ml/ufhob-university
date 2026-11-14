@@ -1,0 +1,418 @@
+from __future__ import annotations
+
+from accounts.scoping import scoped
+
+from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
+
+from django.core.exceptions import ValidationError
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import transaction
+from django.urls import reverse
+
+from academics.imports.import_service import import_grades
+from academics.models import EC, Language, Profession
+from academics.selectors.programme_structure_selectors import semester_has_active_ecs
+from academics.services.workflow import get_semester_permissions
+from portal.models import AccountSupportState
+from portal.models import BranchITSettings, SupportAuditLog, SupportTicket
+from portal.selectors.informaticien import (
+    active_academic_year,
+    academic_classes_for_branch,
+    audit_logs_for_branch,
+    classes_without_notes_for_branch,
+    ecs_without_schedule_teacher_for_branch,
+    enrollments_without_grades_for_branch,
+    support_tickets_for_branch,
+)
+from portal.services.notes_workflow import (
+    STATE_READY_TO_PUBLISH_FINAL,
+    STATE_READY_TO_PUBLISH_NORMAL,
+    get_notes_state,
+)
+from portal.services.it_support_service import (
+    assign_support_ticket,
+    create_support_ticket,
+    log_support_action,
+    update_support_ticket_status,
+)
+
+
+def _page_queryset(queryset, page_number, *, per_page):
+    paginator = Paginator(queryset, per_page)
+    try:
+        return paginator.page(page_number or 1)
+    except (EmptyPage, PageNotAnInteger):
+        return paginator.page(1)
+
+
+@dataclass
+class ImportFeedback:
+    level: str
+    message: str
+    invalid_lines: list[dict]
+    updated: int = 0
+    skipped_empty: int = 0
+    skipped_unknown_columns: int = 0
+    skipped_unknown_students: int = 0
+    skipped_invalid_scores: int = 0
+    unknown_columns: list[str] | None = None
+
+
+def _build_import_preview(*, selected_class, selected_semester, preview_ecs, subject_count):
+    if not selected_class or not selected_semester:
+        return None
+    subject_headers = [
+        f"NOTE /20 - {ec.ue.code} - {ec.title}"
+        for ec in preview_ecs
+    ]
+    sample_headers = ["ENROLLMENT_ID", "MATRICULE", "NOM", "PRENOM", *subject_headers[:4]]
+    sample_row = ["1024", "ESFE-0001", "CAMARA", "BOUBACAR", *(["12,50"] if subject_headers else [])]
+    if len(sample_headers) > len(sample_row):
+        sample_row.extend([""] * (len(sample_headers) - len(sample_row)))
+    return {
+        "headers": sample_headers,
+        "sample_row": sample_row,
+        "subject_count": subject_count,
+    }
+
+
+def build_home_context(*, branch):
+    classes = list(academic_classes_for_branch(branch=branch).filter(is_active=True)[:60])
+    incomplete_classes = []
+    calculable_classes = []
+    resume_target = None
+
+    for academic_class in classes:
+        for semester in academic_class.semesters.all().order_by("number"):
+            state = get_notes_state(academic_class=academic_class, semester=semester)
+            if state is None:
+                continue
+            query = f"?classe={academic_class.id}&semester={semester.id}"
+            item = {
+                "class": academic_class,
+                "semester": semester,
+                "state": state,
+                "url": f"{reverse('accounts_portal:it_notes_flow_workspace')}{query}",
+            }
+            if state.entered_grades and resume_target is None:
+                resume_target = item
+            if state.missing_grades and state.entered_grades:
+                incomplete_classes.append(item)
+            if state.code in (STATE_READY_TO_PUBLISH_NORMAL, STATE_READY_TO_PUBLISH_FINAL):
+                calculable_classes.append(item)
+
+    blocked_accounts = scoped(AccountSupportState).select_related("user__profile").filter(
+        is_blocked=True,
+        user__profile__branch=branch,
+    )[:10]
+    import_errors = audit_logs_for_branch(branch=branch).filter(
+        action_type=SupportAuditLog.ACTION_GRADES_IMPORTED,
+        details__icontains="invalide",
+    )[:10]
+
+    return {
+        "branch": branch,
+        "resume_target": resume_target,
+        "incomplete_classes": incomplete_classes[:10],
+        "calculable_classes": calculable_classes[:10],
+        "blocked_accounts": list(blocked_accounts),
+        "import_errors": list(import_errors),
+    }
+
+
+def build_support_context(*, branch, status="", toast=None, page=1):
+    tickets_page = _page_queryset(support_tickets_for_branch(branch=branch, status=status), page, per_page=20)
+    return {
+        "branch": branch,
+        "status": status,
+        "status_choices": SupportTicket.STATUS_CHOICES,
+        "tickets": list(tickets_page.object_list),
+        "tickets_page": tickets_page,
+        "toast": toast,
+    }
+
+
+def create_branch_ticket(*, actor, branch, title, description):
+    return create_support_ticket(
+        actor=actor,
+        branch=branch,
+        title=title,
+        description=description,
+        category=SupportTicket.CATEGORY_OTHER,
+        priority=SupportTicket.PRIORITY_NORMAL,
+    )
+
+
+def take_branch_ticket(*, actor, branch, ticket):
+    _validate_ticket_branch(branch=branch, ticket=ticket)
+    return assign_support_ticket(actor=actor, branch=branch, ticket=ticket)
+
+
+def resolve_branch_ticket(*, actor, branch, ticket, resolution=""):
+    _validate_ticket_branch(branch=branch, ticket=ticket)
+    return update_support_ticket_status(
+        actor=actor,
+        branch=branch,
+        ticket=ticket,
+        status=SupportTicket.STATUS_RESOLVED,
+        resolution=resolution or "Ticket resolu depuis le dashboard informaticien.",
+    )
+
+
+def build_audit_context(*, branch, page=1, query="", action_type=""):
+    logs_page = _page_queryset(audit_logs_for_branch(branch=branch, query=query, action_type=action_type), page, per_page=25)
+    return {
+        "branch": branch,
+        "logs": list(logs_page.object_list),
+        "logs_page": logs_page,
+        "query": query,
+        "action_type": action_type,
+        "action_choices": SupportAuditLog.ACTION_CHOICES,
+    }
+
+
+def build_import_context(
+    *,
+    branch,
+    classes,
+    selected_class=None,
+    selected_semester=None,
+    session_type="normal",
+    feedback=None,
+):
+    semesters = list(selected_class.semesters.order_by("number")) if selected_class else []
+    # The import screen only needs a short sample.  Loading every UE and EC
+    # for each class/semester selection made large programmes sluggish.
+    preview_ecs = (
+        list(
+            scoped(EC).filter(ue__semester=selected_semester)
+            .select_related("ue")
+            .order_by("ue__code", "title", "id")[:4]
+        )
+        if selected_semester
+        else []
+    )
+    student_count = (
+        selected_class.enrollments.filter(
+            academic_year=selected_class.academic_year,
+            is_active=True,
+        ).count()
+        if selected_class
+        else 0
+    )
+    ec_count = scoped(EC).filter(ue__semester=selected_semester).count() if selected_semester else 0
+    permissions = get_semester_permissions(selected_semester) if selected_semester else None
+    active_session_type = (
+        "retake"
+        if permissions and permissions["can_enter_retake"]
+        else "normal"
+    )
+    state = get_notes_state(academic_class=selected_class, semester=selected_semester) if selected_class and selected_semester else None
+    return {
+        "branch": branch,
+        "classes": classes,
+        "selected_class": selected_class,
+        "semesters": semesters,
+        "selected_semester": selected_semester,
+        "student_count": student_count,
+        "ec_count": ec_count,
+        "workflow_permissions": permissions,
+        "active_session_type": active_session_type,
+        "notes_state": state,
+        "import_preview": _build_import_preview(
+            selected_class=selected_class,
+            selected_semester=selected_semester,
+            preview_ecs=preview_ecs,
+            subject_count=ec_count,
+        ),
+        "feedback": feedback,
+    }
+
+
+@transaction.atomic
+def import_notes_file(*, actor, branch, academic_class, semester, file, session_type="normal"):
+    if academic_class.branch_id != getattr(branch, "id", None):
+        raise ValidationError("Classe hors annexe refusee.")
+    if semester.academic_class_id != academic_class.id:
+        raise ValidationError("Le semestre ne correspond pas a la classe.")
+    if not semester_has_active_ecs(semester):
+        raise ValidationError(
+            "Cette maquette doit etre completee par le Directeur des etudes avant la saisie ou l'import des notes."
+        )
+
+    session_type = (session_type or "normal").strip().lower()
+    result = import_grades(file, academic_class, semester, session_type=session_type)
+    has_critical_errors = bool(result.skipped_invalid_scores or result.skipped_unknown_students)
+    log_support_action(
+        actor=actor,
+        branch=branch,
+        action_type=SupportAuditLog.ACTION_GRADES_IMPORTED,
+        target_label=f"Import notes {academic_class.display_name} S{semester.number} {session_type}",
+        details=f"{result.updated} note(s) importee(s), {len(result.student_issues)} ligne(s) invalide(s).",
+    )
+    if has_critical_errors:
+        message = (
+            f"Import refuse: {len(result.student_issues)} erreur(s) critique(s). "
+            "Aucune note n'a ete inseree."
+        )
+    elif result.skipped_empty:
+        message = (
+            f"Import partiel: {result.updated} note(s) importee(s), "
+            f"{result.skipped_empty} cellule(s) vide(s) a completer avant validation."
+        )
+    else:
+        message = f"{result.updated} note(s) importee(s). {len(result.student_issues)} ligne(s) invalide(s)."
+    return ImportFeedback(
+        level=(
+            "error" if has_critical_errors or not result.updated
+            else "warning" if result.skipped_empty
+            else "success"
+        ),
+        message=message,
+        invalid_lines=result.student_issues,
+        updated=result.updated,
+        skipped_empty=result.skipped_empty,
+        skipped_unknown_columns=result.skipped_unknown_columns,
+        skipped_unknown_students=result.skipped_unknown_students,
+        skipped_invalid_scores=result.skipped_invalid_scores,
+        unknown_columns=result.unknown_columns,
+    )
+
+
+def build_structure_context(*, branch):
+    classes = list(academic_classes_for_branch(branch=branch)[:120])
+    return {
+        "branch": branch,
+        "classes": classes,
+        "active_year": active_academic_year(),
+        "classes_without_notes": list(classes_without_notes_for_branch(branch=branch)[:30]),
+        "ecs_without_teacher": list(ecs_without_schedule_teacher_for_branch(branch=branch)[:30]),
+    }
+
+
+def build_supervision_context(*, branch, page=1):
+    classes_without_notes = list(classes_without_notes_for_branch(branch=branch)[:100])
+    ecs_without_teacher = list(ecs_without_schedule_teacher_for_branch(branch=branch)[:100])
+    enrollments_without_grades = list(enrollments_without_grades_for_branch(branch=branch)[:200])
+    alerts = []
+    for academic_class in classes_without_notes:
+        semester = academic_class.semesters.order_by("number").first()
+        query = f"?classe={academic_class.id}"
+        if semester:
+            query += f"&semester={semester.id}"
+        alerts.append({
+            "level": "warning",
+            "title": "Classe sans notes",
+            "detail": academic_class.display_name,
+            "action_label": "Ouvrir la classe",
+            "action_url": f"{reverse('accounts_portal:it_notes_flow_workspace')}{query}",
+        })
+    for ec in ecs_without_teacher:
+        academic_class = ec.ue.semester.academic_class
+        alerts.append({
+            "level": "warning",
+            "title": "EC sans enseignant planifie",
+            "detail": f"{ec.title} - {academic_class.display_name}",
+            "action_label": "Voir anomalies",
+            "action_url": reverse("accounts_portal:it_structure_workspace"),
+        })
+    for enrollment in enrollments_without_grades:
+        semester = enrollment.academic_class.semesters.order_by("number").first()
+        query = f"?classe={enrollment.academic_class_id}"
+        if semester:
+            query += f"&semester={semester.id}"
+        alerts.append({
+            "level": "info",
+            "title": "Etudiant sans note",
+            "detail": f"{enrollment.student} - {enrollment.academic_class.display_name}",
+            "action_label": "Corriger les notes",
+            "action_url": f"{reverse('accounts_portal:it_notes_flow_workspace')}{query}",
+        })
+    calculated_not_sent = academic_classes_for_branch(branch=branch).filter(
+        semesters__status="FINALIZED",
+        is_active=True,
+    ).distinct()
+    for academic_class in calculated_not_sent[:60]:
+        semester = academic_class.semesters.filter(status="FINALIZED").order_by("number").first()
+        query = f"?classe={academic_class.id}"
+        if semester:
+            query += f"&semester={semester.id}"
+        alerts.append({
+            "level": "info",
+            "title": "Resultats calcules non envoyes",
+            "detail": academic_class.display_name,
+            "action_label": "Envoyer au Directeur",
+            "action_url": f"{reverse('accounts_portal:it_notes_flow_workspace')}{query}",
+        })
+    open_tickets = support_tickets_for_branch(branch=branch).exclude(status=SupportTicket.STATUS_RESOLVED)
+    for ticket in open_tickets[:60]:
+        alerts.append({
+            "level": "warning",
+            "title": "Ticket ouvert",
+            "detail": f"#{ticket.id} - {ticket.title}",
+            "action_label": "Traiter",
+            "action_url": reverse("accounts_portal:it_support_flow_workspace"),
+        })
+    alerts_page = _page_queryset(alerts, page, per_page=20)
+    return {
+        "branch": branch,
+        "alerts": alerts_page.object_list,
+        "alerts_page": alerts_page,
+    }
+
+
+def build_catalog_context(*, toast=None):
+    return {
+        "languages": list(Language.objects.order_by("name")[:120]),
+        "professions": list(Profession.objects.order_by("name")[:120]),
+        "toast": toast,
+    }
+
+
+def create_catalog_item(*, kind, name, code="", description=""):
+    name = (name or "").strip()
+    if not name:
+        raise ValidationError("Le nom est obligatoire.")
+    if kind == "language":
+        return Language.objects.create(name=name, code=(code or "").strip())
+    if kind == "profession":
+        return Profession.objects.create(name=name, description=(description or "").strip())
+    raise ValidationError("Type de catalogue invalide.")
+
+
+def get_branch_settings(*, branch):
+    settings, _created = BranchITSettings.objects.get_or_create(branch=branch)
+    return settings
+
+
+def update_branch_settings(*, actor, branch, validation_threshold, active_academic_year, local_config):
+    from accounts.scoping import resolve_context
+    from django.core.exceptions import PermissionDenied
+
+    context = resolve_context(user=actor)
+    if not context.is_valid or context.school is not None or (context.branch and context.branch != branch):
+        raise PermissionDenied("La configuration commune du campus nécessite un accès à toutes ses écoles.")
+    settings = get_branch_settings(branch=branch)
+    try:
+        settings.validation_threshold = Decimal(str(validation_threshold).replace(",", "."))
+    except (InvalidOperation, TypeError):
+        raise ValidationError("Seuil de validation invalide.")
+    settings.active_academic_year = (active_academic_year or "").strip()
+    settings.local_config = (local_config or "").strip()
+    settings.updated_by = actor
+    settings.full_clean()
+    settings.save()
+    log_support_action(
+        actor=actor,
+        branch=branch,
+        action_type=SupportAuditLog.ACTION_BRANCH_SETTINGS_UPDATED,
+        target_label="Parametres annexe",
+        details="Parametres informaticien mis a jour.",
+    )
+    return settings
+
+
+def _validate_ticket_branch(*, branch, ticket):
+    if branch and ticket.branch_id != branch.id:
+        raise ValidationError("Ticket hors annexe refuse.")

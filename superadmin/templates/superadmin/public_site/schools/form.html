@@ -1,0 +1,18 @@
+{% extends "superadmin/unified_base.html" %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}Identité publique et campus réellement reliés par SchoolBranch{% endblock %}
+{% block content_main %}
+<div class="mx-auto max-w-5xl space-y-5"><a href="{% url 'superadmin:public_school_list' %}" class="btn btn-outline">← Écoles</a><section class="card"><form method="post" enctype="multipart/form-data" class="card-body grid gap-5 md:grid-cols-2">{% csrf_token %}{% if form.non_field_errors %}<div class="md:col-span-2 rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}<div class="{% if field.name == 'description' or field.name == 'detailed_description' or field.name == 'cta_text' or field.name == 'branches' %}md:col-span-2{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="form-help">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}</div>{% endfor %}{% if school %}<div class="md:col-span-2 flex gap-4">{% if school.logo %}<img src="{{ school.logo.url }}" alt="Logo" class="h-24 w-24 rounded-xl border object-contain">{% endif %}{% if school.hero_image %}<img src="{{ school.hero_image.url }}" alt="Couverture" class="h-24 w-48 rounded-xl border object-cover">{% endif %}</div>{% endif %}<div class="md:col-span-2 flex justify-end gap-2"><a href="{% url 'superadmin:public_school_list' %}" class="btn btn-outline">Annuler</a><button class="btn btn-primary" type="submit">Enregistrer</button></div></form></section></div>
+{% if school %}
+<section class="card card-body mt-5">
+  <h2>Campus d’implantation</h2>
+  <a class="btn btn-outline" href="{% url 'superadmin:school_implantation_editor' school.pk %}">+ Rattacher un campus</a>
+  <table class="w-full text-sm"><thead><tr><th>Campus</th><th>Ville</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>{% for link in school.school_branches.all %}<tr>
+      <td>{{ link.branch.name }}</td><td>{{ link.branch.city }}</td><td>{% if link.is_active %}Active{% else %}Inactive{% endif %}</td>
+      <td><a href="{% url 'superadmin:school_implantation_editor' school.pk %}?link_id={{ link.pk }}">Modifier / réactiver</a></td>
+    </tr>{% empty %}<tr><td colspan="4">Aucune implantation.</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

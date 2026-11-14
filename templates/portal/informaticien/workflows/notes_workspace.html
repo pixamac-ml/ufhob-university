@@ -1,0 +1,47 @@
+{% load component_tags %}
+<div class="space-y-5" data-it-notes-workspace>
+  {% component "ui_core.page_header" eyebrow="Scolarité" title="Gestion des notes" subtitle="Sélectionnez une classe et un semestre, puis ouvrez la grille de saisie." %}{% endcomponent %}
+
+  {% if toast %}
+    {% component "ui_core.alert" message=toast.message tone=toast.level dismissible=True %}{% endcomponent %}
+  {% endif %}
+
+  {% component "ui_core.panel" title="Contexte de travail" subtitle="La classe et le semestre déterminent la maquette affichée." %}
+    <form class="grid gap-4 md:grid-cols-2" hx-get="{% url 'accounts_portal:it_notes_flow_workspace' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML">
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">
+        Classe
+        <select name="classe" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2 text-ui-text" hx-get="{% url 'accounts_portal:it_notes_flow_workspace' %}" hx-target="#it-dashboard-workspace" hx-trigger="change" hx-include="[name='classe'], [name='semester']">
+          <option value="">Choisir une classe</option>
+          {% for class_item in classes %}<option value="{{ class_item.id }}" {% if selected_class and selected_class.id == class_item.id %}selected{% endif %}>{{ class_item.display_name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">
+        Semestre
+        <select name="semester" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2 text-ui-text" hx-get="{% url 'accounts_portal:it_notes_flow_workspace' %}" hx-target="#it-dashboard-workspace" hx-trigger="change" hx-include="[name='classe'], [name='semester']">
+          <option value="">Choisir un semestre</option>
+          {% for semester in semesters %}<option value="{{ semester.id }}" {% if selected_semester and selected_semester.id == semester.id %}selected{% endif %}>Semestre {{ semester.number }} — {{ semester.get_status_display }}</option>{% endfor %}
+        </select>
+      </label>
+    </form>
+  {% endcomponent %}
+
+  {% if not selected_class or not selected_semester %}
+    {% component "ui_core.alert" message="Sélectionnez une classe et un semestre pour afficher automatiquement la maquette des notes." tone="info" %}{% endcomponent %}
+  {% else %}
+    {% if not academic_template_ready %}
+      {% component "ui_core.alert" message="Cette maquette doit être complétée par le Directeur des Études avant la saisie des notes." tone="warning" %}{% endcomponent %}
+    {% else %}
+    {% component "ui_core.panel" title=selected_class.display_name subtitle=selected_semester.get_status_display %}
+      {% fill "header" %}
+        <button type="button" class="btn btn-primary" hx-get="{% url 'accounts_portal:it_notes_flow_workspace' %}?drawer=1&class_id={{ selected_class.id }}&semester_id={{ selected_semester.id }}" hx-target="#it-dashboard-drawer-content" hx-swap="innerHTML">
+          <i data-lucide="external-link" class="h-4 w-4"></i> Ouvrir la saisie
+        </button>
+      {% endfill %}
+      {% fill "default" %}
+        <p class="text-sm text-ui-text-muted">La saisie s’ouvre dans le drawer officiel afin de conserver la navigation du tableau de bord.</p>
+        <div hx-get="{% url 'accounts_portal:it_notes_flow_workspace' %}?drawer=1&class_id={{ selected_class.id }}&semester_id={{ selected_semester.id }}" hx-trigger="load" hx-target="#it-dashboard-drawer-content" hx-swap="innerHTML" class="mt-3"></div>
+      {% endfill %}
+    {% endcomponent %}
+    {% endif %}
+  {% endif %}
+</div>

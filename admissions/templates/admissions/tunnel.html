@@ -1,0 +1,631 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}Candidater | UFHOB{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'src/css/admission_funnel.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tunnel-hero-compact">
+  {% include "admissions/partials/hero_admission.html" %}
+</div>
+
+<section class="admission-shell w-full isolate" aria-label="Tunnel de découverte et de candidature">
+  <form method="post"
+        novalidate
+        action="{% url 'admissions:admission_tunnel' %}"
+        enctype="multipart/form-data"
+        class="w-full"
+        x-data="admissionTunnelData()"
+        @submit.prevent="submitForm($event)">
+    {% csrf_token %}
+
+    <input type="hidden" name="last_name" x-model="formData.last_name">
+    <input type="hidden" name="first_name" x-model="formData.first_name">
+    <input type="hidden" name="city" x-model="formData.city">
+    <input type="hidden" name="email" x-model="formData.email">
+    <input type="hidden" name="phone" x-model="formData.phone">
+    <input type="hidden" name="birth_date" x-model="formData.birth_date">
+    <input type="hidden" name="birth_place" x-model="formData.birth_place">
+    <input type="hidden" name="gender" x-model="formData.gender">
+    <input type="hidden" name="current_level" :value="formData.current_level">
+    <input type="hidden" name="current_cycle_name" :value="formData.current_cycle_name">
+    <input type="hidden" name="formation" :value="formData.formation">
+    <input type="hidden" name="formation_slug" x-model="formData.formation_slug">
+    <input type="hidden" name="branch_id" x-model="formData.branch_id">
+    <input type="hidden" name="branch_name" x-model="formData.branch_name">
+    <input type="hidden" name="branch_city" x-model="formData.branch_city">
+    <input type="hidden" name="campus_image" x-model="formData.campus_image">
+    <input type="hidden" name="school_code" x-model="formData.school_code">
+    <input type="hidden" name="school_name" x-model="formData.school_name">
+    <input type="hidden" name="page" :value="programmePage">
+    <input type="hidden" name="page_size" :value="programmePageSize">
+
+    <div class="tunnel-split">
+      <aside class="tunnel-media-pane" aria-label="Votre parcours UFHOB">
+        <div class="tunnel-identity">
+          <div><p class="tunnel-kicker">Université · Admissions</p><p class="tunnel-wordmark">UFHOB</p></div>
+          <h2>Construisez votre<br>parcours universitaire.</h2>
+          <p class="text-sm text-white/70">Un choix éclairé.<br>Un dossier préparé avec soin.</p>
+          <dl class="tunnel-destination">
+            <div><dt>École</dt><dd x-text="formData.school_name || 'À choisir'"></dd></div>
+            <div><dt>Campus</dt><dd x-text="formData.branch_name || 'À choisir'"></dd></div>
+            <div><dt>Programme</dt><dd x-text="formData.formation || 'À choisir'"></dd></div>
+          </dl>
+        </div>
+      </aside>
+      <div class="tunnel-form-pane">
+        <ol class="tunnel-stepper" aria-label="Étapes de candidature">
+          <li :aria-current="step === 1 ? 'step' : null">01 · Identification</li>
+          <li :aria-current="step === 2 ? 'step' : null">02 · Informations</li>
+          <li :aria-current="step === 3 ? 'step' : null">03 · Parcours et pièces</li>
+          <li :aria-current="step === 4 ? 'step' : null">04 · Vérification</li>
+        </ol>
+        <p x-show="backendError" x-cloak role="alert" class="funnel-error mb-4" x-text="backendError"></p>
+        <div x-show="step === 1" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step1.html" %}</div>
+        <div x-show="step === 2" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step2.html" %}</div>
+        <div x-show="step === 3" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step3.html" %}</div>
+        <div x-show="step === 4" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step4.html" %}</div>
+      </div>
+    </div>
+  </form>
+</section>
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+  window.syncAdmissionTunnelLayout = function () {
+    const root = document.documentElement;
+    const navbar = document.querySelector('[x-data^="navbarObserver"]');
+    const navbarHeight = navbar ? Math.ceil(navbar.getBoundingClientRect().height || 0) : 0;
+    const visibleNavs = Array.from(document.querySelectorAll('.tunnel-nav')).filter((node) => node.offsetParent !== null);
+    const mobileNavHeight = visibleNavs.reduce((max, node) => Math.max(max, Math.ceil(node.getBoundingClientRect().height || 0)), 0);
+
+    root.style.setProperty('--tunnel-vh-offset', `${Math.max(navbarHeight + 24, 32)}px`);
+    root.style.setProperty('--tunnel-mobile-nav-height', `${Math.max(mobileNavHeight, 96)}px`);
+  };
+
+  window.admissionTunnelData = function () {
+    return {
+      draftKey: 'ufhob-admission-tunnel-draft-v2',
+      restoreDraft: {{ restore_draft|yesno:"true,false" }},
+      step: {{ initial_step|default:1 }},
+      step3Phase: '{{ initial_step3_phase|default:"school"|escapejs }}',
+      stepThreeRequestKey: '',
+      stepThreeRequestId: 0,
+      stepThreeHtmxReady: false,
+      errors: {},
+      backendErrors: JSON.parse('{{ backend_errors_json|default:"{}"|escapejs }}'),
+      backendError: '{{ backend_error|default:""|escapejs }}',
+      backendErrorStep: {{ backend_error_step|default:1 }},
+      backendErrorField: '{{ backend_error_field|default:""|escapejs }}',
+      revealStepOneIdentify: false,
+      documentsDeferred: {{ documents_deferred|yesno:"true,false" }},
+      programmePage: 1,
+      programmePageSize: window.innerWidth >= 1280 ? 6 : 4,
+      documentFiles: {},
+      fileErrors: {},
+      filesNeedReselection: false,
+      submitting: false,
+      fragmentError: '',
+      documentsRefreshTick: 0,
+      formData: Object.assign({
+        last_name: '',
+        first_name: '',
+        city: '',
+        email: '',
+        phone: '',
+        birth_date: '',
+        birth_place: '',
+        gender: '',
+        current_level: '',
+        current_cycle_name: '',
+        formation: '',
+        formation_slug: '',
+        branch_id: '',
+        branch_name: '',
+        branch_city: '',
+        campus_image: '',
+        school_code: '',
+        school_name: ''
+      }, JSON.parse('{{ initial_form_json|default:"{}"|escapejs }}')),
+      fieldStep(fieldName) {
+        const fieldToStep = {
+          last_name: 1,
+          first_name: 1,
+          city: 1,
+          email: 2,
+          phone: 2,
+          birth_date: 2,
+          gender: 2,
+          school_code: 3,
+          branch_id: 3,
+          current_level: 3,
+          formation_slug: 3,
+          documents: 3,
+        };
+        return fieldToStep[fieldName] || 1;
+      },
+      fieldSelector(fieldName) {
+        const selectors = {
+          last_name: '[data-field="last_name"]',
+          first_name: '[data-field="first_name"]',
+          city: '[data-field="city"]',
+          email: '[data-field="email"]',
+          phone: '[data-field="phone"]',
+          birth_date: '[data-field="birth_date"]',
+          gender: '[data-field="gender"]',
+          current_level: '[data-field="current_level"]',
+          school_code: '[data-field="school_code"]',
+          branch_id: '[data-field="branch_id"]',
+          formation_slug: '[data-field="formation_slug"]',
+          documents: '[data-field="documents"]',
+        };
+        return selectors[fieldName] || '';
+      },
+      firstErrorField() {
+        const order = [
+          'last_name',
+          'first_name',
+          'city',
+          'email',
+          'phone',
+          'birth_date',
+          'gender',
+          'school_code',
+          'branch_id',
+          'current_level',
+          'formation_slug',
+          'documents',
+        ];
+        return order.find((key) => this.errors[key]);
+      },
+      syncStep3PhaseFromError(fieldName) {
+        if (fieldName === 'school_code') {
+          this.step3Phase = 'school';
+          return;
+        }
+        if (fieldName === 'branch_id') {
+          this.step3Phase = this.formData.school_code ? 'campus' : 'school';
+          return;
+        }
+        if (fieldName === 'current_level') {
+          this.step3Phase = this.formData.branch_id ? 'cycle' : (this.formData.school_code ? 'campus' : 'school');
+          return;
+        }
+        if (fieldName === 'formation_slug') {
+          this.step3Phase = this.formData.current_level ? 'program' : (this.formData.branch_id ? 'cycle' : (this.formData.school_code ? 'campus' : 'school'));
+        }
+        if (fieldName === 'documents') {
+          this.step3Phase = 'documents';
+        }
+      },
+      scrollToFieldError(fieldName) {
+        const selector = this.fieldSelector(fieldName);
+        if (!selector) return;
+        const target = document.querySelector(selector);
+        if (!target) return;
+
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const focusable = target.matches('input,select,textarea,button')
+          ? target
+          : target.querySelector('input,select,textarea,button');
+        if (focusable && typeof focusable.focus === 'function') {
+          focusable.focus({ preventScroll: true });
+        }
+      },
+      revealFirstError() {
+        const fieldName = this.firstErrorField();
+        if (!fieldName) return;
+        const stepNo = this.fieldStep(fieldName);
+        if (stepNo === 3) {
+          this.syncStep3PhaseFromError(fieldName);
+        }
+        this.step = stepNo;
+        this.$nextTick(() => {
+          this.scrollToFieldError(fieldName);
+        });
+      },
+      clearErrorsForStep(stepNo) {
+        const fieldsByStep = {
+          1: ['last_name', 'first_name', 'city'],
+          2: ['email', 'phone', 'birth_date', 'gender'],
+          3: ['school_code', 'branch_id', 'current_level', 'formation_slug', 'documents'],
+        };
+        (fieldsByStep[stepNo] || []).forEach((fieldName) => {
+          delete this.errors[fieldName];
+        });
+      },
+      init() {
+        this.stepThreeHtmxReady = document.readyState === 'complete' && Boolean(window.htmx);
+        if (this.restoreDraft) {
+          this.restoreSavedDraft();
+        }
+
+        if (this.backendErrors && Object.keys(this.backendErrors).length) {
+          this.errors = Object.assign({}, this.backendErrors);
+          this.revealStepOneIdentify = ['last_name', 'first_name', 'city'].includes(this.backendErrorField);
+          if (this.backendErrorField) {
+            this.syncStep3PhaseFromError(this.backendErrorField);
+          }
+          this.$nextTick(() => {
+            this.revealFirstError();
+          });
+        }
+
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+          if (event.target.id === 'step3-campuses-list' && this.formData.branch_id &&
+              !Array.from(event.target.querySelectorAll('[data-branch-id]')).some(node => node.dataset.branchId === String(this.formData.branch_id))) {
+            Object.assign(this.formData, {branch_id:'', branch_name:'', branch_city:'', campus_image:''});
+          }
+          if (event.target.id === 'step3-cycles-list' && this.formData.current_level &&
+              !Array.from(event.target.querySelectorAll('[data-cycle-slug]')).some(node => node.dataset.cycleSlug === this.formData.current_level)) {
+            Object.assign(this.formData, {current_level:'', current_cycle_name:'', formation:'', formation_slug:''});
+          }
+          if (!event.target || event.target.id !== 'step3-documents-list') {
+            return;
+          }
+          this.documentsRefreshTick += 1;
+          this.allDocumentInputs().forEach(input => {
+            const file = this.documentFiles[input.name];
+            if (file) {
+              const transfer = new DataTransfer();
+              transfer.items.add(file);
+              input.files = transfer.files;
+            }
+          });
+          this.documentsRefreshTick += 1;
+        });
+
+        document.body.addEventListener('change', (event) => {
+          if (!event.target || !event.target.matches('#step3-documents-list input[type=file]')) {
+            return;
+          }
+          const input = event.target;
+          const file = input.files[0];
+          delete this.fileErrors[input.name];
+          delete this.documentFiles[input.name];
+          if (file && !/\.(pdf|jpe?g|png|docx?)$/i.test(file.name)) this.fileErrors[input.name] = 'Format non autorisé.';
+          else if (file && file.size > 10 * 1024 * 1024) this.fileErrors[input.name] = 'Taille maximale : 10 Mo.';
+          if (this.fileErrors[input.name]) input.value = '';
+          else if (file) this.documentFiles[input.name] = file;
+          this.documentsRefreshTick += 1;
+          this.persistDraft();
+        });
+
+        this.$watch('formData', () => this.persistDraft());
+        this.$watch('step', () => this.persistDraft());
+        this.$watch('step3Phase', () => this.persistDraft());
+        this.$watch('documentsDeferred', () => this.persistDraft());
+        this.$watch('programmePage', () => this.persistDraft());
+        ['htmx:responseError', 'htmx:sendError'].forEach(name => document.body.addEventListener(name, event => {
+          if (event.target.closest('.admission-shell')) this.fragmentError = 'Le chargement a échoué. Réessayez pour poursuivre.';
+        }));
+        window.addEventListener('resize', () => {
+          const size = window.innerWidth >= 1280 ? 6 : 4;
+          if (size !== this.programmePageSize) { this.programmePageSize = size; this.programmePage = 1; }
+        });
+
+        document.body.addEventListener('htmx:load', (event) => {
+          if (event.detail.elt === document.body) {
+            this.stepThreeHtmxReady = true;
+            this.refreshStepThree();
+          }
+        });
+
+        this.$nextTick(() => {
+          this.refreshStepThree();
+        });
+      },
+      restoreSavedDraft() {
+        try {
+          const saved = JSON.parse(window.sessionStorage.getItem(this.draftKey) || 'null');
+          if (!saved || typeof saved !== 'object' || !saved.formData) return;
+          this.formData = Object.assign({}, this.formData, saved.formData);
+          if ([1, 2, 3, 4].includes(Number(saved.step))) this.step = Number(saved.step);
+          if (['school', 'campus', 'cycle', 'program', 'documents'].includes(saved.step3Phase)) this.step3Phase = saved.step3Phase;
+          this.revealStepOneIdentify = Boolean(saved.revealStepOneIdentify);
+          this.documentsDeferred = saved.documentsDeferred === true;
+          this.programmePage = Number(saved.programmePage) || 1;
+          this.filesNeedReselection = Boolean(saved.hadFiles);
+          if (this.step === 4) { this.step = 3; this.step3Phase = 'documents'; }
+        } catch (error) {
+          window.sessionStorage.removeItem(this.draftKey);
+        }
+      },
+      persistDraft() {
+        try {
+          window.sessionStorage.setItem(this.draftKey, JSON.stringify({
+            step: this.step,
+            step3Phase: this.step3Phase,
+            revealStepOneIdentify: this.revealStepOneIdentify,
+            formData: this.formData,
+            documentsDeferred: this.documentsDeferred,
+            programmePage: this.programmePage,
+            hadFiles: this.uploadedDocumentsCount() > 0,
+          }));
+        } catch (error) {
+          // Le tunnel reste utilisable lorsque le stockage navigateur est indisponible.
+        }
+      },
+      refreshStepThree() {
+        if (!this.stepThreeHtmxReady) return;
+        if (this.step !== 3) {
+          this.stepThreeRequestKey = '';
+          return;
+        }
+        const eventMap = {
+          campus: 'admission-step-3-campuses',
+          cycle: 'admission-step-3-cycles',
+          program: 'admission-step-3',
+          documents: 'admission-step-3-documents',
+        };
+        const eventName = eventMap[this.step3Phase];
+        if (!eventName) {
+          this.stepThreeRequestKey = '';
+          return;
+        }
+        const phase = this.step3Phase;
+        const parameters = {
+          campus: [this.formData.school_code],
+          cycle: [this.formData.school_code, this.formData.branch_id],
+          program: [this.formData.school_code, this.formData.branch_id, this.formData.current_level, this.programmePage, this.programmePageSize],
+          documents: [this.formData.formation_slug],
+        };
+        const key = JSON.stringify([phase, ...parameters[phase]]);
+        if (phase === 'documents' && document.querySelector('#step3-documents-list [data-programme-slug]')?.dataset.programmeSlug === this.formData.formation_slug) return;
+        if (this.stepThreeRequestKey === key) return;
+        this.stepThreeRequestKey = key;
+        const requestId = ++this.stepThreeRequestId;
+        // HTMX reads the hidden inputs after Alpine has updated their values.
+        this.$nextTick(() => {
+          if (this.step === 3 && this.step3Phase === phase && this.stepThreeRequestId === requestId) {
+            const targetIds = {campus:'step3-campuses-list', cycle:'step3-cycles-list', program:'step3-formations-list', documents:'step3-documents-list'};
+            const target = document.getElementById(targetIds[phase]);
+            const pending = document.createElement('p');
+            pending.setAttribute('role', 'status');
+            pending.textContent = 'Chargement…';
+            // Never leave options from the previous school/cycle selectable while loading.
+            target.replaceChildren(pending);
+            this.fragmentError = '';
+            document.body.dispatchEvent(new CustomEvent(eventName));
+          }
+        });
+      },
+      startDiscovery() {
+        this.step = 3;
+        this.step3Phase = this.formData.school_code
+          ? (this.formData.branch_id
+            ? (this.formData.current_level
+              ? (this.formData.formation_slug ? 'documents' : 'program')
+              : 'cycle')
+            : 'campus')
+          : 'school';
+        this.$nextTick(() => {
+          this.refreshStepThree();
+          if (typeof window.syncAdmissionTunnelLayout === 'function') {
+            window.syncAdmissionTunnelLayout();
+          }
+        });
+      },
+      selectSchool(code, name) {
+        if (this.formData.school_code !== code) {
+          Object.assign(this.formData, {branch_id:'', branch_name:'', branch_city:'', campus_image:'', current_level:'', current_cycle_name:'', formation:'', formation_slug:''});
+          this.programmePage = 1;
+          this.documentsDeferred = false;
+        }
+        Object.assign(this.formData, {school_code:code, school_name:name});
+        delete this.errors.school_code;
+        this.step3Phase = 'campus';
+      },
+      selectCampus(id, name, city, image) {
+        // Programme availability currently follows the same active SchoolBranch pair.
+        // Changing between compatible campuses of this school preserves the programme.
+        Object.assign(this.formData, {branch_id:String(id), branch_name:name, branch_city:city, campus_image:image});
+        delete this.errors.branch_id;
+        this.programmePage = 1;
+        this.step3Phase = this.formData.formation_slug ? 'documents' : (this.formData.current_level ? 'program' : 'cycle');
+      },
+      selectCycle(slug, name) {
+        if (this.formData.current_level !== slug) {
+          this.formData.formation = ''; this.formData.formation_slug = ''; this.documentsDeferred = false;
+        }
+        this.formData.current_level = slug; this.formData.current_cycle_name = name;
+        this.programmePage = 1; delete this.errors.current_level; this.step3Phase = 'program';
+      },
+      selectProgramme(slug, title) {
+        if (this.formData.formation_slug !== slug) this.documentsDeferred = false;
+        this.formData.formation_slug = slug; this.formData.formation = title;
+        delete this.errors.formation_slug; delete this.errors.documents; this.step3Phase = 'documents';
+      },
+      removeDocument(name) {
+        const input = document.querySelector('#step3-documents-list input[name="' + name + '"]');
+        if (input) input.value = '';
+        delete this.documentFiles[name]; delete this.fileErrors[name];
+        this.documentsRefreshTick += 1; this.persistDraft();
+      },
+      isStepComplete(stepNo) {
+        if (stepNo === 1) return this.formData.last_name && this.formData.first_name && this.formData.city;
+        if (stepNo === 2) return this.formData.email && this.formData.phone && this.formData.birth_date && this.formData.gender;
+        if (stepNo === 3) return this.formData.school_code && this.formData.branch_id && this.formData.current_level && this.formData.formation_slug;
+        return true;
+      },
+      validateStep(stepNo) {
+        this.clearErrorsForStep(stepNo);
+        const fieldsByStep = {
+          1: ['last_name', 'first_name', 'city'],
+          2: ['email', 'phone', 'birth_date', 'gender'],
+          3: ['school_code', 'branch_id', 'current_level', 'formation_slug', 'documents'],
+        };
+        if (stepNo === 1) {
+          if (!this.formData.last_name) this.errors.last_name = 'Le champ nom est obligatoire.';
+          if (!this.formData.first_name) this.errors.first_name = 'Le champ prenom est obligatoire.';
+          if (!this.formData.city) this.errors.city = 'Veuillez renseigner votre ville d\'origine.';
+        }
+        if (stepNo === 2) {
+          if (!this.formData.email) this.errors.email = 'Le champ email est obligatoire.';
+          if (!this.formData.phone) this.errors.phone = 'Veuillez renseigner votre numero de telephone.';
+          if (!this.formData.birth_date) this.errors.birth_date = 'Veuillez renseigner votre date de naissance.';
+          if (!this.formData.gender) this.errors.gender = 'Veuillez selectionner votre genre.';
+          if (this.formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.formData.email)) this.errors.email = 'Saisissez une adresse email valide.';
+        }
+        if (stepNo === 3 && !this.formData.school_code) {
+          this.errors.school_code = 'Veuillez sélectionner une école.';
+        }
+        if (stepNo === 3 && !this.formData.branch_id) {
+          this.errors.branch_id = 'Veuillez selectionner un campus.';
+        }
+        if (stepNo === 3 && !this.formData.current_level) {
+          this.errors.current_level = 'Veuillez selectionner un cycle.';
+        }
+        if (stepNo === 3 && !this.formData.formation_slug) {
+          this.errors.formation_slug = 'Veuillez choisir une formation.';
+        }
+        if (stepNo === 3 && this.formData.formation_slug) {
+          const ready = document.querySelector('#step3-documents-list [data-programme-slug]')?.dataset.programmeSlug === this.formData.formation_slug;
+          if (!ready) this.errors.documents = 'Attendez le chargement des pièces demandées.';
+          else if (this.requiredDocumentsUploaded() < this.requiredDocumentsTotal() && !this.documentsDeferred) this.errors.documents = 'Ajoutez les pièces obligatoires ou cochez l’engagement de transmission ultérieure.';
+          if (this.allDocumentInputs().some(input => this.fileErrors[input.name])) this.errors.documents = 'Corrigez les fichiers signalés avant de continuer.';
+        }
+        return !(fieldsByStep[stepNo] || []).some((fieldName) => Boolean(this.errors[fieldName]));
+      },
+      async submitForm(event) {
+        if (this.submitting) return;
+        this.backendError = '';
+        this.errors = {};
+
+        if (!this.validateStep(1) || !this.validateStep(2) || !this.validateStep(3)) {
+          this.revealFirstError();
+          return;
+        }
+
+        this.persistDraft();
+        this.submitting = true;
+        try {
+          await this.$nextTick();
+          const response = await fetch(event.target.action, {method:'POST', body:new FormData(event.target), headers:{Accept:'application/json'}});
+          const result = await response.json();
+          if (response.ok && result.ok) {
+            try { window.sessionStorage.removeItem(this.draftKey); } catch (_) { /* Storage may be disabled. */ }
+            window.location.assign(result.redirect);
+            return;
+          }
+          this.errors = result.errors || {};
+          if (Object.keys(this.errors).length) this.revealFirstError();
+          else this.backendError = 'L’envoi a échoué. Réessayez ; vos données restent dans ce formulaire.';
+        } catch (error) {
+          this.backendError = 'Connexion interrompue. Vos données et fichiers restent dans ce formulaire ; réessayez.';
+        }
+        this.submitting = false;
+      },
+      goTo(target) {
+        if (target < 1 || target > 4) return;
+        if (target > this.step && !this.validateStep(this.step)) {
+          this.revealFirstError();
+          return;
+        }
+        this.step = target;
+        this.$nextTick(() => {
+          if (typeof window.syncAdmissionTunnelLayout === 'function') {
+            window.syncAdmissionTunnelLayout();
+          }
+          if (window.AOS && typeof window.AOS.refresh === 'function') {
+            window.AOS.refresh();
+          }
+        });
+        if (target === 3) {
+          if (this.formData.school_code && this.formData.branch_id && this.formData.current_level && this.formData.formation_slug) {
+            this.step3Phase = 'documents';
+          } else if (this.formData.school_code && this.formData.branch_id && this.formData.current_level) {
+            this.step3Phase = 'program';
+          } else if (this.formData.school_code && this.formData.branch_id) {
+            this.step3Phase = 'cycle';
+          } else if (this.formData.school_code) {
+            this.step3Phase = 'campus';
+          } else {
+            this.step3Phase = 'school';
+          }
+          this.refreshStepThree();
+        }
+      },
+      progressWidth() {
+        return (this.step / 4) * 100;
+      },
+      hasValue(value) {
+        return String(value ?? '').trim().length > 0;
+      },
+      fieldLabelClasses(value) {
+        return this.hasValue(value)
+          ? '-top-2 text-xs text-ufhob-primary'
+          : 'top-4 text-sm text-slate-500 peer-focus:-top-2 peer-focus:text-xs peer-focus:text-ufhob-primary';
+      },
+      allDocumentInputs() {
+        this.documentsRefreshTick;
+        return Array.from(document.querySelectorAll('#step3-documents-list input[type=file]'));
+      },
+      requiredDocumentInputs() {
+        this.documentsRefreshTick;
+        return Array.from(document.querySelectorAll('#step3-documents-list input[type=file][data-required="1"]'));
+      },
+      uploadedDocumentsCount() {
+        return this.allDocumentInputs().filter((input) => input.files && input.files.length > 0).length;
+      },
+      requiredDocumentsTotal() {
+        return this.requiredDocumentInputs().length;
+      },
+      requiredDocumentsUploaded() {
+        return this.requiredDocumentInputs().filter((input) => input.files && input.files.length > 0).length;
+      },
+      documentUploadPercent() {
+        const total = this.requiredDocumentsTotal();
+        if (!total) return 100;
+        return Math.round((this.requiredDocumentsUploaded() / total) * 100);
+      },
+      documentSubmissionStatus() {
+        const requiredTotal = this.requiredDocumentsTotal();
+        const requiredUploaded = this.requiredDocumentsUploaded();
+        return requiredUploaded >= requiredTotal ? 'Dossier documentaire complet, à vérifier' : 'Dossier incomplet — pièces à compléter';
+      },
+      documentSubmissionNote() {
+        return this.requiredDocumentsUploaded() < this.requiredDocumentsTotal()
+          ? (this.documentsDeferred ? 'Vous vous engagez à transmettre les pièces manquantes ultérieurement.' : 'Les pièces obligatoires ou votre engagement explicite sont nécessaires.')
+          : 'Les fichiers sélectionnés seront transmis avec votre candidature puis vérifiés par les admissions.';
+      },
+      prettyValue(value, fallback = 'Non renseigne') {
+        return value ? value : fallback;
+      }
+    };
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.syncAdmissionTunnelLayout === 'function') {
+      window.syncAdmissionTunnelLayout();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (typeof window.syncAdmissionTunnelLayout === 'function') {
+      window.syncAdmissionTunnelLayout();
+    }
+  });
+
+  document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (!event.target || !['step3-campuses-list', 'step3-cycles-list', 'step3-formations-list', 'step3-documents-list'].includes(event.target.id)) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (typeof window.syncAdmissionTunnelLayout === 'function') {
+        window.syncAdmissionTunnelLayout();
+      }
+      if (window.AOS && typeof window.AOS.refresh === 'function') {
+        window.AOS.refresh();
+      }
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}

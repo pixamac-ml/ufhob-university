@@ -50,13 +50,13 @@
         <!-- Calendar Icon SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:0 auto 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         <p style="margin:0; color:#64748b; font-size:12px;">Date d'envoi</p>
-        <p style="margin:5px 0 0 0; color:#334155; font-size:14px; font-weight:600;">{{ message_obj.created_at|date:"d/m/Y" }}</p>
+        <p style="margin:5px 0 0 0; color:#334155; font-size:14px; font-weight:600;">{{ message_obj.created_date_display }}</p>
     </div>
     <div style="text-align:center;">
         <!-- Clock Icon SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:0 auto 8px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <p style="margin:0; color:#64748b; font-size:12px;">Heure</p>
-        <p style="margin:5px 0 0 0; color:#334155; font-size:14px; font-weight:600;">{{ message_obj.created_at|date:"H:i" }}</p>
+        <p style="margin:5px 0 0 0; color:#334155; font-size:14px; font-weight:600;">{{ message_obj.created_time_display }}</p>
     </div>
     <div style="text-align:center;">
         <!-- Bookmark Icon SVG -->
@@ -87,23 +87,23 @@
     <p style="margin:0; color:#64748b; font-size:13px; line-height:1.8;">
         <!-- Email Icon SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-        <a href="mailto:esfeho@gmail.com" style="color:#1db5b0; text-decoration:none;">esfeho@gmail.com</a><br>
+        <a href="mailto:{{ institution_email }}" style="color:#1db5b0; text-decoration:none;">{{ institution_email }}</a><br>
         <!-- Phone Icon SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-        (+223) 76 37 88 66 / 66 37 88 66<br>
+        {{ institution_phone|default:"Contact disponible sur le site" }}<br>
         <!-- Location Icon SVG -->
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        BP E2087, Bamako, MALI
+        {{ institution_address|default:"Bamako, Mali" }}
     </p>
 </div>
 
 <!-- Closing -->
 <div style="margin-top:40px; text-align:center;">
     <p style="margin:0; color:#64748b; font-size:14px;">
-        Nous vous remercions de votre confiance en l'EPSFé !
+        Nous vous remercions de votre confiance en {{ institution_short_name|default:"UFHOB" }} !
     </p>
     <p style="margin:15px 0 0 0; color:#1e4f6f; font-size:16px; font-weight:600;">
-        L'équipe Administrative EPSFé
+        L'equipe administrative {{ institution_short_name|default:"UFHOB" }}
     </p>
 </div>
 

@@ -1,0 +1,20 @@
+{% load component_tags %}
+<section id="teacher-panel-settings" data-teacher-section="settings" class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Compte enseignant" title="Paramètres" subtitle="Vos informations de profil, préférences du tableau de bord et options de sécurité." %}
+    {% fill "actions" %}{% component "button" label="Personnaliser le dashboard" icon="sliders-horizontal" variant="outline" size="sm" hx_get="/portal/teacher/settings/" hx_target="#sg-drawer-content" hx_swap="innerHTML" %}{% endcomponent %}{% endfill %}
+  {% endcomponent %}
+  <div class="grid gap-5 lg:grid-cols-2">
+    {% component "ui_core.panel" title="Profil enseignant" subtitle="Informations visibles par l'administration." %}
+      {% fill "default" %}
+      <dl class="grid gap-3 text-sm sm:grid-cols-2"><div><dt class="text-ui-text-muted">Nom</dt><dd class="font-semibold text-ui-text">{{ teacher_user.get_full_name|default:teacher_user.username }}</dd></div><div><dt class="text-ui-text-muted">Email</dt><dd class="font-semibold text-ui-text">{{ teacher_user.email|default:"—" }}</dd></div><div><dt class="text-ui-text-muted">Téléphone</dt><dd class="font-semibold text-ui-text">{{ teacher_user.profile.phone|default:"—" }}</dd></div><div><dt class="text-ui-text-muted">Spécialité</dt><dd class="font-semibold text-ui-text">{{ teacher_user.profile.main_domain|default:"—" }}</dd></div></dl>
+      {% endfill %}
+      {% fill "footer" %}<a href="{% url 'accounts:edit_profile' %}" class="text-sm font-semibold text-ui-primary hover:underline">Modifier mon profil</a>{% endfill %}
+    {% endcomponent %}
+    {% component "ui_core.panel" title="Sécurité" subtitle="Protégez l'accès à votre compte." %}
+      {% fill "default" %}
+      {% component "ui_core.alert" title="Mot de passe" message="Utilisez un mot de passe personnel et ne le partagez avec personne." tone="info" %}{% endcomponent %}
+      {% endfill %}
+      {% fill "footer" %}<a href="{% url 'password_change' %}" class="text-sm font-semibold text-ui-primary hover:underline">Changer mon mot de passe</a>{% endfill %}
+    {% endcomponent %}
+  </div>
+</section>

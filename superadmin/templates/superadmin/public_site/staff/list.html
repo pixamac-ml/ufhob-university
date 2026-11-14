@@ -1,0 +1,31 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Personnel public{% endblock %}
+{% block page_subtitle %}Les profils presentes sur la vitrine UFHOB, distincts des comptes de connexion.{% endblock %}
+
+{% block content_main %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <form method="get" class="flex flex-1 flex-wrap items-end gap-2">
+      <label class="min-w-52 flex-1"><span class="sr-only">Rechercher un membre</span><input class="form-input w-full" name="q" value="{{ filters.q }}" placeholder="Rechercher un membre"></label>
+      <select class="form-select" name="category"><option value="">Toutes les categories</option>{% for value, label in categories %}<option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <select class="form-select" name="status"><option value="">Tous les statuts</option><option value="active" {% if filters.status == 'active' %}selected{% endif %}>Visible</option><option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Masque</option></select>
+      <button class="btn btn-outline" type="submit">Filtrer</button>
+    </form>
+    <a class="btn btn-primary" href="{% url 'superadmin:public_staff_create' %}">Ajouter un membre</a>
+  </div>
+
+  <section class="card overflow-hidden">
+    <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Profil</th><th>Fonction</th><th>Categorie</th><th>Statut</th><th class="text-right">Actions</th></tr></thead><tbody>
+      {% for member in staff_page %}
+      <tr>
+        <td><div class="flex items-center gap-3">{% if member.photo %}<img class="h-9 w-9 rounded-full object-cover" src="{{ member.photo.url }}" alt="">{% else %}<span class="flex h-9 w-9 items-center justify-center rounded-full bg-ui-surface-muted text-ui-text-muted">{{ member.full_name|first }}</span>{% endif %}<span class="font-medium">{{ member.full_name }}</span></div></td>
+        <td>{{ member.position }}</td><td>{{ member.get_category_display }}</td><td>{% if member.is_active %}<span class="badge-status badge-success">Visible</span>{% else %}<span class="badge-status badge-draft">Masque</span>{% endif %}</td>
+        <td class="text-right"><div class="inline-flex gap-2"><a class="btn btn-outline btn-sm" href="{% url 'superadmin:public_staff_edit' member.pk %}">Modifier</a><form method="post" action="{% url 'superadmin:public_staff_toggle' member.pk %}" data-confirm-message="{% if member.is_active %}Masquer ce profil de la vitrine ?{% else %}Publier ce profil sur la vitrine ?{% endif %}" data-confirm-title="Confirmer">{% csrf_token %}<button class="btn btn-outline btn-sm" type="submit">{% if member.is_active %}Masquer{% else %}Publier{% endif %}</button></form></div></td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="py-12 text-center"><p class="font-medium text-ui-text">Aucun membre du personnel</p><p class="mt-1 text-sm text-ui-text-muted">Ajoutez le premier profil a afficher sur la vitrine.</p></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if staff_page.paginator.num_pages > 1 %}<nav class="flex items-center justify-between border-t border-ui-border px-4 py-3 text-sm">{% if staff_page.has_previous %}<a class="btn btn-outline btn-sm" href="?q={{ filters.q|urlencode }}&category={{ filters.category }}&status={{ filters.status }}&page={{ staff_page.previous_page_number }}">Precedent</a>{% else %}<span></span>{% endif %}<span>Page {{ staff_page.number }} sur {{ staff_page.paginator.num_pages }}</span>{% if staff_page.has_next %}<a class="btn btn-outline btn-sm" href="?q={{ filters.q|urlencode }}&category={{ filters.category }}&status={{ filters.status }}&page={{ staff_page.next_page_number }}">Suivant</a>{% endif %}</nav>{% endif %}
+  </section>
+</div>
+{% endblock %}

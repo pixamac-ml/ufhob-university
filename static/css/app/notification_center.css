@@ -1,0 +1,46 @@
+/* Override the inherited legacy notification palette only inside the app shell. */
+[data-app-shell] .comm-kicker { color: var(--primary-text); }
+[data-app-shell] .comm-title, [data-app-shell] .comm-stat-value,
+[data-app-shell] .nc-item__title, [data-app-shell] .nc-detail__title,
+[data-app-shell] .nc-detail__meta-row strong { color: var(--text-primary); }
+[data-app-shell] .comm-sub, [data-app-shell] .comm-stat-label,
+[data-app-shell] .comm-panel-title, [data-app-shell] .comm-badge,
+[data-app-shell] .nc-item__excerpt, [data-app-shell] .nc-detail__meta-row,
+[data-app-shell] .comm-source { color: var(--text-secondary); }
+[data-app-shell] .nc-item__meta, [data-app-shell] .comm-empty,
+[data-app-shell] .nc-detail__empty { color: var(--text-muted); }
+[data-app-shell] .comm-stat, [data-app-shell] .comm-panel,
+[data-app-shell] .nc-item, [data-app-shell] .nc-btn,
+[data-app-shell] .comm-btn { background: var(--surface-elevated); border-color: var(--border); color: var(--text-primary); }
+[data-app-shell] .comm-input, [data-app-shell] .comm-select {
+  background: var(--input-bg); border-color: var(--input-border); color: var(--text-primary);
+}
+[data-app-shell] .comm-panel-head, [data-app-shell] .nc-item,
+[data-app-shell] .nc-detail__footer { border-color: var(--border); }
+[data-app-shell] .comm-badge, [data-app-shell] .nc-item__icon--neutral {
+  background: var(--surface-muted); color: var(--text-secondary);
+}
+[data-app-shell] .nc-item:hover, [data-app-shell] .nc-btn:hover { background: var(--surface-hover); }
+[data-app-shell] .nc-item--unread, [data-app-shell] .nc-item--unread:hover,
+[data-app-shell] .nc-item__unread-label { background: var(--info-soft); color: var(--info-text); }
+[data-app-shell] .nc-item__dot { background: var(--border-strong); }
+[data-app-shell] .nc-item--unread .nc-item__dot { background: var(--info); }
+[data-app-shell] .nc-item__icon--danger, [data-app-shell] .nc-detail__priority--danger {
+  background: var(--danger-soft); color: var(--danger-text);
+}
+[data-app-shell] .nc-item__icon--warning, [data-app-shell] .nc-detail__priority--warning {
+  background: var(--warning-soft); color: var(--warning-text);
+}
+[data-app-shell] .nc-detail__body { background: var(--surface-subtle); border-color: var(--border); color: var(--text-secondary); }
+[data-app-shell] .comm-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+[data-app-shell] .comm-title { font-size: calc(1.75rem * var(--app-font-scale, 1)); }
+[data-app-shell] .comm-sub, [data-app-shell] .comm-stat-label,
+[data-app-shell] .comm-panel-title, [data-app-shell] .comm-btn,
+[data-app-shell] .comm-input, [data-app-shell] .comm-select,
+[data-app-shell] .nc-item__title, [data-app-shell] .nc-detail__body {
+  font-size: calc(.875rem * var(--app-font-scale, 1));
+}
+[data-app-shell] .nc-item__excerpt, [data-app-shell] .nc-btn,
+[data-app-shell] .nc-item__meta { font-size: calc(.75rem * var(--app-font-scale, 1)); }
+[data-app-shell] .comm-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 600px) { [data-app-shell] .comm-filters { grid-template-columns: 1fr; } }

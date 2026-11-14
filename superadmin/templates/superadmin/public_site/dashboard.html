@@ -1,0 +1,37 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Site public{% endblock %}
+{% block page_subtitle %}Pilotage éditorial de la vitrine UFHOB{% endblock %}
+
+{% block content_main %}
+<div class="space-y-6">
+  <section class="rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 p-6 text-white shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div><p class="text-xs font-bold uppercase tracking-[.2em] text-emerald-200">Vitrine UFHOB</p><h2 class="mt-2 text-2xl font-black">Publier sans modifier le code</h2><p class="mt-2 max-w-2xl text-sm text-slate-200">Les écrans ci-dessous éditent directement les modèles consommés par le site public.</p></div>
+      <a href="{% url 'core:home' %}" target="_blank" rel="noopener" class="inline-flex rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-900">Voir la vitrine</a>
+    </div>
+  </section>
+
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="card p-5"><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Écoles publiées</p><p class="mt-2 text-3xl font-black text-slate-900">{{ schools_published }}<span class="text-base text-slate-400">/{{ schools_total }}</span></p></div>
+    <div class="card p-5"><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Programmes publics</p><p class="mt-2 text-3xl font-black text-slate-900">{{ programmes_published }}<span class="text-base text-slate-400">/{{ programmes_total }}</span></p></div>
+    <div class="card p-5"><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Campus actifs</p><p class="mt-2 text-3xl font-black text-slate-900">{{ branches_published }}<span class="text-base text-slate-400">/{{ branches_total }}</span></p></div>
+    <div class="card p-5"><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Actualités publiées</p><p class="mt-2 text-3xl font-black text-slate-900">{{ news_published }}<span class="text-base text-slate-400">/{{ news_total }}</span></p></div>
+  </section>
+
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <article class="card p-5"><h3 class="font-black text-slate-900">Contenus scientifiques</h3><p class="mt-2 text-sm text-slate-500">Une source unique pour les publications, mémoires et thèses.</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:memoire_list' %}" class="btn btn-primary">Travaux scientifiques</a><a href="{% url 'superadmin:memoire_create' %}" class="btn btn-outline">Créer</a></div></article>
+    <article class="card p-5"><h3 class="font-black text-slate-900">Vie universitaire</h3><p class="mt-2 text-sm text-slate-500">Modifier, publier ou réordonner les activités et services.</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:university_life_list' %}" class="btn btn-primary">Gérer</a><a href="{% url 'superadmin:public_infrastructure_list' %}" class="btn btn-outline">Ressources et équipements</a></div></article>
+    <article class="card p-5"><h3 class="font-black text-slate-900">Galerie</h3><p class="mt-2 text-sm text-slate-500">Gérer les médias associés aux événements publiés.</p><a href="{% url 'superadmin:gallery_list' %}" class="btn btn-primary mt-5">Gérer la galerie</a></article>
+    <article class="card p-5"><i data-lucide="landmark" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Université</h3><p class="mt-2 text-sm text-slate-500">Hero, présentation, vision, mission, gouvernance, CTA et identité.</p><a href="{% url 'superadmin:settings' %}#universite" class="btn btn-primary mt-5">Configurer</a></article>
+    <article class="card p-5"><i data-lucide="school" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Écoles</h3><p class="mt-2 text-sm text-slate-500">Identité, images, publication, ordre et implantations SchoolBranch.</p><a href="{% url 'superadmin:public_school_list' %}" class="btn btn-primary mt-5">Gérer</a></article>
+    <article class="card p-5"><i data-lucide="graduation-cap" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Formations</h3><p class="mt-2 text-sm text-slate-500">École, contenu public, publication, admission et mise en avant.</p><a href="{% url 'superadmin:formation_list' %}" class="btn btn-primary mt-5">Gérer</a></article>
+    <article class="card p-5"><i data-lucide="building-2" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Campus & vie</h3><p class="mt-2 text-sm text-slate-500">Contacts, image, description publique et informations d’accès.</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:branch_list' %}" class="btn btn-primary">Campus</a><a href="{% url 'superadmin:settings' %}#vie-universitaire" class="btn btn-outline">Contenu</a></div></article>
+    <article class="card p-5"><i data-lucide="newspaper" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Actualités & événements</h3><p class="mt-2 text-sm text-slate-500">{{ events_published }} événement(s) publié(s), avec médias existants.</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:news_list' %}" class="btn btn-primary">Actualités</a><a href="{% url 'superadmin:event_list' %}" class="btn btn-outline">Événements</a></div></article>
+    <article class="card p-5"><i data-lucide="microscope" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Recherche & innovation</h3><p class="mt-2 text-sm text-slate-500">{{ memories_published }} mémoire(s) publié(s), événements et infrastructures.</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:settings' %}#recherche" class="btn btn-primary">Présentation</a><a href="{% url 'superadmin:memoire_list' %}" class="btn btn-outline">Mémoires</a><a href="{% url 'superadmin:public_infrastructure_list' %}" class="btn btn-outline">Infrastructures</a></div></article>
+    <article class="card p-5"><i data-lucide="gem" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Valeurs</h3><p class="mt-2 text-sm text-slate-500">Les engagements affichés sur la page d’accueil.</p><a href="{% url 'superadmin:public_value_list' %}" class="btn btn-primary mt-5">Gérer</a></article>
+    <article class="card p-5"><i data-lucide="message-square" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Mot du Directeur Général</h3><p class="mt-2 text-sm text-slate-500">Message, signataire, photo et publication de la direction.</p><a href="{% url 'superadmin:director_message_list' %}" class="btn btn-primary mt-5">Gérer</a></article>
+    <article class="card p-5"><i data-lucide="contact" class="h-7 w-7 text-emerald-600"></i><h3 class="mt-4 font-black text-slate-900">Contact</h3><p class="mt-2 text-sm text-slate-500">Coordonnées centrales, réseaux sociaux et {{ messages_unread }} message(s) non lu(s).</p><div class="mt-5 flex flex-wrap gap-2"><a href="{% url 'superadmin:settings' %}#contact" class="btn btn-primary">Coordonnées</a><a href="{% url 'superadmin:message_list' %}" class="btn btn-outline">Messages</a></div></article>
+  </section>
+</div>
+{% endblock %}
