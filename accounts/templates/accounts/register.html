@@ -1,121 +1,124 @@
-{% extends "base.html" %}
+{% extends "portal/auth_base.html" %}
+{% load static %}
+
+{% block title %}Créer un compte | UFHOB{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+  .auth-glass-orb {
+    will-change: transform;
+    background: linear-gradient(145deg, rgba(255,255,255,.17), rgba(255,255,255,.035));
+    border: 1px solid rgba(255,255,255,.22);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.28), inset 0 -10px 24px rgba(8,48,78,.12), 0 22px 55px rgba(3,29,51,.18);
+    backdrop-filter: blur(28px) saturate(145%);
+    -webkit-backdrop-filter: blur(28px) saturate(145%);
+    filter: blur(.35px);
+    animation: authGlassDrift 15s cubic-bezier(.42, 0, .58, 1) infinite;
+  }
+  .auth-glass-orb--two { animation-duration: 19s; animation-delay: -6s; }
+  .auth-glass-orb--three { animation-duration: 17s; animation-delay: -11s; }
+  .auth-glass-orb--four { animation-duration: 22s; animation-delay: -15s; }
+  @keyframes authGlassDrift {
+    0%, 100% { transform: translate3d(-34px, -22px, 0) scale(1); }
+    35% { transform: translate3d(54px, 25px, 0) scale(1.06); }
+    70% { transform: translate3d(8px, 58px, 0) scale(.98); }
+  }
+  @media (prefers-reduced-motion: reduce) { .auth-glass-orb { animation: none; } }
+</style>
+{% endblock %}
+
+{% block public_navbar %}{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+{% block public_footer %}{% endblock %}
+
 {% block content %}
-
-<!-- ================= HERO ================= -->
-<section class="relative pt-24 pb-16 bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white">
-    <div class="max-w-4xl mx-auto px-4">
-
-        <!-- Bouton retour -->
-        <a href="{% url 'community:topic_list' %}"
-           class="inline-flex items-center gap-2 text-sm text-primary-100 hover:text-white transition group mb-8">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Retour à la communauté
-        </a>
-
-        <h1 class="text-3xl font-bold">Créer un compte</h1>
-        <p class="text-primary-100 mt-2 text-sm">
-            Rejoignez l'espace communautaire et participez aux échanges académiques.
-        </p>
-
+<section class="min-h-screen bg-white lg:flex">
+  <aside class="relative hidden overflow-hidden bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 text-white lg:flex lg:w-[58%] lg:flex-col lg:justify-between lg:p-12 xl:p-20">
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div class="auth-glass-orb absolute left-[10%] top-[15%] h-36 w-36 rounded-full opacity-45"></div>
+      <div class="auth-glass-orb auth-glass-orb--two absolute right-[12%] top-[26%] h-52 w-52 rounded-full opacity-35"></div>
+      <div class="auth-glass-orb auth-glass-orb--three absolute bottom-[16%] left-[22%] h-28 w-28 rounded-full opacity-40"></div>
+      <div class="auth-glass-orb auth-glass-orb--four absolute bottom-[8%] right-[28%] h-20 w-20 rounded-full opacity-30"></div>
     </div>
-</section>
 
+    <div class="relative">
+      <a href="{% url 'core:home' %}" class="inline-flex items-center gap-3 text-sm font-semibold text-white/80 transition hover:text-white">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Retour au site UFHOB
+      </a>
+    </div>
 
-<!-- ================= FORMULAIRE ================= -->
-<section class="bg-gray-50 py-16">
-    <div class="max-w-md mx-auto px-4">
+    <div class="relative max-w-2xl pb-12">
+      <p class="text-lg font-semibold tracking-wide text-secondary">Un premier pas vers votre parcours</p>
+      <h1 class="mt-4 text-5xl font-bold leading-[1.08] tracking-tight xl:text-6xl">Votre vocation mérite un espace à votre mesure.</h1>
+      <p class="mt-8 max-w-xl text-lg leading-relaxed text-white/85">Créez votre accès personnel pour retrouver les informations et les outils utiles à votre parcours au sein de l’UFHOB.</p>
+      <div class="mt-9 max-w-lg border-l-2 border-secondary pl-5 text-base leading-relaxed text-white/75">Grandir dans les sciences de la santé, c’est apprendre à transformer ses connaissances en attention pour les autres.</div>
+    </div>
 
-        <div class="bg-white shadow-xl rounded-2xl p-10 border border-gray-100">
+    <div class="relative grid grid-cols-3 gap-8 border-t border-white/15 pt-8 text-white/75">
+      <div>
+        <svg class="h-9 w-9 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14M5 12h14"/></svg>
+        <p class="mt-3 text-sm font-medium">Un accès personnel</p>
+      </div>
+      <div>
+        <svg class="h-9 w-9 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 2h12a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-10 0v3H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2Z"/></svg>
+        <p class="mt-3 text-sm font-medium">Vos données protégées</p>
+      </div>
+      <div>
+        <svg class="h-9 w-9 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m7 12 3 3 7-7M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg>
+        <p class="mt-3 text-sm font-medium">Une inscription simple</p>
+      </div>
+    </div>
+  </aside>
 
-            <!-- Logo institution (optionnel) -->
-            <div class="flex justify-center mb-8">
-                <div class="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-                    </svg>
-                </div>
-            </div>
+  <div class="flex min-h-screen w-full items-center justify-center px-5 py-10 sm:px-8 lg:w-[42%] lg:px-12">
+    <div class="w-full max-w-md">
+      <div class="relative mb-10 flex min-h-12 items-center justify-center">
+        <a href="{% url 'core:home' %}" class="absolute left-0 inline-flex items-center gap-2 text-sm font-semibold text-primary-700 lg:hidden">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Site UFHOB
+        </a>
+        <img src="{% static 'images/students/logo-ubhob.png' %}" alt="Université Félix Houphouët-Boigny – Mali" class="h-24 w-24 object-contain sm:h-28 sm:w-28">
+      </div>
 
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
+      <div class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-secondary">Nouveau compte</p>
+        <h2 class="mt-3 text-3xl font-bold tracking-tight text-primary-900">Créer votre compte</h2>
+        <p class="mt-3 text-base leading-relaxed text-slate-500">Choisissez vos identifiants pour accéder à votre espace personnel.</p>
+      </div>
 
-                {% if form.non_field_errors %}
-                <div class="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-sm flex items-center gap-2">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                    </svg>
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
 
-                <!-- Username -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Nom d'utilisateur
-                    </label>
-                    {{ form.username }}
-                    {% if form.username.errors %}
-                    <p class="text-red-500 text-sm mt-1">{{ form.username.errors.0 }}</p>
-                    {% endif %}
-                </div>
+        {% if form.non_field_errors %}
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
 
-                <!-- Password -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Mot de passe
-                    </label>
-                    {{ form.password1 }}
-                    {% if form.password1.errors %}
-                    <p class="text-red-500 text-sm mt-1">{{ form.password1.errors.0 }}</p>
-                    {% endif %}
-                </div>
-
-                <!-- Confirmation -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Confirmation du mot de passe
-                    </label>
-                    {{ form.password2 }}
-                    {% if form.password2.errors %}
-                    <p class="text-red-500 text-sm mt-1">{{ form.password2.errors.0 }}</p>
-                    {% endif %}
-                </div>
-
-                <!-- Submit -->
-                <button type="submit"
-                        class="w-full bg-gradient-to-r from-accent to-accent-dark text-white py-3.5 rounded-xl font-semibold transition shadow-lg hover:shadow-xl hover:scale-[1.02] transform">
-                    Créer mon compte
-                </button>
-
-            </form>
-
-            <!-- Divider -->
-            <div class="relative my-8">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-200"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-4 bg-white text-gray-500">ou</span>
-                </div>
-            </div>
-
-            <!-- Lien connexion - URL CORRIGÉE -->
-            <div class="text-center">
-                <p class="text-sm text-gray-500">
-                    Déjà un compte ?
-                    <a href="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}"
-                       class="text-primary-600 hover:text-primary-700 font-semibold">
-                        Se connecter
-                    </a>
-                </p>
-            </div>
-
+        <div>
+          <label for="{{ form.username.id_for_label }}" class="mb-2 block text-sm font-semibold text-primary-900">Nom d’utilisateur <span class="text-secondary">*</span></label>
+          {{ form.username }}
+          {% if form.username.errors %}<p class="mt-1.5 text-xs text-red-600">{{ form.username.errors.0 }}</p>{% endif %}
         </div>
 
-    </div>
-</section>
+        <div>
+          <label for="{{ form.password1.id_for_label }}" class="mb-2 block text-sm font-semibold text-primary-900">Mot de passe <span class="text-secondary">*</span></label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}<p class="mt-1.5 text-xs text-red-600">{{ form.password1.errors.0 }}</p>{% endif %}
+        </div>
 
+        <div>
+          <label for="{{ form.password2.id_for_label }}" class="mb-2 block text-sm font-semibold text-primary-900">Confirmer le mot de passe <span class="text-secondary">*</span></label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}<p class="mt-1.5 text-xs text-red-600">{{ form.password2.errors.0 }}</p>{% endif %}
+        </div>
+
+        <p class="rounded-xl bg-primary-50 px-4 py-3 text-xs leading-relaxed text-primary-700">Utilisez un mot de passe d’au moins 8 caractères. Évitez les informations faciles à deviner.</p>
+        <button type="submit" class="w-full rounded-xl bg-primary-900 px-5 py-3.5 font-semibold text-white shadow-sm transition duration-200 hover:bg-primary-800 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-primary-200">Créer mon compte</button>
+      </form>
+
+      <p class="mt-7 border-t border-slate-200 pt-6 text-center text-sm text-slate-500">Vous avez déjà un compte ? <a href="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="font-semibold text-primary-700 transition hover:text-secondary">Se connecter</a></p>
+    </div>
+  </div>
+</section>
 {% endblock %}

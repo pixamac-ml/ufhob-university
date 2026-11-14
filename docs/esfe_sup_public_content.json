@@ -1,0 +1,407 @@
+{
+  "source": "Tarifs : fiche institutionnelle transmise par l’utilisateur dans la mission P0. Contenus : rédaction éditoriale autorisée ; aucun contenu de maquette ni droit professionnel ajouté.",
+  "currency": "XOF",
+  "school_id": 4,
+  "school": {
+    "description": "ESFé Sup porte l’offre de formation supérieure en sciences et métiers de la santé au sein de l’Université Félix Houphouët-Boigny - Mali.",
+    "detailed_description": "ESFé Sup propose des parcours de niveau Master orientés vers l’approfondissement des compétences professionnelles, scientifiques, pédagogiques et managériales dans différents domaines de la santé.\n\nDomaines de formation : biologie médicale, gynécologie obstétrique, management, pédagogie, épidémiologie, nutrition et santé environnementale.\n\nApproche de formation : les orientations présentées dans chaque parcours mettent l’accent sur l’analyse des situations de santé, la démarche scientifique et le développement des compétences propres au domaine choisi.\n\nInformations pratiques : les Masters sont organisés sur deux années de cursus. ESFé Sup est actuellement implantée à Moribabougou. Les fiches des formations présentent les objectifs, les domaines professionnels possibles et les frais par année.",
+    "cta_title": "Choisissez votre parcours de Master en santé",
+    "cta_text": "Consultez les formations d’ESFé Sup, leurs orientations et les frais de chaque année.",
+    "cta_button_text": "Explorer les Masters",
+    "cta_button_url": "/formations/?school=ESF%C3%89"
+  },
+  "programmes": [
+    {
+      "id": 51,
+      "formation": "Biologie Médicale",
+      "short_description": "Sciences biologiques appliquées à la santé, démarche analytique et qualité en laboratoire.",
+      "description": "<p>Ce Master est orienté vers les sciences biologiques appliquées à la santé et les activités de laboratoire. Il vise à approfondir les connaissances biomédicales et la démarche d’analyse nécessaires à l’exploitation des résultats biologiques.</p>",
+      "learning_outcomes": "Approfondir les sciences biomédicales utiles au diagnostic.\nRenforcer la démarche analytique et la qualité en laboratoire.",
+      "skills": [
+        "Analyser et interpréter des résultats biologiques dans leur contexte.",
+        "Identifier les exigences de qualité et de traçabilité des analyses.",
+        "Mobiliser les sciences biomédicales dans une démarche scientifique."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nLaboratoires de biologie médicale\nLaboratoires de recherche\nStructures sanitaires\nContrôle et qualité biologique\nProjets liés aux analyses biomédicales\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "formation": "Gynécologie Obstétrique",
+      "short_description": "Approfondissement des connaissances en santé de la femme, santé reproductive et maternité.",
+      "description": "<p>Ce Master porte sur la santé reproductive, la gynécologie et l’obstétrique. Il vise l’approfondissement des connaissances relatives à la santé de la femme, à la grossesse et à la maternité, ainsi qu’à la prévention et à l’organisation des soins concernés.</p>",
+      "learning_outcomes": "Approfondir les connaissances en santé reproductive et maternelle.\nRenforcer l’analyse des besoins de prévention et de suivi.",
+      "skills": [
+        "Analyser les besoins liés à la santé de la femme et à la maternité.",
+        "Mobiliser une démarche de prévention et de suivi adaptée au contexte.",
+        "Contribuer à l’organisation des activités de santé reproductive."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nStructures de santé\nProgrammes de santé maternelle\nServices liés à la santé reproductive\nEnseignement et formation selon la qualification préalable\nProjets sanitaires spécialisés\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "formation": "Manager en Santé",
+      "short_description": "Organisation, planification et pilotage des services, des équipes et des projets de santé.",
+      "description": "<p>Ce Master est orienté vers le management des organisations et services de santé. Il aborde la planification, la coordination des équipes, la gestion de projets, la qualité et le suivi des activités dans une perspective de gouvernance sanitaire.</p>",
+      "learning_outcomes": "Développer une compréhension du pilotage des organisations de santé.\nRenforcer les capacités de planification et de coordination des activités.",
+      "skills": [
+        "Structurer un projet et planifier ses activités.",
+        "Coordonner une équipe et organiser le suivi des actions.",
+        "Analyser des indicateurs de qualité et de fonctionnement."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nÉtablissements de santé\nAdministration sanitaire\nProjets et programmes de santé\nONG et organisations sanitaires\nCoordination et gestion de structures ou services\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "formation": "Pédagogie en Santé",
+      "short_description": "Conception, organisation et évaluation des activités de formation dans le domaine de la santé.",
+      "description": "<p>Ce Master est orienté vers la conception et l’amélioration des activités d’enseignement et de formation en santé. Il vise à approfondir l’ingénierie pédagogique, les méthodes d’enseignement, l’évaluation des apprentissages et l’accompagnement des apprenants.</p>",
+      "learning_outcomes": "Développer une démarche de conception pédagogique adaptée à la santé.\nRenforcer l’analyse et l’amélioration des activités de formation.",
+      "skills": [
+        "Concevoir des supports et des séquences pédagogiques.",
+        "Choisir des méthodes d’enseignement et d’évaluation cohérentes.",
+        "Accompagner les apprenants et analyser leurs besoins."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nÉtablissements de formation en santé\nFormation continue\nCoordination pédagogique\nConception de programmes de formation\nAccompagnement pédagogique\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "formation": "Épidémiologie",
+      "short_description": "Étude de la fréquence, de la distribution et des déterminants des problèmes de santé.",
+      "description": "<p>Ce Master porte sur la fréquence, la distribution et les déterminants des problèmes de santé dans les populations. Ses orientations couvrent la surveillance, la méthodologie des études, l’analyse des données, la prévention et l’investigation en santé publique.</p>",
+      "learning_outcomes": "Approfondir la compréhension des méthodes épidémiologiques.\nRenforcer l’utilisation de données dans l’analyse des problèmes de santé.",
+      "skills": [
+        "Analyser des données et interpréter les résultats d’une étude épidémiologique.",
+        "Contribuer à la surveillance et à l’investigation des problèmes de santé.",
+        "Mobiliser la méthodologie des études pour orienter la prévention."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nSanté publique\nSurveillance épidémiologique\nRecherche\nProgrammes sanitaires et ONG\nAnalyse et suivi de données de santé\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 600000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 300000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 300000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "formation": "Nutrition",
+      "short_description": "Analyse des enjeux alimentaires et nutritionnels, prévention et projets de santé.",
+      "description": "<p>Ce Master est orienté vers la nutrition humaine et son rôle dans la prévention et la prise en charge des problèmes de santé. Il aborde l’évaluation nutritionnelle, la prévention de la malnutrition, la nutrition communautaire et les programmes nutritionnels.</p>",
+      "learning_outcomes": "Approfondir les connaissances sur les enjeux nutritionnels.\nRenforcer l’analyse des besoins et des actions de prévention.",
+      "skills": [
+        "Analyser une situation nutritionnelle et les besoins d’une population.",
+        "Contribuer aux actions de prévention de la malnutrition.",
+        "Participer à la conception et au suivi de programmes nutritionnels."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nProgrammes de nutrition\nStructures sanitaires selon la qualification préalable\nSanté communautaire et ONG\nProjets de prévention\nRecherche et études nutritionnelles\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 600000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 300000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 300000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "formation": "Santé Environnementale",
+      "short_description": "Analyse des relations entre environnement et santé, risques et prévention.",
+      "description": "<p>Ce Master porte sur les relations entre environnement, conditions de vie et santé humaine. Ses orientations couvrent les risques environnementaux, l’hygiène, l’eau et l’assainissement, la prévention, l’environnement professionnel et la surveillance des facteurs de risque.</p>",
+      "learning_outcomes": "Approfondir la compréhension des facteurs environnementaux de santé.\nRenforcer l’analyse des risques et des actions de prévention.",
+      "skills": [
+        "Identifier et analyser des facteurs de risque environnementaux.",
+        "Contribuer aux démarches d’hygiène, d’eau et d’assainissement.",
+        "Participer à la surveillance des risques et aux actions de prévention."
+      ],
+      "career_opportunities": "Domaines professionnels possibles :\nSanté environnementale\nHygiène et assainissement\nCollectivités\nProgrammes de prévention et ONG\nStructures de santé publique\nProjets environnement et santé\nCes perspectives dépendent du parcours préalable et des conditions d’accès propres aux fonctions concernées. Le Master ne confère pas automatiquement une autorisation d’exercice ou d’actes réglementés.",
+      "program_structure": "Parcours de niveau Master organisé sur deux années de cursus : 1re année puis 2e année.",
+      "years": [
+        {
+          "year_number": 1,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 410000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 200000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 200000,
+              "due_month": "Mars"
+            }
+          ]
+        },
+        {
+          "year_number": 2,
+          "fees": [
+            {
+              "label": "Inscription",
+              "amount": 600000,
+              "due_month": "À l’inscription"
+            },
+            {
+              "label": "Janvier",
+              "amount": 300000,
+              "due_month": "Janvier"
+            },
+            {
+              "label": "Mars",
+              "amount": 300000,
+              "due_month": "Mars"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

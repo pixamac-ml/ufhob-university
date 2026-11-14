@@ -1,3 +1,4 @@
+from accounts.scoping import scoped
 # accounts/dashboards/executive_dashboard.py
 
 from django.shortcuts import render, redirect
@@ -12,7 +13,9 @@ from admissions.models import Candidature
 from inscriptions.models import Inscription
 from payments.models import Payment, PaymentAgent
 from branches.models import Branch
+from accounts.models import BranchBankTransfer
 from formations.models import Programme
+from students.models import StudentYearDecision
 
 from .permissions import check_executive_access
 
@@ -34,16 +37,16 @@ def executive_dashboard(request):
     # STATISTIQUES GLOBALES
     # =====================================================
 
-    total_students = Student.objects.filter(
+    total_students = scoped(Student, user=request.user).filter(
         is_active=True
     ).count()
 
-    total_candidatures = Candidature.objects.count()
+    total_candidatures = scoped(Candidature, user=request.user).count()
 
-    total_inscriptions = Inscription.objects.count()
+    total_inscriptions = scoped(Inscription, user=request.user).count()
 
     total_revenue = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(status="validated")
         .aggregate(total=Sum("amount"))["total"]
         or 0
@@ -54,7 +57,7 @@ def executive_dashboard(request):
     # =====================================================
 
     revenue_today = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(
             status="validated",
             paid_at__date=today
@@ -64,7 +67,7 @@ def executive_dashboard(request):
     )
 
     revenue_week = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(
             status="validated",
             paid_at__date__gte=week
@@ -74,7 +77,7 @@ def executive_dashboard(request):
     )
 
     revenue_month = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(
             status="validated",
             paid_at__date__gte=month
@@ -87,7 +90,7 @@ def executive_dashboard(request):
     # TAUX DE CONVERSION
     # =====================================================
 
-    accepted_candidatures = Candidature.objects.filter(
+    accepted_candidatures = scoped(Candidature, user=request.user).filter(
         status="accepted"
     ).count()
 
@@ -101,7 +104,7 @@ def executive_dashboard(request):
     # ADMISSIONS STATS
     # =====================================================
 
-    admissions_stats = Candidature.objects.aggregate(
+    admissions_stats = scoped(Candidature, user=request.user).aggregate(
 
         submitted=Count("id", filter=Q(status="submitted")),
 
@@ -117,7 +120,7 @@ def executive_dashboard(request):
     # STATISTIQUES PAR ANNEXE (ENRICHIES)
     # =====================================================
 
-    branches = Branch.objects.filter(is_active=True)
+    branches = scoped(Branch, user=request.user).filter(is_active=True)
 
     branch_stats = []
 
@@ -125,7 +128,7 @@ def executive_dashboard(request):
 
         # Revenus totaux
         revenue = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(
                 inscription__candidature__branch=branch,
                 status="validated"
@@ -136,7 +139,7 @@ def executive_dashboard(request):
 
         # Revenus du mois
         monthly_revenue = (
-            Payment.objects
+            scoped(Payment, user=request.user)
             .filter(
                 inscription__candidature__branch=branch,
                 status="validated",
@@ -147,24 +150,24 @@ def executive_dashboard(request):
         )
 
         # Nombre d'étudiants actifs
-        students_count = Student.objects.filter(
+        students_count = scoped(Student, user=request.user).filter(
             inscription__candidature__branch=branch,
             is_active=True
         ).count()
 
         # Total candidatures
-        candidatures_count = Candidature.objects.filter(
+        candidatures_count = scoped(Candidature, user=request.user).filter(
             branch=branch
         ).count()
 
         # Candidatures acceptées
-        accepted_count = Candidature.objects.filter(
+        accepted_count = scoped(Candidature, user=request.user).filter(
             branch=branch,
             status="accepted"
         ).count()
 
         # Inscriptions
-        inscriptions_count = Inscription.objects.filter(
+        inscriptions_count = scoped(Inscription, user=request.user).filter(
             candidature__branch=branch
         ).count()
 
@@ -173,6 +176,14 @@ def executive_dashboard(request):
             branch=branch,
             is_active=True
         ).count()
+
+        # Versements bancaires
+        bank_transfers = BranchBankTransfer.objects.filter(
+            branch=branch,
+        ).order_by("-transfer_date")[:5]
+        bank_transfers_total = BranchBankTransfer.objects.filter(
+            branch=branch,
+        ).aggregate(total=Sum("amount"))["total"] or 0
 
         branch_stats.append({
 
@@ -189,6 +200,9 @@ def executive_dashboard(request):
             "inscriptions": inscriptions_count,
 
             "agents": agents_count,
+
+            "bank_transfers": bank_transfers,
+            "bank_transfers_total": bank_transfers_total,
 
         })
 
@@ -229,7 +243,7 @@ def executive_dashboard(request):
     # =====================================================
 
     programmes_popularity = (
-        Inscription.objects
+        scoped(Inscription, user=request.user)
         .values("candidature__programme__title")
         .annotate(count=Count("id"))
         .order_by("-count")
@@ -241,7 +255,7 @@ def executive_dashboard(request):
     # =====================================================
 
     recent_inscriptions = (
-        Inscription.objects
+        scoped(Inscription, user=request.user)
         .select_related(
             "candidature",
             "candidature__programme",
@@ -256,7 +270,7 @@ def executive_dashboard(request):
     # =====================================================
 
     recent_payments = (
-        Payment.objects
+        scoped(Payment, user=request.user)
         .filter(status="validated")
         .select_related(
             "inscription",
@@ -264,6 +278,24 @@ def executive_dashboard(request):
         )
         .order_by("-paid_at")
         [:10]
+    )
+
+    reenrollment_stats = scoped(StudentYearDecision, user=request.user).aggregate(
+        draft=Count("id", filter=Q(workflow_status=StudentYearDecision.WORKFLOW_DRAFT)),
+        academic_validated=Count("id", filter=Q(workflow_status=StudentYearDecision.WORKFLOW_ACADEMIC_VALIDATED)),
+        finance_validated=Count("id", filter=Q(workflow_status=StudentYearDecision.WORKFLOW_FINANCE_VALIDATED)),
+        applied=Count("id", filter=Q(workflow_status=StudentYearDecision.WORKFLOW_APPLIED)),
+        rejected=Count("id", filter=Q(workflow_status=StudentYearDecision.WORKFLOW_REJECTED)),
+    )
+
+    # =====================================================
+    # VERSEMENTS BANCAIRES GLOBAUX
+    # =====================================================
+
+    all_bank_transfers = (
+        BranchBankTransfer.objects
+        .select_related("branch", "closure", "created_by")
+        .order_by("-transfer_date")[:30]
     )
 
     # =====================================================
@@ -297,7 +329,9 @@ def executive_dashboard(request):
         "recent_inscriptions": recent_inscriptions,
 
         "recent_payments": recent_payments,
+        "reenrollment_stats": reenrollment_stats,
 
+        "all_bank_transfers": all_bank_transfers,
         "dashboard_type": "executive"
 
     }

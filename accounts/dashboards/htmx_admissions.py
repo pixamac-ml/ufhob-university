@@ -6,18 +6,22 @@ Vues HTMX pour le dashboard admissions.
 Gestion dynamique des candidatures et documents
 sans rechargement de page.
 """
+from accounts.scoping import scoped
 
 import json
+from functools import wraps
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.views.decorators.http import require_POST, require_GET
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count
 
+from academics.models import AcademicClass
+from academics.services.academic_positioning import get_positioning_context, get_positioning_fee_for_level
 from admissions.models import Candidature, CandidatureDocument
 from inscriptions.models import Inscription
 from inscriptions.services import create_inscription_from_candidature
@@ -36,6 +40,7 @@ def htmx_admissions_required(view_func):
     Décorateur combiné : login + accès admissions + requête HTMX.
     """
 
+    @wraps(view_func)
     def wrapper(request, *args, **kwargs):
 
         if not request.user.is_authenticated:
@@ -59,6 +64,23 @@ def htmx_admissions_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return wrapper
+
+
+def _render_academic_positioning_modal(request, candidature, *, form_error="", selected_level="", selected_class_id=""):
+    positioning = get_positioning_context(candidature=candidature)
+    html = render_to_string(
+        "accounts/dashboard/partials/academic_positioning_modal.html",
+        {
+            "candidature": candidature,
+            "positioning": positioning,
+            "form_error": form_error,
+            "selected_level": (selected_level or "").strip().upper(),
+            "selected_class_id": str(selected_class_id or "").strip(),
+            "submit_url_name": "accounts:create_inscription_htmx",
+        },
+        request=request,
+    )
+    return HttpResponse(html)
 
 
 # ==========================================================
@@ -93,7 +115,7 @@ def approve_candidature_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"candidature": candidature},
+            {"cand": candidature},
             request=request
         )
 
@@ -102,8 +124,11 @@ def approve_candidature_htmx(request, candidature_id):
             "candidatureApproved": {
                 "id": candidature.id
             },
+            "openInscriptionPositioning": {
+                "url": reverse("accounts:inscription_positioning_modal_htmx", args=[candidature.id])
+            },
             "showToast": {
-                "message": f"Candidature {candidature.reference} approuvée",
+                "message": f"Candidature {candidature.reference} approuvee. Positionnement academique requis.",
                 "type": "success"
             }
         })
@@ -145,7 +170,7 @@ def reject_candidature_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"candidature": candidature},
+            {"cand": candidature},
             request=request
         )
 
@@ -199,7 +224,7 @@ def set_candidature_under_review_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"candidature": candidature},
+            {"cand": candidature},
             request=request
         )
 
@@ -250,7 +275,7 @@ def set_candidature_to_complete_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"candidature": candidature},
+            {"cand": candidature},
             request=request
         )
 
@@ -287,7 +312,7 @@ def validate_document_htmx(request, document_id):
     """
 
     document = get_object_or_404(
-        CandidatureDocument.objects.select_related("candidature"),
+        scoped(CandidatureDocument, user=request.user).select_related("candidature"),
         id=document_id
     )
 
@@ -304,14 +329,16 @@ def validate_document_htmx(request, document_id):
     try:
         with transaction.atomic():
 
+            # Keep both fields in sync for legacy screens still reading is_valid.
+            document.is_valid = True
             document.is_validated = True
             document.validated_at = timezone.now()
             # Sauvegarde uniquement les champs qui existent
-            document.save(update_fields=["is_validated", "validated_at"])
+            document.save(update_fields=["is_valid", "is_validated", "validated_at"])
 
         html = render_to_string(
             "accounts/dashboard/partials/document_row.html",
-            {"document": document},
+            {"doc": document},
             request=request
         )
 
@@ -340,14 +367,29 @@ def validate_document_htmx(request, document_id):
 # CRÉATION INSCRIPTION
 # ==========================================================
 
+@require_GET
+@htmx_admissions_required
+def inscription_positioning_modal_htmx(request, candidature_id):
+    candidature = get_object_or_404(
+        get_base_queryset(request.user, "candidature"),
+        id=candidature_id,
+        status__in=["accepted", "accepted_with_reserve"],
+    )
+
+    if hasattr(candidature, "inscription"):
+        return HttpResponse("Inscription deja creee", status=400)
+
+    return _render_academic_positioning_modal(request, candidature)
+
 
 @require_POST
+@htmx_admissions_required
 def create_inscription_htmx(request, candidature_id):
 
     candidature = get_object_or_404(
-        Candidature,
+        get_base_queryset(request.user, "candidature"),
         id=candidature_id,
-        status="accepted"
+        status__in=["accepted", "accepted_with_reserve"],
     )
 
     if hasattr(candidature, "inscription"):
@@ -366,7 +408,8 @@ def create_inscription_htmx(request, candidature_id):
 
         inscription = create_inscription_from_candidature(
             candidature=candidature,
-            amount_due=amount_due
+            amount_due=amount_due,
+            actor=request.user,
         )
 
         html = render_to_string(
@@ -375,7 +418,18 @@ def create_inscription_htmx(request, candidature_id):
             request=request
         )
 
-        return HttpResponse(html)
+        response = HttpResponse(html)
+        response["HX-Trigger"] = json.dumps({
+            "inscriptionCreated": {
+                "candidature_id": candidature.id,
+                "inscription_id": inscription.id,
+            },
+            "showToast": {
+                "message": "Inscription creee avec succes.",
+                "type": "success",
+            }
+        })
+        return response
 
     except Exception as e:
 
@@ -387,6 +441,78 @@ def create_inscription_htmx(request, candidature_id):
 # ==========================================================
 # DÉTAIL CANDIDATURE
 # ==========================================================
+
+@require_POST
+@htmx_admissions_required
+def create_positioned_inscription_htmx(request, candidature_id):
+    candidature = get_object_or_404(
+        get_base_queryset(request.user, "candidature"),
+        id=candidature_id,
+        status__in=["accepted", "accepted_with_reserve"],
+    )
+
+    if hasattr(candidature, "inscription"):
+        return HttpResponse("Inscription deja creee", status=400)
+
+    selected_level = request.POST.get("academic_level", "").strip().upper()
+    academic_class_id = request.POST.get("academic_class", "").strip()
+    academic_class = (
+        scoped(AcademicClass, user=request.user).select_related("programme", "branch", "academic_year")
+        .filter(pk=academic_class_id)
+        .first()
+    )
+
+    if not academic_class:
+        return _render_academic_positioning_modal(
+            request,
+            candidature,
+            form_error="Selectionnez une classe existante avant de creer l'inscription.",
+            selected_level=selected_level,
+            selected_class_id=academic_class_id,
+        )
+
+    amount_due = get_positioning_fee_for_level(candidature.programme, academic_class.level)
+    if amount_due <= 0:
+        return _render_academic_positioning_modal(
+            request,
+            candidature,
+            form_error="Aucun frais n'est configure pour ce niveau dans ce programme.",
+            selected_level=selected_level or academic_class.level,
+            selected_class_id=academic_class_id,
+        )
+
+    try:
+        inscription = create_inscription_from_candidature(
+            candidature=candidature,
+            amount_due=amount_due,
+            academic_class=academic_class,
+            actor=request.user,
+        )
+    except Exception as e:
+        return _render_academic_positioning_modal(
+            request,
+            candidature,
+            form_error=str(e),
+            selected_level=selected_level or getattr(academic_class, "level", ""),
+            selected_class_id=academic_class_id,
+        )
+
+    response = HttpResponse("")
+    response["HX-Trigger"] = json.dumps({
+        "inscriptionCreated": {
+            "candidature_id": candidature.id,
+            "inscription_id": inscription.id,
+        },
+        "showToast": {
+            "message": "Inscription creee avec succes.",
+            "type": "success",
+        }
+    })
+    return response
+
+
+create_inscription_htmx = create_positioned_inscription_htmx
+
 
 @require_GET
 @htmx_admissions_required
@@ -423,7 +549,7 @@ def get_candidature_detail_htmx(request, candidature_id):
     has_inscription = False
     inscription = None
     try:
-        inscription = Inscription.objects.filter(candidature=candidature).first()
+        inscription = scoped(Inscription, user=request.user).filter(candidature=candidature).first()
         has_inscription = inscription is not None
     except:
         pass
@@ -509,7 +635,7 @@ def delete_candidature_htmx(request, candidature_id):
     )
 
     # Vérifier si pas d'inscription liée
-    if Inscription.objects.filter(candidature=candidature).exists():
+    if scoped(Inscription, user=request.user).filter(candidature=candidature).exists():
         return HttpResponse(
             "<div class='text-red-500'>Impossible de supprimer : inscription existante</div>",
             status=400
@@ -564,7 +690,11 @@ def candidatures_list_htmx(request):
     # Filtres
     status = request.GET.get("status")
     programme_id = request.GET.get("programme")
-    search = request.GET.get("q")
+    search = (request.GET.get("q") or request.GET.get("search") or "").strip()
+
+    # Backward compatibility: pending == submitted for candidatures.
+    if status == "pending":
+        status = "submitted"
 
     if status:
         candidatures = candidatures.filter(status=status)
@@ -573,22 +703,33 @@ def candidatures_list_htmx(request):
         candidatures = candidatures.filter(programme_id=programme_id)
 
     if search:
-        candidatures = candidatures.filter(
-            Q(reference__icontains=search) |
-            Q(first_name__icontains=search) |
-            Q(last_name__icontains=search) |
-            Q(email__icontains=search)
+        search_filter = (
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(email__icontains=search)
+            | Q(phone__icontains=search)
+            | Q(programme__title__icontains=search)
+            | Q(branch__name__icontains=search)
+            | Q(academic_year__icontains=search)
         )
+
+        # Optional support for canonical references like CAND-2026-00012.
+        if search.upper().startswith("CAND-"):
+            ref_parts = search.upper().split("-")
+            if len(ref_parts) >= 3 and ref_parts[-1].isdigit():
+                search_filter = search_filter | Q(id=int(ref_parts[-1]))
+
+        candidatures = candidatures.filter(search_filter)
 
     # Tri
     order = request.GET.get("order", "recent")
 
     if order == "oldest":
-        candidatures = candidatures.order_by("created_at")
+        candidatures = candidatures.order_by("submitted_at")
     elif order == "name":
         candidatures = candidatures.order_by("last_name", "first_name")
     else:
-        candidatures = candidatures.order_by("-created_at")
+        candidatures = candidatures.order_by("-submitted_at")
 
     # Pagination
     from django.core.paginator import Paginator
@@ -597,11 +738,16 @@ def candidatures_list_htmx(request):
     page = request.GET.get("page", 1)
     candidatures_page = paginator.get_page(page)
 
+    query_data = request.GET.copy()
+    query_data.pop("page", None)
+    pagination_query = query_data.urlencode()
+
     html = render_to_string(
         "accounts/dashboard/partials/candidatures_table.html",
         {
             "candidatures": candidatures_page,
-            "paginator": paginator
+            "paginator": paginator,
+            "pagination_query": pagination_query,
         },
         request=request
     )
@@ -626,12 +772,14 @@ def documents_list_htmx(request):
         .values_list("id", flat=True)
     )
 
+    unvalidated_filter = Q(is_valid=False) | Q(is_validated=False)
+
     documents = (
-        CandidatureDocument.objects
+        scoped(CandidatureDocument, user=request.user)
         .filter(
             candidature_id__in=candidature_ids,
-            is_validated=False
         )
+        .filter(unvalidated_filter)
         .select_related(
             "candidature",
             "candidature__programme"
@@ -651,11 +799,16 @@ def documents_list_htmx(request):
     page = request.GET.get("page", 1)
     documents_page = paginator.get_page(page)
 
+    query_data = request.GET.copy()
+    query_data.pop("page", None)
+    pagination_query = query_data.urlencode()
+
     html = render_to_string(
         "accounts/dashboard/partials/documents_table.html",
         {
             "documents": documents_page,
-            "paginator": paginator
+            "paginator": paginator,
+            "pagination_query": pagination_query,
         },
         request=request
     )
@@ -691,11 +844,11 @@ def refresh_admissions_stats_htmx(request):
     # Documents en attente
     candidature_ids = candidatures.values_list("id", flat=True)
     pending_documents = (
-        CandidatureDocument.objects
+        scoped(CandidatureDocument, user=request.user)
         .filter(
             candidature_id__in=candidature_ids,
-            is_validated=False
         )
+        .filter(Q(is_valid=False) | Q(is_validated=False))
         .count()
     )
 
@@ -703,7 +856,7 @@ def refresh_admissions_stats_htmx(request):
 
     # Stats du jour
     today = timezone.now().date()
-    stats["today"] = candidatures.filter(created_at__date=today).count()
+    stats["today"] = candidatures.filter(submitted_at__date=today).count()
 
     html = render_to_string(
         "accounts/dashboard/partials/admissions_stats.html",

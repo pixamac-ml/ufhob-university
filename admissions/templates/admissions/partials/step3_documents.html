@@ -1,0 +1,24 @@
+{% if not selected_programme %}
+<p role="status">Sélectionnez un programme pour charger les pièces demandées.</p>
+{% else %}
+<div data-documents-ready="1" data-programme-slug="{{ selected_programme.slug }}">
+  <p class="text-sm text-ufhob-primary">Pièces demandées pour <strong>{{ selected_programme.title }}</strong></p>
+  <p class="text-xs text-ufhob-muted mt-2">Les fichiers seront transmis lors de l’envoi final. PDF, JPG, PNG, DOC ou DOCX · 10 Mo maximum par fichier.</p>
+  {% for programme_document in required_documents %}
+  <div class="funnel-document">
+    <label for="document-{{ programme_document.document_id }}">{{ programme_document.document.name }}<span>{% if programme_document.document.is_mandatory %}Obligatoire{% else %}Facultatif{% endif %}</span></label>
+    {% if programme_document.document.description %}<p class="text-xs text-ufhob-muted mt-1">{{ programme_document.document.description }}</p>{% endif %}
+    <input type="file" id="document-{{ programme_document.document_id }}" name="document_{{ programme_document.document_id }}"
+      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-required="{% if programme_document.document.is_mandatory %}1{% else %}0{% endif %}"
+      :aria-invalid="Boolean(fileErrors['document_{{ programme_document.document_id }}'])"
+      aria-describedby="document-help-{{ programme_document.document_id }} document-error-{{ programme_document.document_id }}">
+    <div id="document-help-{{ programme_document.document_id }}" class="flex flex-wrap items-center justify-between gap-2">
+      <small>Sélectionnez un autre fichier pour remplacer celui-ci.</small>
+      <button type="button" class="text-xs underline text-ufhob-primary" @click="removeDocument('document_{{ programme_document.document_id }}')">Supprimer le fichier</button>
+    </div>
+    <p id="document-error-{{ programme_document.document_id }}" class="funnel-file-error" role="alert" x-text="fileErrors['document_{{ programme_document.document_id }}'] || ''"></p>
+  </div>
+  {% empty %}<p class="text-sm mt-4" role="status">Aucune pièce n’est demandée pour ce programme.</p>{% endfor %}
+</div>
+{% endif %}
+

@@ -1,0 +1,29 @@
+{% if not selected_school_code or not selected_cycle or selected_cycle == 'all' %}
+<p role="status">Sélectionnez une école, un campus et un cycle pour afficher les programmes.</p>
+{% elif formation_cards %}
+<p class="text-xs text-ufhob-muted mb-3" role="status">{{ programme_page.paginator.count }} programme{{ programme_page.paginator.count|pluralize }} compatible{{ programme_page.paginator.count|pluralize }}</p>
+<div class="funnel-options">
+{% for formation in formation_cards %}
+<article class="funnel-programme" :aria-selected="formData.formation_slug === '{{ formation.slug|escapejs }}'">
+  <p class="funnel-programme-meta">{{ formation.cycle }} · {{ formation.diploma }}</p>
+  <h3>{{ formation.title }}</h3>
+  <p class="funnel-programme-meta">{{ formation.duration_years }} an{{ formation.duration_years|pluralize }}</p>
+  <div class="funnel-programme-actions">
+    <button type="button" :aria-pressed="formData.formation_slug === '{{ formation.slug|escapejs }}'"
+      @click="selectProgramme('{{ formation.slug|escapejs }}', '{{ formation.title|escapejs }}')"
+      x-text="formData.formation_slug === '{{ formation.slug|escapejs }}' ? 'Sélectionné' : 'Choisir'">Choisir</button>
+    <a href="{{ formation.details_url }}" target="_blank" rel="noopener" class="text-ufhob-muted">Détails<span class="sr-only"> de {{ formation.title }} (nouvel onglet)</span></a>
+  </div>
+</article>
+{% endfor %}
+</div>
+{% if programme_page.paginator.num_pages > 1 %}
+<nav class="funnel-pagination" aria-label="Pages des programmes">
+  <button type="button" {% if not programme_page.has_previous %}disabled{% else %}@click="programmePage={{ programme_page.previous_page_number }}"{% endif %}>Précédent</button>
+  <span aria-live="polite">{{ programme_page.number }} / {{ programme_page.paginator.num_pages }}</span>
+  <button type="button" {% if not programme_page.has_next %}disabled{% else %}@click="programmePage={{ programme_page.next_page_number }}"{% endif %}>Suivant</button>
+</nav>
+{% endif %}
+{% else %}
+<p role="status">Aucun programme n’est actuellement ouvert à la candidature pour ce parcours.</p>
+{% endif %}

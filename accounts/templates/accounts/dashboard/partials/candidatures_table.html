@@ -1,3 +1,4 @@
+{% load component_tags %}
 <div class="space-y-3">
 
 {% for cand in candidatures %}
@@ -6,12 +7,15 @@
 
 {% empty %}
 
-<div class="text-center py-12">
+<div class="text-center py-12 rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
 
-    <i class="fas fa-users text-3xl text-slate-300 mb-3"></i>
+    {% component "icon" name="users" class_str="text-3xl text-slate-300 mb-3" %}{% endcomponent %}
 
-    <p class="text-slate-500">
-        Aucune candidature trouvée
+    <p class="font-semibold text-slate-600">
+        Aucune candidature trouvee
+    </p>
+    <p class="text-sm text-slate-400 mt-1">
+        Ajustez les filtres pour afficher des resultats.
     </p>
 
 </div>
@@ -19,3 +23,29 @@
 {% endfor %}
 
 </div>
+
+{% if candidatures.has_other_pages %}
+<div class="mt-4 flex items-center justify-center gap-2">
+    {% if candidatures.has_previous %}
+    <button hx-get="{% url 'accounts:candidatures_list_htmx' %}?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ candidatures.previous_page_number }}"
+            hx-target="#pending-list"
+            hx-swap="innerHTML"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+        {% component "icon" name="chevron-left" %}{% endcomponent %}
+    </button>
+    {% endif %}
+
+    <span class="px-3 py-1.5 text-sm text-slate-600">
+        Page {{ candidatures.number }} / {{ paginator.num_pages }}
+    </span>
+
+    {% if candidatures.has_next %}
+    <button hx-get="{% url 'accounts:candidatures_list_htmx' %}?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ candidatures.next_page_number }}"
+            hx-target="#pending-list"
+            hx-swap="innerHTML"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+        {% component "icon" name="chevron-right" %}{% endcomponent %}
+    </button>
+    {% endif %}
+</div>
+{% endif %}

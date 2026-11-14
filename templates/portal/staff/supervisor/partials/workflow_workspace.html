@@ -1,0 +1,31 @@
+{% load component_tags %}
+<div
+  data-supervisor-section="{{ section|default:'home' }}"
+  data-supervisor-view="{{ active_view|default:'overview' }}"
+  data-selected-class-id="{{ selected_class_id|default:'' }}"
+  class="space-y-5"
+>
+  {% component "ui_core.page_header" eyebrow=crumb title=panel_title subtitle=panel_lede %}
+    {% fill "actions" %}
+      {% if selected_class %}
+        {% component "ui_core.status_badge" label=selected_class.display_name tone="primary" icon="school" %}{% endcomponent %}
+      {% else %}
+        {% component "ui_core.status_badge" label="Contexte annexe" tone="neutral" icon="building-2" %}{% endcomponent %}
+      {% endif %}
+    {% endfill %}
+  {% endcomponent %}
+
+  {% if branch %}
+    {% component "ui_core.tabs" id="supervisor-section-tabs" items=supervisor_tabs active=active_view density="compact" subview_event="supervisor-subview" subview_attr="supervisor-subview" %}{% endcomponent %}
+    <div class="relative min-h-48">
+      <div id="supervisor-section-loading" class="htmx-indicator pointer-events-none absolute inset-0 z-20">
+        {% component "ui_core.loading_overlay" loading=True label="Chargement de la supervision" %}{% endcomponent %}
+      </div>
+      <div id="supervisor-section-content" aria-live="polite">
+        {% include "portal/staff/supervisor/partials/subcontent.html" %}
+      </div>
+    </div>
+  {% else %}
+    {% component "ui_core.empty_state" icon="triangle-alert" title="Aucune annexe rattachée" message="Contactez l'administrateur afin d'associer ce compte à une annexe." %}{% endcomponent %}
+  {% endif %}
+</div>

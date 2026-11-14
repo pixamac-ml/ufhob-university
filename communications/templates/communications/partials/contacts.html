@@ -1,0 +1,11 @@
+{% for contact in contacts %}
+  <form method="post" action="{% url 'communications:start_direct' contact.id %}" class="mb-1">{% csrf_token %}
+    <button type="submit" class="flex w-full items-center gap-3 rounded-ui-button p-2 text-left hover:bg-ui-surface-hover">
+      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ui-info-soft text-xs font-bold text-ui-info">{{ contact.get_full_name|default:contact.username|truncatechars:2 }}</span>
+      <span class="min-w-0"><strong class="block truncate text-sm text-ui-text">{{ contact.get_full_name|default:contact.username }}</strong>
+        <small class="block truncate text-ui-text-muted">{{ contact.institutional_profile.get_position_display|default:contact.profile.get_position_display|default:"Compte UFHOB" }}{% if contact.institutional_profile.school %} · {{ contact.institutional_profile.school.display_name }}{% endif %}{% if contact.institutional_profile.branch %} · {{ contact.institutional_profile.branch.name }}{% endif %}</small>
+      </span>
+      {% if contact.profile.is_online %}<span class="ml-auto text-xs text-ui-success">● En ligne</span>{% endif %}
+    </button>
+  </form>
+{% empty %}<p class="text-sm text-ui-text-muted">Aucun contact autorisé.</p>{% endfor %}

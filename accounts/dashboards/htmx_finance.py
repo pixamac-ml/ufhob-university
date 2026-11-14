@@ -6,6 +6,7 @@ Vues HTMX pour le dashboard finance.
 Gestion dynamique des paiements et sessions cash
 sans rechargement de page.
 """
+from accounts.scoping import scoped
 
 import json
 from datetime import timedelta
@@ -113,10 +114,6 @@ def validate_payment_htmx(request, payment_id):
             payment.status = Payment.STATUS_VALIDATED
             payment.paid_at = timezone.now()
             payment.save(update_fields=["status", "paid_at"])
-
-            # Mise à jour de l'inscription
-            if payment.inscription:
-                payment.inscription.update_financial_state()
 
         # Rendu du fragment validé
         html = render_to_string(
@@ -250,8 +247,18 @@ def create_cash_session_htmx(request):
         id=inscription_id
     )
 
+    if inscription.status not in {
+        Inscription.STATUS_CREATED,
+        Inscription.STATUS_AWAITING_PAYMENT,
+        Inscription.STATUS_PARTIAL,
+    }:
+        return HttpResponse(
+            "<div class='text-red-500 p-4'>Cette inscription n'est pas dans un etat payable.</div>",
+            status=400
+        )
+
     # Vérifier qu'il n'y a pas déjà une session active pour cette inscription
-    existing_session = CashPaymentSession.objects.filter(
+    existing_session = scoped(CashPaymentSession, user=request.user).filter(
         inscription=inscription,
         is_used=False,
         expires_at__gt=timezone.now()
@@ -267,7 +274,7 @@ def create_cash_session_htmx(request):
         with transaction.atomic():
 
             # Création de la session
-            session = CashPaymentSession.objects.create(
+            session = scoped(CashPaymentSession, user=request.user).create(
                 agent=agent,
                 inscription=inscription,
                 verification_code="000000",  # Temporaire
@@ -333,7 +340,7 @@ def regenerate_code_htmx(request, session_id):
 
     # Récupération de la session
     session = get_object_or_404(
-        CashPaymentSession.objects.select_related(
+        scoped(CashPaymentSession, user=request.user).select_related(
             "inscription",
             "inscription__candidature",
         ),
@@ -413,7 +420,7 @@ def mark_session_used_htmx(request, session_id):
 
     # Récupération de la session
     session = get_object_or_404(
-        CashPaymentSession.objects.select_related(
+        scoped(CashPaymentSession, user=request.user).select_related(
             "inscription",
             "inscription__candidature",
             "inscription__candidature__programme",
@@ -443,7 +450,7 @@ def mark_session_used_htmx(request, session_id):
         with transaction.atomic():
 
             # Création du paiement
-            payment = Payment.objects.create(
+            payment = scoped(Payment, user=request.user).create(
                 inscription=inscription,
                 amount=amount,
                 method=Payment.METHOD_CASH,
@@ -508,7 +515,7 @@ def cancel_session_htmx(request, session_id):
         )
 
     session = get_object_or_404(
-        CashPaymentSession,
+        scoped(CashPaymentSession, user=request.user),
         id=session_id,
         agent=agent,
         is_used=False
@@ -765,7 +772,7 @@ def payments_list_htmx(request):
     # Filtres
     method = request.GET.get("method")
     status = request.GET.get("status")
-    search = request.GET.get("q")
+    search = (request.GET.get("q") or request.GET.get("search") or "").strip()
 
     if method:
         payments = payments.filter(method=method)
@@ -774,12 +781,19 @@ def payments_list_htmx(request):
         payments = payments.filter(status=status)
 
     if search:
-        payments = payments.filter(
+        search_filter = (
             Q(reference__icontains=search) |
             Q(inscription__public_token__icontains=search) |
             Q(inscription__candidature__last_name__icontains=search) |
-            Q(inscription__candidature__first_name__icontains=search)
+            Q(inscription__candidature__first_name__icontains=search) |
+            Q(inscription__candidature__email__icontains=search)
         )
+
+        # Exact id support for references like PAY-AB12CD34.
+        if search.upper().startswith("PAY-"):
+            search_filter = search_filter | Q(reference__iexact=search)
+
+        payments = payments.filter(search_filter)
 
     # Tri
     order = request.GET.get("order", "recent")
@@ -796,11 +810,16 @@ def payments_list_htmx(request):
     page = request.GET.get("page", 1)
     payments_page = paginator.get_page(page)
 
+    query_data = request.GET.copy()
+    query_data.pop("page", None)
+    pagination_query = query_data.urlencode()
+
     html = render_to_string(
         "accounts/dashboard/partials/payments_table.html",
         {
             "payments": payments_page,
-            "paginator": paginator
+            "paginator": paginator,
+            "pagination_query": pagination_query,
         },
         request=request
     )

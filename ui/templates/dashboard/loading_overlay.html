@@ -1,0 +1,3 @@
+{% load component_tags %}
+{# Compatibility entry point: UI Core owns the sole loading-overlay visual. #}
+{% component "ui_core.loading_overlay" loading=True label=label variant="blocking" %}{% endcomponent %}

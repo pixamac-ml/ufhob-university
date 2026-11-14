@@ -1,0 +1,488 @@
+from accounts.scoping import scoped
+import json
+
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
+
+from accounts.forms import BranchCashMovementForm, BranchWalletForm, CashRegisterCloseForm, CashRegisterOpenForm, WalletAmountForm
+from accounts.models import BranchCashMovement, BranchWallet
+from accounts.services.accounting_documents import (
+    create_cash_movement,
+    ensure_cash_movement_receipt,
+)
+from accounts.services.financial_integrity import (
+    assert_financial_period_open,
+    close_cash_register_session,
+    open_cash_register_session,
+)
+from accounts.services.wallets import allocate_from_principal, close_wallet, return_to_principal, transfer_between_wallets
+from accounts.services.manager_intelligence import (
+    lock_branch_cash_balance,
+    reconcile_branch_financial_movements,
+    payment_cash_reference,
+)
+from inscriptions.models import Inscription
+from payments.models import CashPaymentSession, FinancialLog, Payment, PaymentAgent
+
+from accounts.dashboards.htmx_utils import (
+    PAYABLE_INSCRIPTION_STATUSES,
+    get_active_cash_session,
+    get_current_agent,
+    manager_finance_required,
+    manager_required,
+    manager_section_notice_redirect_response,
+    manager_section_redirect_response,
+)
+
+
+def _wallet_error_response(message: str) -> HttpResponse:
+    """Keep the current workspace visible and report an actionable wallet error."""
+    response = HttpResponse("")
+    response["HX-Reswap"] = "none"
+    response["HX-Trigger"] = json.dumps(
+        {"showToast": {"message": message, "type": "error"}}
+    )
+    return response
+
+
+@manager_finance_required("manage_cash_sessions")
+@require_POST
+def cash_session_create(request: HttpRequest, pk: int) -> HttpResponse:
+    inscription = get_object_or_404(
+        scoped(Inscription, user=request.user).select_related(
+            "candidature",
+            "candidature__programme",
+            "candidature__branch",
+        ),
+        pk=pk,
+        candidature__branch=request.branch,
+    )
+    manager_agent = get_current_agent(request.user, request.branch)
+    if not manager_agent:
+        return HttpResponse(
+            "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Aucun profil PaymentAgent actif n'est attribue a cette gestionnaire.</div>",
+            status=403,
+        )
+    if inscription.status not in PAYABLE_INSCRIPTION_STATUSES or inscription.balance <= 0:
+        return HttpResponse(
+            "<div class='rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700'>Cette inscription n'est pas payable en l'etat.</div>",
+            status=400,
+        )
+
+    existing_session = get_active_cash_session(inscription)
+    if existing_session:
+        return render(
+            request,
+            "accounts/dashboard/partials/manager_cash_session_card.html",
+            {
+                "session": existing_session,
+                "manager_agent": manager_agent,
+                "show_existing_notice": True,
+            },
+        )
+
+    with transaction.atomic():
+        inscription = get_object_or_404(
+            scoped(Inscription, user=request.user).select_for_update(),
+            pk=inscription.pk,
+            candidature__branch=request.branch,
+        )
+        existing_session = get_active_cash_session(inscription)
+        if existing_session:
+            return render(
+                request,
+                "accounts/dashboard/partials/manager_cash_session_card.html",
+                {
+                    "session": existing_session,
+                    "manager_agent": manager_agent,
+                    "show_existing_notice": True,
+                },
+            )
+        session = scoped(CashPaymentSession, user=request.user).create(
+            inscription=inscription,
+            agent=manager_agent,
+            verification_code="000000",
+            expires_at=timezone.now(),
+        )
+        session.generate_code()
+
+    return render(
+        request,
+        "accounts/dashboard/partials/manager_cash_session_card.html",
+        {
+            "session": session,
+            "manager_agent": manager_agent,
+            "show_created_notice": True,
+        },
+    )
+
+
+@manager_finance_required("manage_cash_sessions")
+@require_POST
+def cash_session_regenerate(request: HttpRequest, pk: int) -> HttpResponse:
+    manager_agent = get_current_agent(request.user, request.branch)
+    if not manager_agent:
+        return HttpResponse("Aucun agent actif.", status=403)
+    session = get_object_or_404(
+        scoped(CashPaymentSession, user=request.user).select_related(
+            "agent__user",
+            "inscription",
+            "inscription__candidature",
+            "inscription__candidature__programme",
+        ),
+        pk=pk,
+        agent=manager_agent,
+        is_used=False,
+    )
+    session.generate_code()
+    return render(
+        request,
+        "accounts/dashboard/partials/manager_cash_session_card.html",
+        {
+            "session": session,
+            "manager_agent": manager_agent,
+            "show_regenerated_notice": True,
+        },
+    )
+
+
+@manager_finance_required("manage_cash_sessions")
+@require_POST
+def cash_session_complete(request: HttpRequest, pk: int) -> HttpResponse:
+    manager_agent = get_current_agent(request.user, request.branch)
+    if not manager_agent:
+        return HttpResponse("Aucun agent actif.", status=403)
+    session = get_object_or_404(
+        scoped(CashPaymentSession, user=request.user).select_related(
+            "inscription",
+            "inscription__candidature",
+            "inscription__candidature__programme",
+        ),
+        pk=pk,
+        agent=manager_agent,
+        is_used=False,
+    )
+    if timezone.now() > session.expires_at:
+        session.is_used = True
+        session.save(update_fields=["is_used"])
+        return HttpResponse(
+            "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Le code a expire. Regenerer une nouvelle session.</div>",
+            status=400,
+        )
+
+    raw_amount = (request.POST.get("amount") or "").strip()
+    try:
+        amount = int(raw_amount)
+    except (TypeError, ValueError):
+        amount = 0
+    if amount <= 0:
+        return HttpResponse(
+            "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Le montant saisi est invalide.</div>",
+            status=400,
+        )
+    if amount > session.inscription.balance:
+        return HttpResponse(
+            "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Le montant depasse le solde restant de l'inscription.</div>",
+            status=400,
+        )
+
+    with transaction.atomic():
+        session = get_object_or_404(
+            scoped(CashPaymentSession, user=request.user).select_for_update().select_related(
+                "inscription",
+                "inscription__candidature",
+                "inscription__candidature__programme",
+            ),
+            pk=pk,
+            agent=manager_agent,
+            is_used=False,
+        )
+        inscription = get_object_or_404(
+            scoped(Inscription, user=request.user).select_for_update(),
+            pk=session.inscription_id,
+            candidature__branch=request.branch,
+        )
+        if timezone.now() > session.expires_at:
+            session.is_used = True
+            session.save(update_fields=["is_used"])
+            return HttpResponse(
+                "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Le code a expire. Regenerer une nouvelle session.</div>",
+                status=400,
+            )
+        if amount > inscription.balance:
+            return HttpResponse(
+                "<div class='rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>Le montant depasse le solde restant de l'inscription.</div>",
+                status=400,
+            )
+        payment = scoped(Payment, user=request.user).create(
+            inscription=inscription,
+            amount=amount,
+            method=Payment.METHOD_CASH,
+            status=Payment.STATUS_VALIDATED,
+            paid_at=timezone.now(),
+            agent=manager_agent,
+            cash_session=session,
+        )
+        existing_movement = BranchCashMovement.objects.filter(
+            branch=request.branch,
+            source=BranchCashMovement.SOURCE_STUDENT_PAYMENT,
+            source_reference=payment_cash_reference(payment),
+        ).first()
+        if not existing_movement:
+            create_cash_movement(
+                branch=request.branch,
+                source=BranchCashMovement.SOURCE_STUDENT_PAYMENT,
+                source_reference=payment_cash_reference(payment),
+                movement_type=BranchCashMovement.TYPE_IN,
+                amount=payment.amount,
+                label=f"Paiement etudiant - {payment.inscription.candidature.full_name}",
+                movement_date=payment.paid_at.date(),
+                notes=f"Synchronisation automatique paiement #{payment.pk}.",
+                created_by=request.user,
+            )
+        FinancialLog.objects.create(
+            branch=request.branch,
+            payment=payment,
+            action=FinancialLog.ACTION_PAYMENT_CREATED,
+            new_amount=payment.amount,
+            reason="Paiement espece cree et valide depuis le dashboard gestionnaire.",
+            actor=request.user,
+            metadata={"payment_reference": payment.reference, "inscription_id": payment.inscription_id},
+        )
+        session.is_used = True
+        session.save(update_fields=["is_used"])
+
+    response = render(
+        request,
+        "accounts/dashboard/partials/cash_session_completed.html",
+        {"session": session, "payment": payment},
+    )
+    response["HX-Trigger"] = json.dumps({
+        "cashBalanceUpdated": True, "paymentUpdated": True, "dashboardStatsUpdated": True,
+        "showToast": {"message": f"Paiement de {payment.amount:,} FCFA encaisse.", "type": "success"},
+    })
+    return response
+
+
+@manager_finance_required("manage_cash_sessions")
+@require_POST
+def cash_session_cancel(request: HttpRequest, pk: int) -> HttpResponse:
+    manager_agent = get_current_agent(request.user, request.branch)
+    if not manager_agent:
+        return HttpResponse("Aucun agent actif.", status=403)
+    session = get_object_or_404(
+        scoped(CashPaymentSession, user=request.user),
+        pk=pk,
+        agent=manager_agent,
+        is_used=False,
+    )
+    session.is_used = True
+    session.save(update_fields=["is_used"])
+    return HttpResponse("")
+
+
+@manager_required
+@require_POST
+def cash_movement_create(request: HttpRequest) -> HttpResponse:
+    form = BranchCashMovementForm(request.POST)
+    if not form.is_valid():
+        response = render(
+            request,
+            "accounts/dashboard/partials/manager_cash_movement_form.html",
+            {"cash_form": form},
+        )
+        response.status_code = 400
+        return response
+    try:
+        assert_financial_period_open(request.branch, form.cleaned_data["movement_date"])
+    except ValidationError as exc:
+        return HttpResponse(" ".join(exc.messages), status=400)
+
+    with transaction.atomic():
+        _locked_branch, available_cash = lock_branch_cash_balance(request.branch)
+        movement = form.save(commit=False)
+        if movement.movement_type == BranchCashMovement.TYPE_OUT and movement.amount > available_cash:
+            response = render(
+                request,
+                "accounts/dashboard/partials/manager_cash_movement_form.html",
+                {
+                    "cash_form": form,
+                    "cash_error": (
+                        "Sortie impossible: le montant depasse la caisse disponible "
+                        f"({available_cash} FCFA)."
+                    ),
+                },
+            )
+            response.status_code = 400
+            return response
+        create_cash_movement(
+            branch=request.branch,
+            movement_type=movement.movement_type,
+            source=movement.source,
+            amount=movement.amount,
+            label=movement.label,
+            movement_date=movement.movement_date,
+            notes=movement.notes,
+            created_by=request.user,
+        )
+    response = manager_section_redirect_response("caisse")
+    response["HX-Trigger"] = json.dumps({"cashBalanceUpdated": True, "dashboardStatsUpdated": True})
+    return response
+
+
+@manager_required
+@require_POST
+def cash_register_open(request: HttpRequest) -> HttpResponse:
+    form = CashRegisterOpenForm(request.POST)
+    if not form.is_valid():
+        return HttpResponse("Comptage d'ouverture invalide.", status=400)
+    try:
+        _session, created = open_cash_register_session(
+            branch=request.branch,
+            actor=request.user,
+            opening_amount=form.cleaned_data["opening_amount"],
+            notes=form.cleaned_data["opening_notes"],
+        )
+    except ValidationError as exc:
+        return HttpResponse(" ".join(exc.messages), status=400)
+    return manager_section_notice_redirect_response(
+        "caisse",
+        "caisse_ouverte" if created else "caisse_deja_ouverte",
+    )
+
+
+@manager_required
+@require_POST
+def cash_register_close(request: HttpRequest) -> HttpResponse:
+    form = CashRegisterCloseForm(request.POST)
+    if not form.is_valid():
+        return HttpResponse("Comptage de fermeture invalide.", status=400)
+    try:
+        session = close_cash_register_session(
+            branch=request.branch,
+            actor=request.user,
+            counted_amount=form.cleaned_data["counted_amount"],
+            notes=form.cleaned_data["closing_notes"],
+        )
+    except ValidationError as exc:
+        return HttpResponse(" ".join(exc.messages), status=400)
+    notice = "caisse_fermee_ecart" if session.difference_amount else "caisse_fermee"
+    return manager_section_notice_redirect_response("caisse", notice)
+
+
+@manager_required
+@require_POST
+def wallet_create(request: HttpRequest) -> HttpResponse:
+    form = BranchWalletForm(request.POST)
+    if not form.is_valid():
+        first_error = next(iter(form.errors.values()))[0]
+        return _wallet_error_response(f"Mini-caisse invalide : {first_error}")
+    wallet = form.save(commit=False)
+    form.apply_profile(wallet)
+    wallet.branch = request.branch
+    wallet.created_by = request.user
+    if not wallet.is_favorite and BranchWallet.objects.filter(
+        branch=request.branch,
+        status=BranchWallet.STATUS_ACTIVE,
+        is_favorite=True,
+    ).count() < 4:
+        wallet.is_favorite = True
+    try:
+        wallet.save()
+    except IntegrityError:
+        return _wallet_error_response(
+            "Une mini-caisse porte deja ce nom dans cette annexe."
+        )
+    return manager_section_notice_redirect_response("caisse", "mini_caisse_creee")
+
+
+def _branch_wallet(request, pk):
+    return get_object_or_404(BranchWallet, pk=pk, branch=request.branch)
+
+
+@manager_required
+@require_POST
+def wallet_allocate(request: HttpRequest, pk: int) -> HttpResponse:
+    form = WalletAmountForm(request.POST)
+    if not form.is_valid():
+        return _wallet_error_response("Saisissez un montant d'affectation valide.")
+    try:
+        allocate_from_principal(wallet=_branch_wallet(request, pk), amount=form.cleaned_data["amount"], actor=request.user, notes=form.cleaned_data["notes"])
+    except ValidationError as exc:
+        return _wallet_error_response(" ".join(exc.messages))
+    return manager_section_notice_redirect_response("caisse", "mini_caisse_alimentee")
+
+
+@manager_required
+@require_POST
+def wallet_return(request: HttpRequest, pk: int) -> HttpResponse:
+    form = WalletAmountForm(request.POST)
+    if not form.is_valid():
+        return _wallet_error_response("Saisissez un montant de restitution valide.")
+    try:
+        return_to_principal(wallet=_branch_wallet(request, pk), amount=form.cleaned_data["amount"], actor=request.user, notes=form.cleaned_data["notes"])
+    except ValidationError as exc:
+        return _wallet_error_response(" ".join(exc.messages))
+    return manager_section_notice_redirect_response("caisse", "mini_caisse_restituee")
+
+
+@manager_required
+@require_POST
+def wallet_transfer(request: HttpRequest, pk: int) -> HttpResponse:
+    form = WalletAmountForm(request.POST)
+    target_id = request.POST.get("target_wallet_id")
+    if not form.is_valid() or not target_id:
+        return _wallet_error_response("Choisissez une destination et un montant valide.")
+    try:
+        transfer_between_wallets(source=_branch_wallet(request, pk), target=_branch_wallet(request, int(target_id)), amount=form.cleaned_data["amount"], actor=request.user, notes=form.cleaned_data["notes"])
+    except (ValidationError, ValueError) as exc:
+        return _wallet_error_response(
+            " ".join(exc.messages)
+            if isinstance(exc, ValidationError)
+            else "Destination invalide."
+        )
+    return manager_section_notice_redirect_response("caisse", "mini_caisse_transferee")
+
+
+@manager_required
+@require_POST
+def wallet_close(request: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        close_wallet(wallet=_branch_wallet(request, pk), actor=request.user)
+    except ValidationError as exc:
+        return _wallet_error_response(" ".join(exc.messages))
+    return manager_section_notice_redirect_response("caisse", "mini_caisse_cloturee")
+
+
+@manager_required
+@require_POST
+def cash_sync(request: HttpRequest) -> HttpResponse:
+    result = reconcile_branch_financial_movements(request.branch, request.user, repair=True)
+    response = manager_section_notice_redirect_response(
+        "caisse",
+        f"caisse_sync_{result['created']}",
+    )
+    response["HX-Trigger"] = json.dumps({"cashBalanceUpdated": True, "dashboardStatsUpdated": True})
+    return response
+
+
+@manager_required
+@require_GET
+def cash_movement_receipt(request: HttpRequest, pk: int) -> FileResponse:
+    movement = get_object_or_404(
+        BranchCashMovement,
+        pk=pk,
+        branch=request.branch,
+    )
+    ensure_cash_movement_receipt(movement)
+    if not movement.receipt_pdf:
+        raise Http404("Piece de caisse indisponible.")
+    return FileResponse(
+        movement.receipt_pdf.open("rb"),
+        as_attachment=True,
+        filename=f"piece-caisse-{movement.receipt_number or movement.reference}.pdf",
+    )

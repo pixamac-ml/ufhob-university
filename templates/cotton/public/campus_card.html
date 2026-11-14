@@ -1,0 +1,5 @@
+{% load static %}
+<article id="campus-{{ campus.slug }}" class="public-editorial-card overflow-hidden border border-ufhob-border bg-white">
+  {% if campus.image %}<img src="{{ campus.image.url }}" alt="Campus {{ campus.name }}" class="h-44 w-full object-cover" loading="lazy">{% endif %}
+  <div class="p-6"><p class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary-dark">Campus · {{ campus.city }}</p><h3 class="mt-2 text-xl font-bold text-ufhob-primary">{{ campus.name }}</h3>{% if campus.address %}<p class="mt-2 text-sm text-ufhob-muted">{{ campus.address }}</p>{% endif %}{% if campus.active_school_branches %}<div class="mt-4 flex flex-wrap gap-2">{% for presence in campus.active_school_branches %}<span class="border-l-2 border-ufhob-accent bg-ufhob-ivory px-3 py-1 text-xs font-bold text-ufhob-primary">{{ presence.school.display_name }}</span>{% endfor %}</div>{% endif %}<a href="{% url 'core:campus_detail' slug=campus.slug %}" class="public-text-link mt-5 text-sm text-ufhob-primary">Découvrir ce campus <span aria-hidden="true">→</span></a></div>
+</article>

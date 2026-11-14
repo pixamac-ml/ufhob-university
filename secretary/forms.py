@@ -1,0 +1,334 @@
+
+from accounts.scoping import scoped
+from django import forms
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+from accounts.dashboards.helpers import get_user_branch, is_global_viewer
+from .selectors import get_active_students, get_documents_queryset, get_registry_queryset
+from .models import Appointment, DocumentReceipt, Meeting, MeetingMinutes, RegistryEntry, SecretaryCall, SecretaryTask, SecretaryTransmission, VisitorLog
+
+User = get_user_model()
+
+
+class SecretaryBaseForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
+        self.branch = kwargs.pop("branch", None) or get_user_branch(self.user)
+        super().__init__(*args, **kwargs)
+        self._apply_widget_classes()
+        self._apply_scope()
+
+    def _apply_widget_classes(self):
+        for name, field in self.fields.items():
+            widget = field.widget
+            css_class = widget.attrs.get("class", "")
+            widget.attrs["class"] = f"{css_class} secretary-input".strip()
+            if isinstance(widget, forms.Textarea):
+                widget.attrs.setdefault("rows", 4)
+            if field.required:
+                widget.attrs.setdefault("required", "required")
+
+    def _branch_user_queryset(self):
+        if self.branch:
+            return scoped(User, user=self.user).filter(profile__branch=self.branch).distinct()
+        if self.user and not is_global_viewer(self.user):
+            return User.objects.none()
+        return scoped(User, user=self.user).all()
+
+    def _student_queryset(self):
+        if self.branch:
+            return get_active_students(branch=self.branch, user=self.user)
+        if self.user and not is_global_viewer(self.user):
+            return get_active_students(user=self.user)
+        return get_active_students(user=self.user)
+
+    def _registry_queryset(self):
+        if self.branch:
+            return get_registry_queryset(branch=self.branch, user=self.user)
+        if self.user and not is_global_viewer(self.user):
+            return get_registry_queryset(user=self.user)
+        return get_registry_queryset(user=self.user)
+
+    def _apply_scope(self):
+        pass
+
+
+class RegistryEntryForm(SecretaryBaseForm):
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+        self.fields["related_staff"].queryset = self._branch_user_queryset()
+        self.fields["entry_type"].widget.attrs.setdefault("data-registry-routing", "true")
+        self.fields["motive"].widget.attrs.setdefault("placeholder", "Motif concret de la venue")
+        self.fields["visitor_name"].widget.attrs.setdefault("placeholder", "Nom du parent, visiteur ou deposant")
+
+    class Meta:
+        model = RegistryEntry
+        fields = [
+            "title",
+            "entry_type",
+            "visitor_name",
+            "visitor_phone",
+            "visitor_email",
+            "related_student",
+            "related_staff",
+            "student_class_label",
+            "motive",
+            "description",
+            "priority",
+            "target_service",
+            "status",
+            "exited_at",
+            "attachment",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "exited_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        }
+        labels = {
+            "title": "Objet de l'entree",
+            "entry_type": "Type d'entree",
+            "visitor_name": "Nom du visiteur",
+            "visitor_phone": "Telephone",
+            "visitor_email": "E-mail",
+            "related_student": "Etudiant concerne",
+            "related_staff": "Personnel concerne",
+            "student_class_label": "Classe de l'etudiant",
+            "motive": "Motif de la venue",
+            "description": "Description",
+            "priority": "Priorite",
+            "target_service": "Service destinataire",
+            "status": "Etat",
+            "exited_at": "Heure de sortie",
+            "attachment": "Piece jointe",
+        }
+
+    def clean_exited_at(self):
+        exited_at = self.cleaned_data.get("exited_at")
+        if exited_at and timezone.is_naive(exited_at):
+            return timezone.make_aware(exited_at, timezone.get_current_timezone())
+        return exited_at
+
+
+class AppointmentForm(SecretaryBaseForm):
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+        self.fields["assigned_to"].queryset = self._branch_user_queryset()
+        self.fields["related_staff"].queryset = self._branch_user_queryset()
+
+    scheduled_at = forms.DateTimeField(
+        label="Date et heure",
+        input_formats=["%Y-%m-%dT%H:%M"],
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "title",
+            "person_name",
+            "phone",
+            "email",
+            "reason",
+            "scheduled_at",
+            "assigned_to",
+            "related_student",
+            "related_staff",
+            "status",
+            "notes",
+        ]
+        labels = {
+            "title": "Titre du rendez-vous",
+            "person_name": "Nom de la personne",
+            "phone": "Telephone",
+            "email": "E-mail",
+            "reason": "Motif",
+            "assigned_to": "Assigne a",
+            "related_student": "Etudiant concerne",
+            "related_staff": "Personnel concerne",
+            "status": "Etat",
+            "notes": "Notes",
+        }
+
+    def clean_scheduled_at(self):
+        scheduled_at = self.cleaned_data["scheduled_at"]
+        if timezone.is_naive(scheduled_at):
+            scheduled_at = timezone.make_aware(scheduled_at, timezone.get_current_timezone())
+        return scheduled_at
+
+
+class VisitorLogForm(SecretaryBaseForm):
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+        self.fields["related_staff"].queryset = self._branch_user_queryset()
+
+    arrived_at = forms.DateTimeField(
+        label="Heure d'arrivee",
+        input_formats=["%Y-%m-%dT%H:%M"],
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )
+    departed_at = forms.DateTimeField(
+        label="Heure de depart",
+        required=False,
+        input_formats=["%Y-%m-%dT%H:%M"],
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )
+
+    class Meta:
+        model = VisitorLog
+        fields = [
+            "full_name",
+            "phone",
+            "reason",
+            "related_student",
+            "related_staff",
+            "arrived_at",
+            "departed_at",
+            "status",
+        ]
+        labels = {
+            "full_name": "Nom complet",
+            "phone": "Telephone",
+            "reason": "Motif de la visite",
+            "related_student": "Etudiant concerne",
+            "related_staff": "Personnel concerne",
+            "status": "Etat",
+        }
+
+    def clean_arrived_at(self):
+        arrived_at = self.cleaned_data["arrived_at"]
+        if timezone.is_naive(arrived_at):
+            arrived_at = timezone.make_aware(arrived_at, timezone.get_current_timezone())
+        return arrived_at
+
+    def clean_departed_at(self):
+        departed_at = self.cleaned_data.get("departed_at")
+        if departed_at and timezone.is_naive(departed_at):
+            departed_at = timezone.make_aware(departed_at, timezone.get_current_timezone())
+        return departed_at
+
+
+class DocumentReceiptForm(SecretaryBaseForm):
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+        self.fields["related_registry"].queryset = self._registry_queryset()
+
+    class Meta:
+        model = DocumentReceipt
+        fields = [
+            "title",
+            "description",
+            "submitted_by_name",
+            "submitted_by_phone",
+            "related_student",
+            "related_registry",
+            "status",
+            "file",
+        ]
+        labels = {
+            "title": "Titre du document",
+            "description": "Description",
+            "submitted_by_name": "Depose par",
+            "submitted_by_phone": "Telephone du deposant",
+            "related_student": "Etudiant concerne",
+            "related_registry": "Entree de registre liee",
+            "status": "Etat",
+            "file": "Piece jointe",
+        }
+
+
+class SecretaryTaskForm(SecretaryBaseForm):
+    def _apply_scope(self):
+        self.fields["assigned_to"].queryset = self._branch_user_queryset()
+        self.fields["related_student"].queryset = self._student_queryset()
+
+    class Meta:
+        model = SecretaryTask
+        fields = [
+            "title",
+            "description",
+            "priority",
+            "status",
+            "assigned_to",
+            "related_student",
+            "due_date",
+        ]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        labels = {
+            "title": "Titre de la tache",
+            "description": "Description",
+            "priority": "Priorite",
+            "status": "Etat",
+            "assigned_to": "Assigne a",
+            "related_student": "Etudiant concerne",
+            "due_date": "Date d'echeance",
+        }
+
+
+class SecretaryCallForm(SecretaryBaseForm):
+    class Meta:
+        model = SecretaryCall
+        fields = ["call_type", "interlocutor", "phone", "subject", "target_service", "priority", "call_status", "related_student", "notes"]
+        labels = {"call_type": "Type d'appel", "interlocutor": "Interlocuteur", "phone": "Téléphone", "subject": "Objet", "target_service": "Destinataire / service", "priority": "Priorité", "call_status": "État", "related_student": "Étudiant concerné", "notes": "Notes"}
+
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+
+
+class SecretaryTransmissionForm(SecretaryBaseForm):
+    class Meta:
+        model = SecretaryTransmission
+        fields = ["subject", "details", "target_service", "priority", "related_student"]
+        labels = {"subject": "Objet", "details": "Message / dossier", "target_service": "Service destinataire", "priority": "Priorité", "related_student": "Étudiant concerné"}
+
+    def _apply_scope(self):
+        self.fields["related_student"].queryset = self._student_queryset()
+
+
+class MeetingForm(SecretaryBaseForm):
+    class Meta:
+        model = Meeting
+        fields = [
+            "title",
+            "meeting_type",
+            "scheduled_at",
+            "location",
+            "agenda",
+            "participants",
+            "secretary_present",
+        ]
+        widgets = {
+            "scheduled_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "agenda": forms.Textarea(attrs={"rows": 4}),
+            "participants": forms.Textarea(attrs={"rows": 3}),
+        }
+        labels = {
+            "title": "Titre de la réunion",
+            "meeting_type": "Type",
+            "scheduled_at": "Date et heure",
+            "location": "Lieu",
+            "agenda": "Ordre du jour",
+            "participants": "Participants (un par ligne)",
+            "secretary_present": "Secrétaire présente",
+        }
+
+    def _apply_scope(self):
+        pass
+
+
+class MeetingMinutesForm(forms.ModelForm):
+    class Meta:
+        model = MeetingMinutes
+        fields = ["content", "decisions", "next_steps"]
+        widgets = {
+            "content": forms.Textarea(attrs={"rows": 8, "class": "secretary-input"}),
+            "decisions": forms.Textarea(attrs={"rows": 4, "class": "secretary-input"}),
+            "next_steps": forms.Textarea(attrs={"rows": 4, "class": "secretary-input"}),
+        }
+        labels = {
+            "content": "Corps du procès-verbal",
+            "decisions": "Décisions prises",
+            "next_steps": "Actions à suivre",
+        }

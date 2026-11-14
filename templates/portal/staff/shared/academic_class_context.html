@@ -1,0 +1,8 @@
+{% if academic_class %}
+<p class="flex flex-wrap gap-2 text-xs text-ui-text-muted" data-academic-class-context>
+  <span>{{ academic_class.programme.school.code|default:"École à rattacher" }}</span>
+  <span>Campus {{ academic_class.branch.name }}</span>
+  <span>{{ academic_class.programme.title }}</span>
+  <span>{{ academic_class.academic_year.name }}</span>
+</p>
+{% endif %}

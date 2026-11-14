@@ -1,0 +1,45 @@
+{% extends "workspace_base.html" %}
+{% load static %}
+
+{% block title %}Course Studio | ESFE{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'django_ckeditor_5/dist/styles.css' %}">
+  <script defer src="{% static 'django_ckeditor_5/dist/bundle.js' %}"></script>
+  <style>
+    [data-course-studio-page] .ck.ck-editor { display: block; width: 100%; }
+    [data-course-studio-page] .ck.ck-toolbar,
+    [data-course-studio-page] .ck.ck-toolbar__items { display: flex; flex-wrap: wrap; }
+    [data-course-studio-page] .ck.ck-editor__main { display: block; }
+    [data-course-studio-page] [data-course-editor] .ck.ck-toolbar {
+      position: sticky;
+      top: 5.25rem;
+      z-index: 10;
+      border-radius: .75rem .75rem 0 0;
+    }
+    [data-course-studio-page] .ck.ck-editor__editable_inline {
+      min-height: clamp(34rem, 64vh, 50rem);
+      padding: 1.5rem;
+    }
+    [data-course-studio-page] .ck.ck-editor__editable:not(.ck-focused) { border-color: var(--ui-border, #dbe3ef); }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div data-course-studio-page class="min-h-screen bg-ui-surface-muted text-ui-text">
+  <header class="sticky top-0 z-30 border-b border-ui-border bg-ui-surface/95 backdrop-blur">
+    <div class="mx-auto flex min-h-16 max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div class="flex min-w-0 items-center gap-3">
+        <a href="{% url 'accounts_portal:portal_teacher' %}?section=supports" class="grid h-10 w-10 shrink-0 place-items-center rounded-ui-button bg-ui-primary text-sm font-black text-ui-on-primary" aria-label="ESFE">E</a>
+        <a href="{% url 'accounts_portal:portal_teacher' %}?section=supports" class="ui-focus-ring inline-flex min-h-10 shrink-0 items-center gap-2 rounded-ui-button px-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover"><i data-lucide="arrow-left" class="h-4 w-4"></i><span class="hidden sm:inline">Ressources de cours</span></a>
+        <div class="min-w-0 border-l border-ui-border pl-3"><h1 class="truncate text-base font-bold sm:text-lg">{{ selected_ec.title|default:"Course Studio" }}</h1><p class="truncate text-xs text-ui-text-muted">{{ selected_class.display_name|default:"Conception pédagogique" }}</p></div>
+      </div>
+      <div class="hidden items-center gap-3 sm:flex"><a href="{% url 'accounts_portal:teacher_course_interactions' %}" class="ui-focus-ring inline-flex min-h-10 items-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold hover:bg-ui-surface-hover"><i data-lucide="messages-square" class="h-4 w-4"></i>Interactions</a><span class="items-center gap-2 text-xs font-semibold text-ui-text-muted lg:inline-flex"><i data-lucide="file-pen-line" class="h-4 w-4 text-ui-primary"></i>Course Studio</span></div>
+    </div>
+  </header>
+  <main id="course-studio-workspace" class="mx-auto min-h-[calc(100vh-4rem)] max-w-[1920px] p-4 sm:p-6 lg:p-8">
+    {% include "portal/partials/teacher_support_workspace.html" %}
+  </main>
+</div>
+{% endblock %}

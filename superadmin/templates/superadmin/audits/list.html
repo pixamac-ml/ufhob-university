@@ -1,0 +1,40 @@
+{% extends "superadmin/unified_base.html" %}
+{% load component_tags %}
+
+{% block page_title %}Audits et journaux{% endblock %}
+{% block page_subtitle %}Consultation des traces déjà collectées par UFHOB. Aucune action métier n’est modifiable ici.{% endblock %}
+
+{% block content_main %}
+<div class="space-y-5">
+  {% if filter_warning %}{% component "ui_core.alert" tone="warning" message=filter_warning %}{% endcomponent %}{% endif %}
+  <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    {% for item in sources %}
+      <a href="{% url 'superadmin:audit_center' %}?source={{ item.key }}" class="rounded-ui-card border p-4 no-underline {% if source == item.key %}border-ui-primary bg-ui-primary-soft{% else %}border-ui-border bg-ui-surface hover:bg-ui-surface-hover{% endif %}">
+        <p class="text-xs font-bold uppercase tracking-wide text-ui-text-muted">{{ item.label }}</p>
+        <p class="mt-2 text-2xl font-bold text-ui-text">{{ item.count }}</p>
+      </a>
+    {% endfor %}
+  </section>
+
+  <section class="rounded-ui-card border border-ui-border bg-ui-surface p-4">
+    <form method="get" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <input type="hidden" name="source" value="{{ source }}">
+      <label class="space-y-1"><span class="form-label">Recherche</span><input name="q" value="{{ filters.q }}" class="form-input" placeholder="Acteur, objet ou contexte"></label>
+      <label class="space-y-1"><span class="form-label">Action</span><select name="action" class="form-select"><option value="">Toutes les actions</option>{% for value, label in actions %}<option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label class="space-y-1"><span class="form-label">Acteur</span><select name="actor" class="form-select"><option value="">Tous les acteurs</option>{% for actor in actors %}<option value="{{ actor.pk }}" {% if filters.actor == actor.pk|stringformat:'s' %}selected{% endif %}>{{ actor.get_full_name|default:actor.username }}</option>{% endfor %}</select></label>
+      {% if source == 'support' or source == 'finance' %}<label class="space-y-1"><span class="form-label">Campus</span><select name="branch" class="form-select"><option value="">Tous les campus</option>{% for branch in branches %}<option value="{{ branch.pk }}" {% if filters.branch == branch.pk|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>{% endfor %}</select></label>{% endif %}
+      <div class="flex items-end gap-2"><button class="btn btn-primary" type="submit">Filtrer</button><a class="btn btn-outline" href="{% url 'superadmin:audit_center' %}?source={{ source }}">Réinitialiser</a></div>
+    </form>
+  </section>
+
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface" data-ui-core="data-table">
+    <header class="border-b border-ui-border px-4 py-3"><h2 class="text-sm font-bold text-ui-text">{{ source_label }}</h2><p class="mt-1 text-sm text-ui-text-muted">{{ page_obj.paginator.count }} trace{{ page_obj.paginator.count|pluralize }} trouvée{{ page_obj.paginator.count|pluralize }}.</p></header>
+    {% if audit_rows %}
+      <div class="overflow-x-auto"><table class="w-full min-w-ui-table text-left text-sm"><thead class="bg-ui-surface-muted text-xs uppercase text-ui-text-muted"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Acteur</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Domaine</th><th class="px-4 py-3">Objet / contexte</th><th class="px-4 py-3 text-right">Détail</th></tr></thead><tbody class="divide-y divide-ui-border">{% for row in audit_rows %}<tr class="hover:bg-ui-surface-hover"><td class="whitespace-nowrap px-4 py-3 text-ui-text-muted">{{ row.occurred_at|date:'d/m/Y H:i' }}</td><td class="px-4 py-3">{% if row.actor %}<a class="font-semibold text-ui-primary" href="{% url 'superadmin:user_detail' row.actor.pk %}">{{ row.actor.get_full_name|default:row.actor.username }}</a>{% else %}—{% endif %}</td><td class="px-4 py-3">{% component "ui_core.status_badge" label=row.action tone="info" %}{% endcomponent %}</td><td class="px-4 py-3 text-ui-text-muted">{{ row.domain }}</td><td class="max-w-md px-4 py-3 text-ui-text-muted"><span class="block truncate">{{ row.context }}</span></td><td class="px-4 py-3 text-right"><a class="btn btn-outline btn-sm" href="{% url 'superadmin:audit_detail' source row.entry.pk %}">Voir</a></td></tr>{% endfor %}</tbody></table></div>
+      {% if page_obj.paginator.num_pages > 1 %}<footer class="flex items-center justify-between border-t border-ui-border px-4 py-3 text-sm"><span class="text-ui-text-muted">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span><div class="flex gap-2">{% if page_obj.has_previous %}<a class="btn btn-outline btn-sm" href="?source={{ source }}&q={{ filters.q|urlencode }}&page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-outline btn-sm" href="?source={{ source }}&q={{ filters.q|urlencode }}&page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}</div></footer>{% endif %}
+    {% else %}
+      {% component "ui_core.empty_state" icon="shield-check" title="Aucune trace trouvée" message="Les journaux apparaîtront ici lorsque le système enregistrera des opérations de ce domaine." %}{% endcomponent %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

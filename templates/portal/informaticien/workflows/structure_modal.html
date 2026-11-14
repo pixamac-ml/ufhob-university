@@ -1,0 +1,214 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Paramétrage académique" title="Configurer la structure" %}
+    {% fill "actions" %}<button type="button" class="btn btn-secondary" onclick="window.dispatchEvent(new CustomEvent('ui-overlay-close', {detail: {id: 'it-dashboard-modal'}}))">Fermer</button>{% endfill %}
+  {% endcomponent %}
+
+  {% component "ui_core.panel" %}
+    {% fill "default" %}
+      {% if form_error %}
+        {% component "ui_core.alert" message=form_error tone="danger" %}{% endcomponent %}
+      {% endif %}
+
+      {% if kind == "class" %}
+      <form
+        method="post"
+        action="{% url 'accounts_portal:it_structure_action' %}"
+        hx-post="{% url 'accounts_portal:it_structure_action' %}"
+        hx-target="#it-dashboard-workspace"
+        hx-swap="innerHTML"
+        class="grid gap-4"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_class">
+        <input type="hidden" name="section" value="classes">
+        <input type="hidden" name="class_id" value="{{ target_class.id|default:'' }}">
+        <div class="grid gap-4 md:grid-cols-[0.8fr_1.2fr]">
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Cycle
+            <select id="it-class-cycle-filter" class="h-12 rounded-xl border border-slate-200 px-4">
+              <option value="">Tous les cycles</option>
+              {% for group in programmes_by_cycle %}
+              <option value="{{ group.cycle }}">{{ group.cycle }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Programme
+            <select id="it-class-programme-select" name="programme_id" class="h-12 rounded-xl border border-slate-200 px-4">
+              <option value="">Choisir un programme</option>
+              {% for group in programmes_by_cycle %}
+              <optgroup label="{{ group.cycle }}">
+                {% for programme in group.programmes %}
+                <option value="{{ programme.id }}" data-cycle="{{ group.cycle }}" {% if form_values.programme_id|stringformat:"s" == programme.id|stringformat:"s" or not form_values and target_class and target_class.programme_id == programme.id %}selected{% endif %}>{{ group.cycle }} - {{ programme.title }}</option>
+                {% endfor %}
+              </optgroup>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Annee academique
+            <select name="academic_year_id" class="h-12 rounded-xl border border-slate-200 px-4">
+              <option value="">Choisir une annee</option>
+              {% for year in academic_years %}
+              <option value="{{ year.id }}" {% if form_values.academic_year_id|stringformat:"s" == year.id|stringformat:"s" or not form_values and target_class and target_class.academic_year_id == year.id %}selected{% endif %}>{{ year.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Niveau
+            <input name="level" value="{% if form_values %}{{ form_values.level }}{% else %}{{ target_class.level|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4" placeholder="L1, L2, M1...">
+          </label>
+        </div>
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          Seuil de validation
+          <input name="validation_threshold" value="{% if form_values %}{{ form_values.validation_threshold }}{% else %}{{ target_class.validation_threshold|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4" placeholder="10">
+        </label>
+        <button type="submit" class="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white">Enregistrer la classe</button>
+      </form>
+      <script>
+        (function () {
+          const cycleSelect = document.getElementById("it-class-cycle-filter");
+          const programmeSelect = document.getElementById("it-class-programme-select");
+          if (!cycleSelect || !programmeSelect) return;
+
+          const selectedOption = programmeSelect.options[programmeSelect.selectedIndex];
+          if (selectedOption && selectedOption.dataset.cycle) {
+            cycleSelect.value = selectedOption.dataset.cycle;
+          }
+
+          function applyCycleFilter() {
+            const cycle = cycleSelect.value;
+            let selectedStillVisible = false;
+            Array.from(programmeSelect.options).forEach(function (option) {
+              if (!option.value) {
+                option.hidden = false;
+                return;
+              }
+              const visible = !cycle || option.dataset.cycle === cycle;
+              option.hidden = !visible;
+              if (option.selected && visible) {
+                selectedStillVisible = true;
+              }
+            });
+            if (!selectedStillVisible) {
+              programmeSelect.value = "";
+            }
+          }
+
+          cycleSelect.addEventListener("change", applyCycleFilter);
+          applyCycleFilter();
+        })();
+      </script>
+      {% elif kind == "ue" %}
+      <form
+        method="post"
+        action="{% url 'accounts_portal:it_structure_action' %}"
+        hx-post="{% url 'accounts_portal:it_structure_action' %}"
+        hx-target="#it-dashboard-workspace"
+        hx-swap="innerHTML"
+        class="grid gap-4"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_ue">
+        <input type="hidden" name="section" value="maquettes">
+        <input type="hidden" name="ue_id" value="{{ target_ue.id|default:'' }}">
+        <input type="hidden" name="selected_class_id" value="{{ selected_class.id|default:'' }}">
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          Semestre
+          <select name="semester_id" class="h-12 rounded-xl border border-slate-200 px-4">
+            <option value="">Choisir un semestre</option>
+            {% for semester in semesters %}
+            <option value="{{ semester.id }}" {% if form_values.semester_id|stringformat:"s" == semester.id|stringformat:"s" or not form_values and selected_semester and selected_semester.id == semester.id or not form_values and target_ue and target_ue.semester_id == semester.id %}selected{% endif %}>Semestre {{ semester.number }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Code UE
+            <input name="code" value="{% if form_values %}{{ form_values.code }}{% else %}{{ target_ue.code|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4">
+          </label>
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Intitule UE
+            <input name="title" value="{% if form_values %}{{ form_values.title }}{% else %}{{ target_ue.title|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4">
+          </label>
+        </div>
+        <button type="submit" class="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white">Enregistrer l'UE</button>
+      </form>
+      {% elif kind == "ec" %}
+      <form
+        method="post"
+        action="{% url 'accounts_portal:it_structure_action' %}"
+        hx-post="{% url 'accounts_portal:it_structure_action' %}"
+        hx-target="#it-dashboard-workspace"
+        hx-swap="innerHTML"
+        class="grid gap-4"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_ec">
+        <input type="hidden" name="section" value="maquettes">
+        <input type="hidden" name="ec_id" value="{{ target_ec.id|default:'' }}">
+        <input type="hidden" name="selected_class_id" value="{{ selected_class.id|default:'' }}">
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          UE
+          <select name="ue_id" class="h-12 rounded-xl border border-slate-200 px-4">
+            <option value="">Choisir une UE</option>
+            {% for row in ue_rows %}
+              {% for ue in row.ues %}
+              <option value="{{ ue.id }}" {% if form_values.ue_id|stringformat:"s" == ue.id|stringformat:"s" or not form_values and selected_ue and selected_ue.id == ue.id or not form_values and target_ec and target_ec.ue_id == ue.id %}selected{% endif %}>S{{ row.semester.number }} · {{ ue.code }} · {{ ue.title }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+        </label>
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          Intitule EC
+          <input name="title" value="{% if form_values %}{{ form_values.title }}{% else %}{{ target_ec.title|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4">
+        </label>
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Coefficient
+            <input name="coefficient" value="{% if form_values %}{{ form_values.coefficient }}{% else %}{{ target_ec.coefficient|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4">
+          </label>
+          <label class="grid gap-2 text-sm font-bold text-slate-700">
+            Credit requis
+            <input name="credit_required" value="{% if form_values %}{{ form_values.credit_required }}{% else %}{{ target_ec.credit_required|default:'' }}{% endif %}" class="h-12 rounded-xl border border-slate-200 px-4">
+          </label>
+        </div>
+        <button type="submit" class="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white">Enregistrer l'EC</button>
+      </form>
+      {% else %}
+      <form
+        method="post"
+        action="{% url 'accounts_portal:it_structure_action' %}"
+        hx-post="{% url 'accounts_portal:it_structure_action' %}"
+        hx-target="#it-dashboard-workspace"
+        hx-swap="innerHTML"
+        class="grid gap-4"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign_student">
+        <input type="hidden" name="section" value="affectations">
+        <input type="hidden" name="student_id" value="{{ target_student.id|default:'' }}">
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          Etudiant
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+            {{ target_student.full_name|default:"Etudiant introuvable" }}{% if target_student %} · {{ target_student.programme.title }}{% endif %}
+          </div>
+        </label>
+        <label class="grid gap-2 text-sm font-bold text-slate-700">
+          Classe cible
+          <select name="class_id" class="h-12 rounded-xl border border-slate-200 px-4">
+            <option value="">Choisir une classe</option>
+            {% for class_item in classes %}
+            <option value="{{ class_item.id }}" {% if form_values.class_id|stringformat:"s" == class_item.id|stringformat:"s" or not form_values and selected_class and selected_class.id == class_item.id %}selected{% endif %}>{{ class_item.display_name }} · {{ class_item.programme.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white">Affecter l'etudiant</button>
+      </form>
+      {% endif %}
+    {% endfill %}
+  {% endcomponent %}
+</div>

@@ -1,0 +1,25 @@
+<tr id="transcript-request-{{ request_item.id }}">
+  <td>{{ request_item.student.full_name }}<br><small>{{ request_item.student.matricule }}</small></td>
+  <td>{{ request_item.enrollment.programme.school.code }} · {{ request_item.enrollment.branch }}</td>
+  <td>{{ request_item.enrollment.programme }}<br><small>{{ request_item.enrollment.academic_class }} · S{{ request_item.semester.number }}</small></td>
+  <td>{{ request_item.get_status_display }}</td>
+  <td>
+    {% if request_item.status == 'requested' %}
+      <form class="inline" method="post" action="{% url 'academics:director_take_transcript_request' request_item.id %}" hx-post="{% url 'academics:director_take_transcript_request' request_item.id %}" hx-target="#transcript-request-{{ request_item.id }}" hx-swap="outerHTML">{% csrf_token %}<button type="submit">Prendre en traitement</button></form>
+    {% elif request_item.status == 'processing' %}
+      {% if request_item.bulletin_id %}
+        <a href="{% url 'academics:bulletin_detail' request_item.bulletin_id %}">Voir</a>
+        <a href="{% url 'academics:bulletin_pdf' request_item.bulletin_id %}">Télécharger</a>
+        <form class="inline" method="post" action="{% url 'academics:director_mark_transcript_available' request_item.id %}" hx-post="{% url 'academics:director_mark_transcript_available' request_item.id %}" hx-target="#transcript-request-{{ request_item.id }}" hx-swap="outerHTML">{% csrf_token %}<button type="submit">Déclarer disponible</button></form>
+      {% else %}
+        <form class="inline" method="post" action="{% url 'academics:director_generate_transcript' request_item.id %}">{% csrf_token %}<button type="submit">Générer</button></form>
+      {% endif %}
+    {% elif request_item.status == 'available' %}
+      <a href="{% url 'academics:bulletin_detail' request_item.bulletin_id %}">Voir</a>
+      <a href="{% url 'academics:bulletin_pdf' request_item.bulletin_id %}">Télécharger</a>
+      <form class="inline" method="post" action="{% url 'academics:director_mark_transcript_delivered' request_item.id %}" hx-post="{% url 'academics:director_mark_transcript_delivered' request_item.id %}" hx-target="#transcript-request-{{ request_item.id }}" hx-swap="outerHTML">{% csrf_token %}<button type="submit">Marquer remis</button></form>
+    {% elif request_item.status == 'delivered' %}
+      <span>Remis physiquement</span>
+    {% endif %}
+  </td>
+</tr>

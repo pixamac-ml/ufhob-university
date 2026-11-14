@@ -1,0 +1,13 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}{% if diploma %}Modifier le diplôme{% else %}Nouveau diplôme{% endif %}{% endblock %}
+{% block page_subtitle %}Définissez un diplôme de référence pour les programmes UFHOB.{% endblock %}
+
+{% block content_main %}
+  <form method="post" class="mx-auto max-w-3xl overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface">
+    {% csrf_token %}
+    <header class="border-b border-ui-border px-5 py-4"><h2 class="text-base font-bold text-ui-text">Informations générales</h2><p class="mt-1 text-sm text-ui-text-muted">Les champs marqués d’un astérisque sont obligatoires.</p></header>
+    <div class="grid grid-cols-1 gap-5 p-5 md:grid-cols-2"><div class="space-y-1.5 md:col-span-2"><label for="name" class="block text-sm font-semibold text-ui-text">Nom du diplôme <span class="text-ui-danger" aria-hidden="true">*</span></label><input id="name" name="name" type="text" required value="{{ diploma.name|default:'' }}" placeholder="Ex. Licence, Master, Bachelor" class="h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus"></div><div class="space-y-1.5"><label for="level" class="block text-sm font-semibold text-ui-text">Niveau</label><select id="level" name="level" class="h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus"><option value="superieur" {% if diploma.level == 'superieur' %}selected{% endif %}>Supérieur</option><option value="secondaire" {% if diploma.level == 'secondaire' %}selected{% endif %}>Secondaire</option></select></div></div>
+    <footer class="flex flex-wrap justify-end gap-3 border-t border-ui-border px-5 py-4"><a href="{% url 'superadmin:diploma_list' %}" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-border px-4 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Annuler</a><button type="submit" class="inline-flex min-h-ui-control items-center rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus">Enregistrer</button></footer>
+  </form>
+{% endblock %}

@@ -1,0 +1,20 @@
+<div class="min-h-0 p-3">
+  <p class="mb-3 px-2 text-ui-micro font-bold uppercase tracking-ui-label text-ui-text">Contenu du cours</p>
+  <div class="mb-4">
+    <div class="mb-1 flex items-center justify-between text-xs font-semibold text-ui-text-muted"><span>Progression</span><span>{{ total_completed_content_count }}/{{ total_active_content_count }}</span></div>
+    <div class="h-2 overflow-hidden rounded-full bg-ui-surface-muted"><div class="h-full rounded-full bg-ui-primary" style="width:{% if total_active_content_count %}{% widthratio total_completed_content_count total_active_content_count 100 %}{% else %}0{% endif %}%"></div></div>
+  </div>
+  {% for chapter in chapters %}
+    <section class="mb-4 last:mb-0" x-data="{ open: true }">
+      <button type="button" @click="open = !open" :aria-expanded="open.toString()" class="mb-2 flex min-h-9 w-full items-center justify-between gap-2 rounded-ui-button px-2 text-left text-ui-micro font-bold uppercase tracking-ui-label text-ui-text-muted hover:bg-ui-surface-hover"><span class="min-w-0"><span class="block truncate">{{ chapter.title }}</span><span class="mt-0.5 block normal-case tracking-normal text-[10px]">{{ chapter.completed_content_count }}/{{ chapter.active_content_count }} terminée{{ chapter.completed_content_count|pluralize }}</span></span><i data-lucide="chevron-down" class="h-4 w-4 shrink-0 transition-transform" :class="open && 'rotate-180'"></i></button>
+      <div x-show="open" class="space-y-1">
+        {% for content in chapter.active_contents %}
+          <button type="button" class="flex min-h-11 w-full items-start gap-2 rounded-ui-button px-2 py-2 text-left text-sm font-semibold" :class="activeId === {{ content.id }} ? 'bg-ui-primary-soft text-ui-primary' : 'text-ui-text hover:bg-ui-surface-hover'" @click="setActive({{ content.id }})">
+            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-ui-button border border-ui-border bg-ui-surface text-xs">{% if content.student_is_completed %}<i data-lucide="check" class="h-3.5 w-3.5 text-ui-success"></i>{% else %}{{ forloop.counter }}{% endif %}</span>
+            <span class="min-w-0"><span class="block leading-snug">{{ content.title }}</span><span class="mt-0.5 block text-ui-micro font-semibold uppercase text-ui-text-muted">{{ content.get_content_type_display }} · {{ content.student_progress_percent }}%</span></span>
+          </button>
+        {% empty %}<p class="rounded-ui-button border border-dashed border-ui-border p-3 text-sm text-ui-text-muted">Aucune leçon active.</p>{% endfor %}
+      </div>
+    </section>
+  {% empty %}<p class="text-sm text-ui-text-muted">Aucune section publiée.</p>{% endfor %}
+</div>

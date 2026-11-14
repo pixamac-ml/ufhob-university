@@ -1,109 +1,195 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from django.templatetags.static import static
-from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
+import uuid
+import hashlib
+import secrets
+from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from branches.models import Branch
-from schools.models import School
+
 User = get_user_model()
 
 
-# ==========================================
-# VALIDATION AVATAR
-# ==========================================
 def validate_avatar_extension(value):
     allowed = ["jpg", "jpeg", "png", "webp"]
-
     ext = value.name.split(".")[-1].lower()
-
     if ext not in allowed:
-        raise ValidationError("Format avatar non autorisé")
+        raise ValidationError("Format avatar non autorise")
 
 
-# ==========================================
-# CHEMIN UPLOAD AVATAR
-# ==========================================
 def profile_upload_path(instance, filename):
     return f"profiles/{instance.user.id}/avatar/{filename}"
 
 
-# ==========================================
-# PROFILE
-# ==========================================
 class Profile(models.Model):
-
     ROLE_CHOICES = [
         ("superadmin", "Super Administrateur"),
         ("executive", "Direction"),
         ("admissions", "Admissions"),
         ("finance", "Finance"),
         ("teacher", "Enseignant"),
-        ("student", "Étudiant"),
+        ("student", "Etudiant"),
     ]
 
-    # ---------------------------------
-    # RELATION UTILISATEUR
-    # ---------------------------------
+    POSITION_CHOICES = [
+        ("student", "Etudiant"),
+        ("teacher", "Enseignant"),
+        ("moniteur", "Moniteur / Monitrice"),
+        ("finance_manager", "Responsable finance"),
+        ("payment_agent", "Agent de paiement"),
+        ("secretary", "Secretaire"),
+        ("admissions", "Admissions"),
+        ("director_of_studies", "Directeur des etudes"),
+        ("executive_director", "Direction executive"),
+        ("deputy_executive_director", "Direction generale adjointe"),
+        ("branch_manager", "Gestionnaire annexe"),
+        ("annex_manager", "Gestionnaire d'annexe"),
+        ("academic_supervisor", "Surveillant academique"),
+        ("it_support", "Informaticien"),
+        ("marketing_manager", "Responsable marketing digital"),
+        ("super_admin", "Super administrateur"),
+    ]
+
+    USER_TYPE_CHOICES = [
+        ("public", "Public"),
+        ("staff", "Staff"),
+    ]
+
+    EMPLOYMENT_STATUS_CHOICES = [
+        ("active", "Actif"),
+        ("on_leave", "En conge"),
+        ("suspended", "Suspendu"),
+        ("inactive", "Inactif"),
+    ]
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         related_name="profile",
-        db_index=True
+        db_index=True,
     )
 
-    # ---------------------------------
-    # RÔLE STAFF / UTILISATEUR
-    # ---------------------------------
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
         blank=True,
-        db_index=True
+        db_index=True,
     )
 
-    # ---------------------------------
-    # ANNEXE
-    # ---------------------------------
+    user_type = models.CharField(
+        max_length=20,
+        choices=USER_TYPE_CHOICES,
+        blank=True,
+        db_index=True,
+        help_text="Type utilisateur normalise pour le portail",
+    )
+
+    position = models.CharField(
+        max_length=40,
+        choices=POSITION_CHOICES,
+        blank=True,
+        db_index=True,
+        help_text="Fonction metier principale pour le routage dashboard.",
+    )
+
     branch = models.ForeignKey(
         Branch,
         on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="staff_profiles",
-        db_index=True
+        db_index=True,
     )
-    # ==================================================
-    # LIEN VERS L'ÉCOLE (NOUVEAU - UFHOB)
-    # ==================================================
-    school = models.ForeignKey(
-        'schools.School',
-        on_delete=models.SET_NULL,
+
+    employee_code = models.CharField(
+        max_length=30,
+        blank=True,
+        db_index=True,
+        help_text="Code employe interne pour la gestion de paie.",
+    )
+
+    salary_base = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Salaire mensuel de base en FCFA.",
+    )
+
+    teacher_hourly_rate = models.PositiveBigIntegerField(
+        default=0,
+        help_text="Tarif horaire officiel pour les enseignants, en FCFA.",
+    )
+
+    # Parametres sociaux par defaut du dossier RH. Les taux/montants restent
+    # configures par l'etablissement : ces cases ne supposent aucun taux legal.
+    amo_applicable = models.BooleanField(
+        default=False,
+        verbose_name="AMO applicable",
+        help_text="Proposer la retenue AMO sur les prochaines paies.",
+    )
+    inps_applicable = models.BooleanField(
+        default=False,
+        verbose_name="INPS applicable",
+        help_text="Proposer la retenue INPS sur les prochaines paies.",
+    )
+    amo_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        verbose_name="Taux AMO (%)",
+    )
+    inps_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        verbose_name="Taux INPS (%)",
+    )
+
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EMPLOYMENT_STATUS_CHOICES,
+        default="active",
+        db_index=True,
+    )
+
+    hire_date = models.DateField(
         null=True,
         blank=True,
-        related_name="profiles",
-        verbose_name="École",
-        help_text="École à laquelle l'utilisateur est rattaché"
     )
-    # ---------------------------------
-    # IDENTITÉ PUBLIQUE
-    # ---------------------------------
+
     avatar = models.ImageField(
         upload_to=profile_upload_path,
         validators=[validate_avatar_extension],
         blank=True,
-        null=True
+        null=True,
     )
 
     bio = models.TextField(
         blank=True,
-        help_text="Présentation publique de l'utilisateur"
+        help_text="Presentation publique de l'utilisateur",
     )
 
     location = models.CharField(
         max_length=120,
         blank=True,
-        db_index=True
+        db_index=True,
+    )
+
+    phone = models.CharField(
+        max_length=30,
+        blank=True,
+        db_index=True,
+        help_text="Numero de contact principal de l'utilisateur.",
+    )
+
+    address = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Adresse postale ou administrative principale.",
     )
 
     website = models.URLField(blank=True)
@@ -111,87 +197,59 @@ class Profile(models.Model):
     main_domain = models.CharField(
         max_length=120,
         blank=True,
-        help_text="Domaine principal d'activité",
-        db_index=True
+        help_text="Domaine principal d'activite",
+        db_index=True,
     )
 
-    # ---------------------------------
-    # RÉPUTATION
-    # ---------------------------------
-    reputation = models.IntegerField(
-        default=0,
-        db_index=True
-    )
-
-    # ---------------------------------
-    # STATISTIQUES COMMUNAUTAIRES
-    # ---------------------------------
-    total_topics = models.PositiveIntegerField(
-        default=0,
-        db_index=True
-    )
-
+    reputation = models.IntegerField(default=0, db_index=True)
+    total_topics = models.PositiveIntegerField(default=0, db_index=True)
     total_answers = models.PositiveIntegerField(default=0)
-
     total_accepted_answers = models.PositiveIntegerField(default=0)
-
     total_upvotes_received = models.PositiveIntegerField(default=0)
-
     total_views_generated = models.PositiveIntegerField(default=0)
 
-    # ---------------------------------
-    # BADGES
-    # ---------------------------------
     badge_gold = models.PositiveIntegerField(default=0)
     badge_silver = models.PositiveIntegerField(default=0)
     badge_bronze = models.PositiveIntegerField(default=0)
 
-    # ---------------------------------
-    # MÉTADONNÉES
-    # ---------------------------------
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True
-    )
-
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(default=timezone.now, db_index=True)
+    is_public = models.BooleanField(default=True, db_index=True)
 
-    last_seen = models.DateTimeField(
-        default=timezone.now,
-        db_index=True
-    )
-
-    is_public = models.BooleanField(
-        default=True,
-        db_index=True
-    )
-
-    # ==========================================
-    # META
-    # ==========================================
     class Meta:
         ordering = ["-reputation"]
         verbose_name = "Profil"
         verbose_name_plural = "Profils"
-
         indexes = [
             models.Index(fields=["role"]),
+            models.Index(fields=["user_type"]),
+            models.Index(fields=["position"]),
             models.Index(fields=["branch"]),
+            models.Index(fields=["employment_status"]),
             models.Index(fields=["reputation"]),
         ]
 
-    # ==========================================
-    # MÉTHODES
-    # ==========================================
     def __str__(self):
         return f"Profil de {self.user.username}"
+
+    @property
+    def institutional_position_label(self):
+        from accounts.position_registry import get_position_definition
+
+        position = getattr(getattr(self.user, "institutional_profile", None), "position", None) or self.position
+        definition = get_position_definition(position)
+        return definition.label if definition else self.get_position_display()
 
     @property
     def avatar_url(self):
         if self.avatar and hasattr(self.avatar, "url"):
             return self.avatar.url
+        return ""
 
-        return static("images/default-avatar.png")
+    @property
+    def is_online(self):
+        return self.last_seen >= timezone.now() - timedelta(minutes=5)
 
     @property
     def score(self):
@@ -208,3 +266,1434 @@ class Profile(models.Model):
     @property
     def is_teacher(self):
         return self.role == "teacher"
+
+
+class UserEmailHistory(models.Model):
+    """Immutable trace of addresses previously used by an account."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_history")
+    email = models.EmailField()
+    started_at = models.DateTimeField(default=timezone.now)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    changed_at = models.DateTimeField(default=timezone.now)
+    changed_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="email_history_changes",
+    )
+    reason = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        ordering = ["-changed_at", "-id"]
+        indexes = [models.Index(fields=["user", "ended_at"])]
+
+    def __str__(self):
+        return f"{self.user_id}: {self.email}"
+
+
+class PublicCommunityProfile(models.Model):
+    """Identité publique, sans position ni permission institutionnelle."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="public_community_profile",
+    )
+    bio = models.TextField(blank=True)
+    location = models.CharField(max_length=120, blank=True, db_index=True)
+    website = models.URLField(blank=True)
+    main_domain = models.CharField(max_length=120, blank=True, db_index=True)
+    reputation = models.IntegerField(default=0, db_index=True)
+    total_topics = models.PositiveIntegerField(default=0)
+    total_answers = models.PositiveIntegerField(default=0)
+    total_accepted_answers = models.PositiveIntegerField(default=0)
+    total_upvotes_received = models.PositiveIntegerField(default=0)
+    total_views_generated = models.PositiveIntegerField(default=0)
+    badge_gold = models.PositiveIntegerField(default=0)
+    badge_silver = models.PositiveIntegerField(default=0)
+    badge_bronze = models.PositiveIntegerField(default=0)
+    is_public = models.BooleanField(default=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Profil public de {self.user.username}"
+
+
+class InstitutionalProfile(models.Model):
+    """Affectation SYSTEM officielle ; la catégorie et le scope sont dérivés."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="institutional_profile",
+    )
+    position = models.CharField(max_length=40, choices=Profile.POSITION_CHOICES, db_index=True)
+    school = models.ForeignKey(
+        "core.School", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="institutional_profiles",
+    )
+    access_scope = models.CharField(
+        max_length=20, blank=True, default="",
+        choices=[("", "Automatique (compatibilité)"), ("GLOBAL", "Université"),
+                 ("SCHOOL", "École"), ("BRANCH", "Campus"),
+                 ("SCHOOL_BRANCH", "École et campus")],
+    )
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="institutional_profiles",
+    )
+    employee_code = models.CharField(max_length=30, blank=True, db_index=True)
+    salary_base = models.PositiveBigIntegerField(default=0)
+    teacher_hourly_rate = models.PositiveBigIntegerField(default=0)
+    employment_status = models.CharField(
+        max_length=20,
+        choices=Profile.EMPLOYMENT_STATUS_CHOICES,
+        default="active",
+        db_index=True,
+    )
+    hire_date = models.DateField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def definition(self):
+        from accounts.position_registry import get_position_definition
+
+        return get_position_definition(self.position)
+
+    @property
+    def category(self):
+        return self.definition.category if self.definition else None
+
+    @property
+    def scope(self):
+        if self.access_scope:
+            return self.access_scope
+        if self.school_id:
+            return "SCHOOL_BRANCH" if self.branch_id else "SCHOOL"
+        return self.definition.scope if self.definition else None
+
+    @property
+    def scope_label(self):
+        return {"GLOBAL": "Université", "SCHOOL": "École", "BRANCH": "Campus", "SCHOOL_BRANCH": "École et campus"}.get(self.scope, "Non défini")
+
+    def clean(self):
+        super().clean()
+        from core.models import SchoolBranch
+
+        errors = {}
+        if self.scope in {"SCHOOL", "SCHOOL_BRANCH"} and not self.school_id:
+            errors["school"] = "Une école est obligatoire pour ce périmètre."
+        if self.access_scope in {"BRANCH", "SCHOOL_BRANCH"} and not self.branch_id:
+            errors["branch"] = "Un campus est obligatoire pour ce périmètre."
+        if self.access_scope in {"GLOBAL", "BRANCH"} and self.school_id:
+            errors["school"] = "Ce périmètre ne doit pas porter de restriction école."
+        if self.access_scope == "SCHOOL" and self.branch_id:
+            errors["branch"] = "Le périmètre école couvre ses campus ; retirez le campus."
+        if self.access_scope == "GLOBAL" and self.branch_id:
+            errors["branch"] = "Le périmètre université ne doit pas être limité à un campus."
+        if self.school_id and self.branch_id and not SchoolBranch.objects.filter(
+            school_id=self.school_id, branch_id=self.branch_id, is_active=True,
+            school__is_active=True, branch__is_active=True,
+        ).exists():
+            errors["branch"] = "Cette école n'est pas active sur ce campus."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Profil institutionnel de {self.user.username}"
+
+
+class AccountSessionRecord(models.Model):
+    """Session SYSTEM opaque, sans conservation de la cle Django brute."""
+
+    END_IDLE_TIMEOUT = "IDLE_TIMEOUT"
+    END_ABSOLUTE_TIMEOUT = "ABSOLUTE_TIMEOUT"
+    END_VOLUNTARY = "VOLUNTARY_LOGOUT"
+    END_ADMIN_REVOKED = "ADMIN_REVOKED"
+    END_PASSWORD_CHANGED = "PASSWORD_CHANGED"
+    END_ACCOUNT_RESTRICTED = "ACCOUNT_RESTRICTED"
+    END_CHOICES = [
+        (END_IDLE_TIMEOUT, "Expiration pour inactivite"),
+        (END_ABSOLUTE_TIMEOUT, "Expiration absolue"),
+        (END_VOLUNTARY, "Deconnexion volontaire"),
+        (END_ADMIN_REVOKED, "Revocation administrative"),
+        (END_PASSWORD_CHANGED, "Changement de mot de passe"),
+        (END_ACCOUNT_RESTRICTED, "Compte restreint"),
+    ]
+
+    identifier = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="system_session_records")
+    position = models.CharField(max_length=40, blank=True, db_index=True)
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    last_activity_at = models.DateTimeField(default=timezone.now, db_index=True)
+    absolute_expires_at = models.DateTimeField(db_index=True)
+    ended_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    end_reason = models.CharField(max_length=32, choices=END_CHOICES, blank=True, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["user", "ended_at"], name="accounts_ac_user_id_8026b0_idx"),
+            models.Index(fields=["identifier", "ended_at"], name="accounts_ac_identif_8917b1_idx"),
+        ]
+
+
+class AccountSecurityEvent(models.Model):
+    """Journal de securite minimal ne contenant ni secret ni cle de session."""
+
+    LOGIN_SUCCESS = "LOGIN_SUCCESS"
+    LOGOUT_VOLUNTARY = "LOGOUT_VOLUNTARY"
+    IDLE_TIMEOUT = "IDLE_TIMEOUT"
+    ABSOLUTE_TIMEOUT = "ABSOLUTE_TIMEOUT"
+    ADMIN_REVOKED = "ADMIN_REVOKED"
+    PASSWORD_CHANGED = "PASSWORD_CHANGED"
+    EMAIL_CHANGED = "EMAIL_CHANGED"
+    ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED"
+    ACCOUNT_BLOCKED = "ACCOUNT_BLOCKED"
+    ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED"
+    POSITION_CHANGED = "POSITION_CHANGED"
+    BRANCH_CHANGED = "BRANCH_CHANGED"
+    EVENT_CHOICES = [
+        (LOGIN_SUCCESS, "Connexion reussie"),
+        (LOGOUT_VOLUNTARY, "Deconnexion volontaire"),
+        (IDLE_TIMEOUT, "Expiration pour inactivite"),
+        (ABSOLUTE_TIMEOUT, "Expiration absolue"),
+        (ADMIN_REVOKED, "Revocation administrative"),
+        (PASSWORD_CHANGED, "Changement de mot de passe"),
+        (EMAIL_CHANGED, "Changement d'adresse email"),
+        (ACCOUNT_SUSPENDED, "Suspension"),
+        (ACCOUNT_BLOCKED, "Blocage"),
+        (ACCOUNT_DEACTIVATED, "Desactivation"),
+        (POSITION_CHANGED, "Changement de position"),
+        (BRANCH_CHANGED, "Changement d'annexe"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_events")
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="acted_security_events")
+    session_identifier = models.UUIDField(null=True, blank=True, db_index=True)
+    event_type = models.CharField(max_length=32, choices=EVENT_CHOICES, db_index=True)
+    reason = models.CharField(max_length=80, blank=True)
+    authentication_method = models.CharField(max_length=32, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["user", "created_at"], name="accounts_ac_user_id_d09911_idx"),
+            models.Index(fields=["event_type", "created_at"], name="accounts_ac_event_t_9d5f32_idx"),
+        ]
+
+
+class UserPreference(models.Model):
+    THEME_LIGHT = "LIGHT"
+    THEME_DARK = "DARK"
+    THEME_SYSTEM = "SYSTEM"
+    THEME_CHOICES = [
+        (THEME_LIGHT, "Clair"),
+        (THEME_DARK, "Sombre"),
+        (THEME_SYSTEM, "Système"),
+    ]
+
+    FONT_SCALE_SMALL = "SM"
+    FONT_SCALE_NORMAL = "MD"
+    FONT_SCALE_LARGE = "LG"
+    FONT_SCALE_XLARGE = "XL"
+    FONT_SCALE_CHOICES = [
+        (FONT_SCALE_SMALL, "Petite"),
+        (FONT_SCALE_NORMAL, "Normale"),
+        (FONT_SCALE_LARGE, "Grande"),
+        (FONT_SCALE_XLARGE, "Très grande"),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="user_preference",
+        db_index=True,
+    )
+    notify_email = models.BooleanField(default=True)
+    notify_in_app = models.BooleanField(default=True)
+    notify_sms = models.BooleanField(default=False)
+    theme = models.CharField(max_length=10, choices=THEME_CHOICES, default=THEME_SYSTEM)
+    font_scale = models.CharField(max_length=4, choices=FONT_SCALE_CHOICES, default=FONT_SCALE_NORMAL)
+    ui_sidebar_collapsed = models.BooleanField(default=False)
+    ui_compact_mode = models.BooleanField(default=False)
+    ui_autorefresh = models.BooleanField(default=True)
+    internal_rules_accepted_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Preference utilisateur"
+        verbose_name_plural = "Preferences utilisateurs"
+
+    def __str__(self):
+        return f"Preferences de {self.user.username}"
+
+
+class SensitiveActionRequest(models.Model):
+    """Demande de modification sur une operation financiere deja finalisee.
+
+    Le workflow ne bloque jamais la creation initiale d'une operation : il
+    s'applique uniquement quand la gestionnaire tente de corriger une erreur
+    sur une operation deja validee/payee. Pour un paiement, le code est
+    consultable par le DG/DGA dans le panneau des corrections financières et
+    transmis au demandeur ; la modification exige ce code avant expiration.
+    """
+
+    ACTION_PAYMENT_EDIT = "payment_edit"
+    ACTION_PAYMENT_CANCEL = "payment_cancel"
+    ACTION_PAYROLL_EDIT = "payroll_edit"
+    ACTION_HONORARIUM_EDIT = "honorarium_edit"
+    ACTION_SEMESTER_PUBLISH = "semester_publish"
+    ACTION_ANNUAL_DELIBERATION_PUBLISH = "annual_deliberation_publish"
+
+    ACTION_CHOICES = [
+        (ACTION_PAYMENT_EDIT, "Modification d'un paiement valide"),
+        (ACTION_PAYMENT_CANCEL, "Annulation d'un paiement valide"),
+        (ACTION_PAYROLL_EDIT, "Modification d'une fiche de paie deja payee"),
+        (ACTION_HONORARIUM_EDIT, "Modification d'un honoraire deja paye"),
+        (ACTION_SEMESTER_PUBLISH, "Publication des resultats d'un semestre"),
+        (ACTION_ANNUAL_DELIBERATION_PUBLISH, "Publication d'une deliberation annuelle"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "En attente de validation"),
+        (STATUS_APPROVED, "Validee"),
+        (STATUS_EXPIRED, "Expiree"),
+        (STATUS_CANCELLED, "Annulee"),
+    ]
+
+    OTP_VALIDITY_MINUTES = 5
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="sensitive_action_requests",
+        db_index=True,
+    )
+    action_type = models.CharField(max_length=30, choices=ACTION_CHOICES, db_index=True)
+    target_model = models.CharField(max_length=60, help_text="Nom du modele cible (ex: Payment).")
+    target_id = models.PositiveBigIntegerField()
+    reason = models.TextField(blank=True, help_text="Motif explique par la gestionnaire.")
+    previous_state = models.JSONField(default=dict, blank=True)
+    requested_state = models.JSONField(default=dict, blank=True)
+
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="sensitive_action_requests",
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sensitive_action_approvals",
+    )
+
+    otp_code_hash = models.CharField(max_length=128)
+    # Le hash reste la source de validation. Cette copie courte sert uniquement
+    # au DG/DGA dans le panneau des corrections financières en attente, afin
+    # qu'il puisse communiquer le code au demandeur sans l'exposer par
+    # notification. Elle est effacée dès que la demande est résolue.
+    otp_display_code = models.CharField(max_length=6, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expires_at = models.DateTimeField()
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Demande d'action sensible"
+        verbose_name_plural = "Demandes d'action sensible"
+        indexes = [
+            models.Index(fields=["branch", "status"]),
+            models.Index(fields=["target_model", "target_id"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_action_type_display()} #{self.target_id} ({self.get_status_display()})"
+
+    @property
+    def is_expired(self):
+        return self.status == self.STATUS_PENDING and timezone.now() > self.expires_at
+
+
+class FinancialAuditLog(models.Model):
+    """Trace immuable des actions financieres sensibles effectivement appliquees."""
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="financial_audit_logs",
+        db_index=True,
+    )
+    action_type = models.CharField(max_length=30)
+    target_model = models.CharField(max_length=60)
+    target_id = models.PositiveBigIntegerField()
+    previous_state = models.JSONField(default=dict, blank=True)
+    new_state = models.JSONField(default=dict, blank=True)
+    performed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="financial_audit_logs",
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="financial_audit_approvals",
+    )
+    sensitive_action_request = models.ForeignKey(
+        SensitiveActionRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Log d'audit financier"
+        verbose_name_plural = "Logs d'audit financier"
+        indexes = [
+            models.Index(fields=["branch", "created_at"]),
+            models.Index(fields=["target_model", "target_id"]),
+        ]
+
+    def __str__(self):
+        return f"{self.action_type} #{self.target_id} par {self.performed_by}"
+
+
+class PayrollEntry(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_READY = "ready"
+    STATUS_PARTIAL = "partial"
+    STATUS_PAID = "paid"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "A verifier"),
+        (STATUS_READY, "Disponible a retirer"),
+        (STATUS_PARTIAL, "Retrait partiel"),
+        (STATUS_PAID, "Retire"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="payroll_entries",
+        db_index=True,
+    )
+
+    employee = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="payroll_entries",
+        db_index=True,
+    )
+
+    period_month = models.DateField(
+        db_index=True,
+        help_text="Premier jour du mois de paie.",
+    )
+
+    base_salary = models.PositiveBigIntegerField(default=0)
+    allowances = models.PositiveBigIntegerField(default=0)
+    deductions = models.PositiveBigIntegerField(default=0)
+    amo_applicable = models.BooleanField(default=False, verbose_name="AMO appliquee")
+    inps_applicable = models.BooleanField(default=False, verbose_name="INPS appliquee")
+    amo_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        verbose_name="Taux AMO (%)",
+    )
+    inps_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        verbose_name="Taux INPS (%)",
+    )
+    amo_amount = models.PositiveBigIntegerField(default=0, verbose_name="Retenue AMO")
+    inps_amount = models.PositiveBigIntegerField(default=0, verbose_name="Retenue INPS")
+    advances = models.PositiveBigIntegerField(default=0)
+    paid_amount = models.PositiveBigIntegerField(default=0)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        db_index=True,
+    )
+
+    paid_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    notes = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_payroll_entries",
+    )
+
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_payroll_entries",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-period_month", "employee__last_name", "employee__first_name"]
+        verbose_name = "Fiche de paie"
+        verbose_name_plural = "Fiches de paie"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "employee", "period_month"],
+                name="accounts_unique_branch_employee_payroll_period",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["branch", "period_month"]),
+            models.Index(fields=["employee", "period_month"]),
+            models.Index(fields=["status", "period_month"]),
+        ]
+
+    def __str__(self):
+        return f"Paie {self.employee} - {self.period_month:%Y-%m}"
+
+    @property
+    def net_salary(self):
+        gross = self.gross_salary
+        charges = self.deductions + self.social_deductions + self.advances
+        return max(gross - charges, 0)
+
+    @property
+    def gross_salary(self):
+        return self.base_salary + self.allowances
+
+    @staticmethod
+    def percentage_amount(base, rate):
+        """Calculate a FCFA deduction from a percentage, rounded normally."""
+        return int(
+            (Decimal(base) * Decimal(rate) / Decimal("100")).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+
+    @property
+    def social_deductions(self):
+        """Total des retenues sociales de cette paie (snapshot mensuel)."""
+        amo = self.percentage_amount(self.gross_salary, self.amo_rate) if self.amo_rate else self.amo_amount
+        inps = self.percentage_amount(self.gross_salary, self.inps_rate) if self.inps_rate else self.inps_amount
+        return (amo if self.amo_applicable else 0) + (inps if self.inps_applicable else 0)
+
+    @property
+    def remaining_salary(self):
+        return max(self.net_salary - self.paid_amount, 0)
+
+    def refresh_status(self):
+        if self.paid_amount >= self.net_salary and self.net_salary > 0:
+            self.status = self.STATUS_PAID
+            if not self.paid_at:
+                self.paid_at = timezone.now()
+        elif self.paid_amount > 0:
+            self.status = self.STATUS_PARTIAL
+            self.paid_at = timezone.now()
+        elif self.status == self.STATUS_PAID:
+            self.status = self.STATUS_READY
+            self.paid_at = None
+
+    def save(self, *args, **kwargs):
+        if self.amo_applicable and self.amo_rate:
+            self.amo_amount = self.percentage_amount(self.gross_salary, self.amo_rate)
+        elif not self.amo_applicable:
+            self.amo_amount = 0
+        if self.inps_applicable and self.inps_rate:
+            self.inps_amount = self.percentage_amount(self.gross_salary, self.inps_rate)
+        elif not self.inps_applicable:
+            self.inps_amount = 0
+        update_fields = kwargs.get("update_fields")
+        if update_fields and set(update_fields) & {
+            "base_salary", "allowances", "amo_applicable", "amo_rate",
+            "inps_applicable", "inps_rate",
+        }:
+            kwargs["update_fields"] = set(update_fields) | {"amo_amount", "inps_amount"}
+        self.refresh_status()
+        super().save(*args, **kwargs)
+
+
+def branch_expense_upload_path(instance, filename):
+    return f"branches/{instance.branch_id}/expenses/{filename}"
+
+
+class BranchExpense(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_APPROVED = "approved"
+    STATUS_PAID = "paid"
+    STATUS_REJECTED = "rejected"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Brouillon"),
+        (STATUS_SUBMITTED, "A valider"),
+        (STATUS_APPROVED, "Approuvee"),
+        (STATUS_PAID, "Payee"),
+        (STATUS_REJECTED, "Rejetee"),
+    ]
+
+    CATEGORY_RENT = "rent"
+    CATEGORY_UTILITIES = "utilities"
+    CATEGORY_SUPPLIES = "supplies"
+    CATEGORY_MAINTENANCE = "maintenance"
+    CATEGORY_TRANSPORT = "transport"
+    CATEGORY_COMMUNICATION = "communication"
+    CATEGORY_EXAM_INVIGILATION = "exam_invigilation"
+    CATEGORY_OTHER = "other"
+
+    CATEGORY_CHOICES = [
+        (CATEGORY_RENT, "Loyer"),
+        (CATEGORY_UTILITIES, "Eau / electricite"),
+        (CATEGORY_SUPPLIES, "Fournitures"),
+        (CATEGORY_MAINTENANCE, "Maintenance"),
+        (CATEGORY_TRANSPORT, "Transport"),
+        (CATEGORY_COMMUNICATION, "Communication"),
+        (CATEGORY_EXAM_INVIGILATION, "Vacations de surveillance"),
+        (CATEGORY_OTHER, "Autre"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="expenses",
+        db_index=True,
+    )
+    title = models.CharField(max_length=180)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER, db_index=True)
+    amount = models.PositiveBigIntegerField()
+    expense_date = models.DateField(default=timezone.localdate, db_index=True)
+    supplier = models.CharField(max_length=150, blank=True)
+    reference = models.CharField(max_length=80, blank=True, db_index=True)
+    receipt = models.FileField(upload_to=branch_expense_upload_path, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SUBMITTED, db_index=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_branch_expenses")
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_branch_expenses")
+    paid_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="paid_branch_expenses")
+    approved_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    paid_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-expense_date", "-created_at"]
+        verbose_name = "Depense annexe"
+        verbose_name_plural = "Depenses annexes"
+        indexes = [
+            models.Index(fields=["branch", "expense_date"]),
+            models.Index(fields=["branch", "status"]),
+            models.Index(fields=["category", "expense_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} - {self.amount} FCFA"
+
+    @property
+    def can_be_approved(self):
+        return self.status in {self.STATUS_DRAFT, self.STATUS_SUBMITTED}
+
+    @property
+    def can_be_paid(self):
+        return self.status == self.STATUS_APPROVED
+
+
+class BranchCashMovement(models.Model):
+    TYPE_IN = "in"
+    TYPE_OUT = "out"
+
+    TYPE_CHOICES = [
+        (TYPE_IN, "Entree"),
+        (TYPE_OUT, "Sortie"),
+    ]
+
+    SOURCE_MANUAL = "manual"
+    SOURCE_EXPENSE = "expense"
+    SOURCE_PAYROLL = "payroll"
+    SOURCE_HONORARIUM = "honorarium"
+    SOURCE_STUDENT_PAYMENT = "student_payment"
+    SOURCE_SHOP = "shop"
+    SOURCE_BANK_TRANSFER = "bank_transfer"
+    SOURCE_ADJUSTMENT = "adjustment"
+    SOURCE_DONATION = "donation"
+
+    SOURCE_CHOICES = [
+        (SOURCE_MANUAL, "Saisie manuelle"),
+        (SOURCE_EXPENSE, "Depense"),
+        (SOURCE_PAYROLL, "Salaire"),
+        (SOURCE_HONORARIUM, "Honoraire enseignant"),
+        (SOURCE_STUDENT_PAYMENT, "Paiement etudiant"),
+        (SOURCE_SHOP, "Boutique"),
+        (SOURCE_BANK_TRANSFER, "Versement bancaire"),
+        (SOURCE_ADJUSTMENT, "Ajustement caisse"),
+        (SOURCE_DONATION, "Don / Donation"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="cash_movements",
+        db_index=True,
+    )
+    movement_type = models.CharField(max_length=10, choices=TYPE_CHOICES, db_index=True)
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, default=SOURCE_MANUAL, db_index=True)
+    amount = models.PositiveBigIntegerField()
+    label = models.CharField(max_length=180)
+    movement_date = models.DateField(default=timezone.localdate, db_index=True)
+    expense = models.ForeignKey(
+        BranchExpense,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cash_movements",
+    )
+    reference = models.CharField(max_length=80, blank=True, db_index=True)
+    source_reference = models.CharField(
+        max_length=120,
+        blank=True,
+        db_index=True,
+        help_text="Reference technique de la source pour eviter les doublons de synchronisation.",
+    )
+    receipt_number = models.CharField(max_length=80, blank=True, db_index=True)
+    receipt_pdf = models.FileField(upload_to="accounts/cash-receipts/", null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_cash_movements")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-movement_date", "-created_at"]
+        verbose_name = "Mouvement de caisse"
+        verbose_name_plural = "Mouvements de caisse"
+        indexes = [
+            models.Index(fields=["branch", "movement_date"]),
+            models.Index(fields=["branch", "movement_type"]),
+            models.Index(fields=["source", "movement_date"]),
+            models.Index(fields=["branch", "source", "source_reference"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "source", "source_reference"],
+                condition=~models.Q(source_reference=""),
+                name="accounts_unique_cash_source_reference",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_movement_type_display()} {self.amount} FCFA - {self.label}"
+
+
+class BranchCashRegisterSession(models.Model):
+    """ContrÃ´le quotidien de la caisse physique d'une annexe.
+
+    Cette session ne crÃ©e pas d'Ã©criture comptable : elle compare le comptage
+    rÃ©el de la gestionnaire au solde issu du grand livre immuable.
+    """
+
+    STATUS_OPEN = "open"
+    STATUS_CLOSED = "closed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Ouverte"),
+        (STATUS_CLOSED, "Fermee"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="cash_register_sessions",
+        db_index=True,
+    )
+    session_date = models.DateField(default=timezone.localdate, db_index=True)
+    opening_amount = models.PositiveBigIntegerField(default=0)
+    system_opening_balance = models.BigIntegerField(default=0)
+    expected_amount = models.BigIntegerField(default=0)
+    counted_amount = models.BigIntegerField(null=True, blank=True)
+    difference_amount = models.BigIntegerField(default=0)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    opening_notes = models.TextField(blank=True)
+    closing_notes = models.TextField(blank=True)
+    opened_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="opened_cash_register_sessions",
+    )
+    closed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="closed_cash_register_sessions",
+    )
+    opened_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    closed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-session_date", "-created_at"]
+        verbose_name = "Session de caisse"
+        verbose_name_plural = "Sessions de caisse"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "session_date"],
+                name="accounts_unique_branch_cash_register_day",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["branch", "status", "session_date"]),
+        ]
+
+    def __str__(self):
+        return f"Caisse {self.branch} - {self.session_date:%d/%m/%Y}"
+
+
+class BranchWallet(models.Model):
+    """Compartiment logique d'une unique tresorerie d'annexe."""
+
+    TYPE_RECEIPT = "receipt"
+    TYPE_DISBURSEMENT = "disbursement"
+    TYPE_CHOICES = [(TYPE_RECEIPT, "Encaissement"), (TYPE_DISBURSEMENT, "Decaissement")]
+    NATURE_RECURRING = "recurring"
+    NATURE_TEMPORARY = "temporary"
+    NATURE_CHOICES = [(NATURE_RECURRING, "Recurrente"), (NATURE_TEMPORARY, "Temporaire")]
+    STATUS_ACTIVE = "active"
+    STATUS_CLOSED = "closed"
+    STATUS_ARCHIVED = "archived"
+    STATUS_CHOICES = [(STATUS_ACTIVE, "Active"), (STATUS_CLOSED, "Cloturee"), (STATUS_ARCHIVED, "Archivee")]
+
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="wallets", db_index=True)
+    name = models.CharField(max_length=100)
+    wallet_type = models.CharField(max_length=16, choices=TYPE_CHOICES, db_index=True)
+    category = models.CharField(max_length=50, db_index=True)
+    nature = models.CharField(max_length=16, choices=NATURE_CHOICES, default=NATURE_RECURRING)
+    description = models.TextField(blank=True)
+    planned_closure_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
+    is_favorite = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_branch_wallets")
+    closed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="closed_branch_wallets")
+    closed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_favorite", "name"]
+        constraints = [models.UniqueConstraint(fields=["branch", "name"], name="accounts_unique_branch_wallet_name")]
+        indexes = [models.Index(fields=["branch", "status", "wallet_type"])]
+
+    def __str__(self):
+        return f"{self.branch} - {self.name}"
+
+
+class BranchWalletEntry(models.Model):
+    """Journal append-only des affectations; il ne modifie pas la tresorerie totale."""
+
+    DIRECTION_IN = "in"
+    DIRECTION_OUT = "out"
+    DIRECTION_CHOICES = [(DIRECTION_IN, "Credit"), (DIRECTION_OUT, "Debit")]
+    KIND_ALLOCATION = "allocation"
+    KIND_RECEIPT_ALLOCATION = "receipt_allocation"
+    KIND_TRANSFER = "transfer"
+    KIND_RETURN = "return"
+    KIND_CONSUMPTION = "consumption"
+    KIND_REVERSAL = "reversal"
+    KIND_CHOICES = [
+        (KIND_ALLOCATION, "Affectation"), (KIND_RECEIPT_ALLOCATION, "Affectation recette"),
+        (KIND_TRANSFER, "Transfert"), (KIND_RETURN, "Restitution"),
+        (KIND_CONSUMPTION, "Utilisation"), (KIND_REVERSAL, "Contre-ecriture"),
+    ]
+
+    wallet = models.ForeignKey(BranchWallet, on_delete=models.PROTECT, related_name="entries", db_index=True)
+    direction = models.CharField(max_length=4, choices=DIRECTION_CHOICES)
+    kind = models.CharField(max_length=24, choices=KIND_CHOICES, db_index=True)
+    amount = models.PositiveBigIntegerField()
+    cash_movement = models.ForeignKey(BranchCashMovement, on_delete=models.PROTECT, null=True, blank=True, related_name="wallet_entries")
+    counterpart_wallet = models.ForeignKey(BranchWallet, on_delete=models.PROTECT, null=True, blank=True, related_name="counterpart_entries")
+    operation_reference = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+    idempotency_key = models.CharField(max_length=120, blank=True)
+    label = models.CharField(max_length=180)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_wallet_entries")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["wallet", "idempotency_key"], condition=~models.Q(idempotency_key=""), name="accounts_unique_wallet_entry_idempotency"),
+        ]
+        indexes = [models.Index(fields=["wallet", "direction", "created_at"]), models.Index(fields=["operation_reference"])]
+
+    def __str__(self):
+        return f"{self.wallet} - {self.get_kind_display()} {self.amount} FCFA"
+
+
+class AccountingDocumentSequence(models.Model):
+    DOCUMENT_EXPENSE = "expense"
+    DOCUMENT_CASH = "cash"
+    DOCUMENT_BANK_TRANSFER = "bank_transfer"
+
+    DOCUMENT_CHOICES = [
+        (DOCUMENT_EXPENSE, "Depense"),
+        (DOCUMENT_CASH, "Caisse"),
+        (DOCUMENT_BANK_TRANSFER, "Versement bancaire"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="accounting_sequences",
+    )
+    document_type = models.CharField(max_length=30, choices=DOCUMENT_CHOICES)
+    year = models.PositiveSmallIntegerField()
+    last_number = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Sequence comptable"
+        verbose_name_plural = "Sequences comptables"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "document_type", "year"],
+                name="accounts_unique_accounting_sequence_branch_type_year",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.branch} - {self.document_type} - {self.year}: {self.last_number}"
+
+
+class TeacherHonorariumEntry(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_READY = "ready"
+    STATUS_PARTIAL = "partial"
+    STATUS_PAID = "paid"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "A verifier"),
+        (STATUS_READY, "Disponible a retirer"),
+        (STATUS_PARTIAL, "Retrait partiel"),
+        (STATUS_PAID, "Retire"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="teacher_honorarium_entries",
+        db_index=True,
+    )
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="teacher_honorarium_entries",
+        db_index=True,
+    )
+    period_month = models.DateField(db_index=True, help_text="Premier jour du mois des honoraires.")
+    hourly_rate = models.PositiveBigIntegerField(default=0)
+    validated_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    adjustments = models.PositiveBigIntegerField(default=0)
+    deductions = models.PositiveBigIntegerField(default=0)
+    advances = models.PositiveBigIntegerField(default=0)
+    paid_amount = models.PositiveBigIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
+    paid_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_teacher_honorariums",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_teacher_honorariums",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-period_month", "teacher__last_name", "teacher__first_name"]
+        verbose_name = "Honoraire enseignant"
+        verbose_name_plural = "Honoraires enseignants"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "teacher", "period_month"],
+                name="accounts_unique_branch_teacher_honorarium_period",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["branch", "period_month"]),
+            models.Index(fields=["teacher", "period_month"]),
+            models.Index(fields=["status", "period_month"]),
+        ]
+
+    def __str__(self):
+        return f"Honoraire {self.teacher} - {self.period_month:%Y-%m}"
+
+    @property
+    def gross_amount(self):
+        return max(int(self.validated_hours * self.hourly_rate) + self.adjustments, 0)
+
+    @property
+    def net_amount(self):
+        return max(self.gross_amount - self.deductions - self.advances, 0)
+
+    @property
+    def remaining_amount(self):
+        return max(self.net_amount - self.paid_amount, 0)
+
+    def refresh_status(self):
+        if self.paid_amount >= self.net_amount and self.net_amount > 0:
+            self.status = self.STATUS_PAID
+            if not self.paid_at:
+                self.paid_at = timezone.now()
+        elif self.paid_amount > 0:
+            self.status = self.STATUS_PARTIAL
+            self.paid_at = timezone.now()
+        elif self.status == self.STATUS_PAID:
+            self.status = self.STATUS_READY
+            self.paid_at = None
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and Profile.objects.filter(user_id=self.teacher_id, position="moniteur").exists():
+            raise ValidationError("Un moniteur relève de la paie du personnel, sans honoraires pédagogiques.")
+        self.refresh_status()
+        super().save(*args, **kwargs)
+
+
+class PaymentSignatureSession(models.Model):
+    """Session temporaire de signature tablette avant decaissement.
+
+    Le lien contient uniquement un jeton aleatoire a usage unique. La session
+    conserve un instantane financier afin que le recap signe reste immuable,
+    meme si une fiche est corrigee plus tard sous controle DG/DGA.
+    """
+
+    TYPE_PAYROLL = "payroll"
+    TYPE_HONORARIUM = "honorarium"
+    TYPE_CHOICES = [(TYPE_PAYROLL, "Salaire"), (TYPE_HONORARIUM, "Honoraire")]
+
+    STATUS_INITIATED = "initiated"
+    STATUS_AWAITING_SIGNATURE = "awaiting_signature"
+    STATUS_SIGNED = "signed"
+    STATUS_COMPLETED = "completed"
+    STATUS_REFUSED = "refused"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_INITIATED, "Initiee"),
+        (STATUS_AWAITING_SIGNATURE, "En attente de signature"),
+        (STATUS_SIGNED, "Signee"),
+        (STATUS_COMPLETED, "Payee"),
+        (STATUS_REFUSED, "Refusee"),
+        (STATUS_EXPIRED, "Expiree"),
+        (STATUS_CANCELLED, "Annulee"),
+    ]
+    ACTIVE_STATUSES = (STATUS_INITIATED, STATUS_AWAITING_SIGNATURE, STATUS_SIGNED)
+
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="payment_signature_sessions", db_index=True)
+    payment_type = models.CharField(max_length=20, choices=TYPE_CHOICES, db_index=True)
+    payroll_entry = models.ForeignKey(
+        "PayrollEntry", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="signature_sessions",
+    )
+    honorarium_entry = models.ForeignKey(
+        "TeacherHonorariumEntry", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="signature_sessions",
+    )
+    beneficiary = models.ForeignKey(User, on_delete=models.PROTECT, related_name="payment_signature_sessions")
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    amount = models.PositiveBigIntegerField()
+    snapshot = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_INITIATED, db_index=True)
+    expires_at = models.DateTimeField(db_index=True)
+    signature_data = models.TextField(blank=True)
+    signature_sha256 = models.CharField(max_length=64, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    signed_ip = models.GenericIPAddressField(null=True, blank=True)
+    signed_user_agent = models.CharField(max_length=300, blank=True)
+    approved_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="approved_payment_signature_sessions")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    cash_movement = models.ForeignKey(BranchCashMovement, null=True, blank=True, on_delete=models.PROTECT, related_name="payment_signature_sessions")
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_payment_signature_sessions")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["branch", "status", "created_at"]),
+            models.Index(fields=["beneficiary", "status", "expires_at"]),
+        ]
+
+    @staticmethod
+    def issue_token():
+        raw = secrets.token_urlsafe(32)
+        return raw, hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def hash_token(raw_token):
+        return hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def __str__(self):
+        return f"Signature {self.payment_type} #{self.pk} - {self.status}"
+
+
+class BranchMonthlyClosure(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_VALIDATED = "validated"
+    STATUS_CLOSED = "closed"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Brouillon"),
+        (STATUS_VALIDATED, "Validee"),
+        (STATUS_CLOSED, "Cloturee"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="monthly_closures",
+        db_index=True,
+    )
+    period_month = models.DateField(db_index=True)
+    total_entries = models.PositiveBigIntegerField(default=0)
+    total_exits = models.PositiveBigIntegerField(default=0)
+    student_revenue = models.PositiveBigIntegerField(default=0)
+    shop_revenue = models.PositiveBigIntegerField(default=0)
+    salary_paid = models.PositiveBigIntegerField(default=0)
+    honorarium_paid = models.PositiveBigIntegerField(default=0)
+    expenses_paid = models.PositiveBigIntegerField(default=0)
+    result_amount = models.BigIntegerField(default=0)
+    bank_transfer_amount = models.PositiveBigIntegerField(default=0)
+    # Snapshot de caisse : ces montants sont figés à la préparation de la
+    # clôture afin que l'historique reste lisible même si le grand livre évolue
+    # dans les périodes suivantes.
+    opening_cash_balance = models.BigIntegerField(default=0)
+    theoretical_cash_balance = models.BigIntegerField(default=0)
+    physical_cash_count = models.BigIntegerField(null=True, blank=True)
+    cash_difference = models.BigIntegerField(default=0)
+    difference_justification = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_monthly_closures",
+    )
+    validated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="validated_monthly_closures",
+    )
+    validated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    counted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="counted_monthly_closures",
+    )
+    counted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    closed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-period_month", "-created_at"]
+        verbose_name = "Cloture mensuelle"
+        verbose_name_plural = "Clotures mensuelles"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "period_month"],
+                name="accounts_unique_branch_monthly_closure_period",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["branch", "period_month"]),
+            models.Index(fields=["branch", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Cloture {self.branch} - {self.period_month:%Y-%m}"
+
+    @property
+    def is_closed(self):
+        return self.status == self.STATUS_CLOSED
+
+
+class BranchBankTransfer(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_VALIDATED = "validated"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Brouillon"),
+        (STATUS_VALIDATED, "Valide"),
+        (STATUS_CANCELLED, "Annule"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="bank_transfers",
+        db_index=True,
+    )
+    closure = models.ForeignKey(
+        BranchMonthlyClosure,
+        on_delete=models.PROTECT,
+        related_name="bank_transfers",
+        null=True,
+        blank=True,
+    )
+    bank_name = models.CharField(max_length=180)
+    bank_country = models.CharField(max_length=80, blank=True, default="Mali")
+    reference = models.CharField(max_length=120, db_index=True)
+    idempotency_key = models.CharField(max_length=64, blank=True, db_index=True)
+    transfer_date = models.DateField(db_index=True)
+    amount = models.PositiveBigIntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
+    cash_balance_before = models.BigIntegerField(default=0)
+    cash_balance_after = models.BigIntegerField(default=0)
+    proof = models.FileField(upload_to="accounts/bank-transfers/", blank=True, null=True)
+    proof_uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_bank_transfer_proofs",
+    )
+    proof_uploaded_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    comment = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_bank_transfers",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    validated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="validated_bank_transfers",
+    )
+    validated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["-transfer_date", "-created_at"]
+        verbose_name = "Versement bancaire"
+        verbose_name_plural = "Versements bancaires"
+        indexes = [
+            models.Index(fields=["branch", "transfer_date"]),
+            models.Index(fields=["reference"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "reference"],
+                name="accounts_unique_branch_bank_transfer_reference",
+            ),
+            models.UniqueConstraint(
+                fields=["branch", "idempotency_key"],
+                condition=~models.Q(idempotency_key=""),
+                name="accounts_unique_branch_bank_transfer_idempotency",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values("reference", "status").first()
+            if (
+                previous
+                and previous["status"] == self.STATUS_VALIDATED
+                and previous["reference"] != self.reference
+            ):
+                raise ValidationError("La référence d'un versement validé est immuable.")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.bank_name} - {self.amount} FCFA - {self.reference}"
+
+
+class StatutCartePersonnel(models.TextChoices):
+    ACTIVE = "active", "Active"
+    REVOQUEE = "revoquee", "Révoquée"
+    PERDUE = "perdue", "Perdue"
+    EXPIREE = "expiree", "Expirée"
+
+
+class CartePersonnel(models.Model):
+    """Carte professionnelle émise pour un profil staff, une fois par année."""
+
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="cartes_personnel")
+    public_reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    annee = models.CharField(max_length=9)
+    code_annexe = models.CharField(max_length=20)
+    date_emission = models.DateField(auto_now_add=True)
+    date_expiration = models.DateField()
+    statut = models.CharField(
+        max_length=10,
+        choices=StatutCartePersonnel.choices,
+        default=StatutCartePersonnel.ACTIVE,
+        db_index=True,
+    )
+    token_version = models.CharField(max_length=4, default="v2")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date_emission", "-id"]
+        verbose_name = "Carte personnel"
+        verbose_name_plural = "Cartes personnel"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "annee"],
+                name="unique_staff_card_per_academic_year",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["profile", "statut"]),
+            models.Index(fields=["statut", "date_expiration"]),
+        ]
+
+    def __str__(self):
+        return f"Carte personnel {self.profile.user} — {self.annee} ({self.statut})"
+
+    @property
+    def is_valide(self) -> bool:
+        return (
+            self.statut == StatutCartePersonnel.ACTIVE
+            and self.date_expiration >= timezone.localdate()
+        )
+
+    def revoquer(self, motif: str = "revoquee") -> None:
+        if motif not in StatutCartePersonnel.values:
+            motif = StatutCartePersonnel.REVOQUEE
+        self.statut = motif
+        self.save(update_fields=["statut"])
+
+
+class Donation(models.Model):
+    PAYMENT_CASH = "cash"
+    PAYMENT_OM = "orange_money"
+    PAYMENT_TMONEY = "t-money"
+    PAYMENT_WAVE = "wave"
+    PAYMENT_BANK = "bank_transfer"
+    PAYMENT_CHEQUE = "cheque"
+
+    PAYMENT_METHOD_CHOICES = [
+        (PAYMENT_CASH, "Especes"),
+        (PAYMENT_OM, "Orange Money"),
+        (PAYMENT_TMONEY, "T-Money"),
+        (PAYMENT_WAVE, "Wave"),
+        (PAYMENT_BANK, "Virement bancaire"),
+        (PAYMENT_CHEQUE, "Cheque"),
+    ]
+
+    MOTIF_CHOICES = [
+        ("sponsoring", "Sponsoring / Partenariat"),
+        ("mecenat", "Mecenat"),
+        ("appui", "Appui institutionnel"),
+        ("projet", "Projet / Programme"),
+        ("bourse", "Bourse etudiant"),
+        ("infrastructure", "Infrastructure / Equipement"),
+        ("evenement", "Evenement / Activite"),
+        ("libre", "Don libre"),
+        ("autre", "Autre"),
+    ]
+
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="donations",
+        db_index=True,
+    )
+    cash_movement = models.OneToOneField(
+        BranchCashMovement,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="donation_source",
+        help_text="Mouvement de caisse lié (entrée)",
+    )
+    donor_name = models.CharField(max_length=200, db_index=True, help_text="Nom du donateur / organisation.")
+    amount = models.PositiveBigIntegerField(help_text="Montant du don en FCFA.")
+    date = models.DateField(default=timezone.localdate, db_index=True)
+    motif = models.CharField(max_length=40, choices=MOTIF_CHOICES, default="libre", db_index=True)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default=PAYMENT_CASH)
+    description = models.TextField(blank=True, help_text="Description ou remerciements.")
+    receipt_number = models.CharField(max_length=80, blank=True, db_index=True, help_text="Numero de recu.")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_donations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date", "-created_at"]
+        verbose_name = "Don / Donation"
+        verbose_name_plural = "Dons / Donations"
+        indexes = [
+            models.Index(fields=["branch", "date"]),
+            models.Index(fields=["branch", "motif"]),
+            models.Index(fields=["donor_name"]),
+        ]
+
+    def __str__(self):
+        return f"Don de {self.donor_name} — {self.amount} FCFA ({self.get_motif_display()})"

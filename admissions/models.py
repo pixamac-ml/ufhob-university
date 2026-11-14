@@ -8,6 +8,16 @@ from formations.models import Programme, RequiredDocument
 
 
 class Candidature(models.Model):
+    def clean(self):
+        super().clean()
+        from formations.availability import validate_offering_change
+
+        validate_offering_change(self)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
     # ==================================================
     # LIEN ACADÉMIQUE
     # ==================================================

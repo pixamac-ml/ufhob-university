@@ -1,0 +1,8 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}La publication est consommée immédiatement par la vitrine publique{% endblock %}
+
+{% block content_main %}
+<section class="card mx-auto max-w-3xl"><div class="card-header"><div><h2 class="text-base font-semibold text-ui-text">Contenu et publication</h2><p class="mt-1 text-sm text-ui-text-muted">Le message et son visuel sont affichés sur le site institutionnel.</p></div></div><form method="post" enctype="multipart/form-data" class="card-body space-y-5">{% csrf_token %}{% include "superadmin/partials/_django_form_fields.html" with form=form %}<div class="flex flex-wrap justify-end gap-2 border-t border-ui-border pt-4"><a href="{% url 'superadmin:director_message_list' %}" class="btn btn-outline">Annuler</a><button class="btn btn-primary" type="submit">Enregistrer</button></div></form></section>
+{% endblock %}

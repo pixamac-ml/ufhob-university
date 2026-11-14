@@ -1,0 +1,18 @@
+{% load humanize component_tags %}
+<div id="shop-remote-order-modal" class="fixed inset-0 z-[90] grid place-items-center p-4">
+  <div class="absolute inset-0 bg-ui-overlay/55" onclick="document.getElementById('shop-remote-order-modal').remove()"></div>
+  <section class="relative w-full max-w-md rounded-ui-modal bg-ui-surface p-5 shadow-ui-modal">
+    <button type="button" onclick="document.getElementById('shop-remote-order-modal').remove()" class="float-right text-ui-text-muted" aria-label="Fermer">×</button>
+    <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">Commande a distance</p>
+    <h2 class="mt-1 text-xl font-bold text-ui-text">{{ product.name|default:"Votre article" }}</h2>
+    {% if product %}<p class="mt-1 text-sm text-ui-text-muted">{{ product.effective_price|intcomma }} FCFA l'unite. Le montant final est recalcule par le serveur.</p>{% endif %}
+    <form hx-post="{% url 'shop:student_remote_order_request' %}" hx-target="#shop-order-modal-target" hx-swap="innerHTML" class="mt-5 space-y-4">
+      {% csrf_token %}{{ order_request_form.product_id }}
+      {% component "ui_core.django_form_field" field=order_request_form.quantity %}{% endcomponent %}
+      {% component "ui_core.django_form_field" field=order_request_form.agent %}{% endcomponent %}
+      {% if order_request_form.non_field_errors %}<p class="text-sm text-ui-danger">{{ order_request_form.non_field_errors|join:", " }}</p>{% endif %}
+      <p class="rounded-ui-warning-soft p-3 text-xs text-ui-text-muted">Un code de confirmation sera envoye a l'adresse e-mail associee a votre compte. Ce code ne vaut pas paiement.</p>
+      <button class="ui-focus-ring w-full rounded-ui-button bg-ui-primary py-3 text-sm font-semibold text-ui-on-primary">Recevoir mon code e-mail</button>
+    </form>
+  </section>
+</div>

@@ -1,0 +1,41 @@
+{% extends "superadmin/unified_base.html" %}
+{% load component_tags %}
+
+{% block page_title %}Cycles{% endblock %}
+{% block page_subtitle %}Gérez les cycles de formation proposés par l’université.{% endblock %}
+
+{% block content_main %}
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface" data-ui-core="data-table">
+    <header class="flex flex-wrap items-center justify-between gap-3 border-b border-ui-border px-4 py-3">
+      <div>
+        <h2 class="text-sm font-bold text-ui-text">Cycles de formation</h2>
+        <p class="mt-1 text-sm text-ui-text-muted">{{ cycles|length }} cycle{{ cycles|length|pluralize }} configuré{{ cycles|length|pluralize }}.</p>
+      </div>
+      <a href="{% url 'superadmin:cycle_create' %}" class="inline-flex min-h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus">
+        <i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i> Nouveau cycle
+      </a>
+    </header>
+    {% if cycles %}
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-ui-table text-left text-sm">
+          <thead class="bg-ui-surface-muted text-xs uppercase text-ui-text-muted"><tr>
+            <th scope="col" class="px-4 py-3 font-bold">Cycle</th><th scope="col" class="px-4 py-3 font-bold">Durée</th><th scope="col" class="px-4 py-3 font-bold">Programmes</th><th scope="col" class="px-4 py-3 font-bold">Statut</th><th scope="col" class="px-4 py-3 text-right font-bold">Actions</th>
+          </tr></thead>
+          <tbody class="divide-y divide-ui-border">
+            {% for cycle in cycles %}
+              <tr class="hover:bg-ui-surface-hover">
+                <td class="px-4 py-3"><p class="font-semibold text-ui-text">{{ cycle.name }}</p>{% if cycle.description %}<p class="mt-1 max-w-xl truncate text-xs text-ui-text-muted">{{ cycle.description }}</p>{% endif %}</td>
+                <td class="px-4 py-3 text-ui-text-muted">{{ cycle.min_duration_years }} à {{ cycle.max_duration_years }} an{{ cycle.max_duration_years|pluralize }}</td>
+                <td class="px-4 py-3">{% component "ui_core.status_badge" label=cycle.formations_count tone="info" %}{% endcomponent %}</td>
+                <td class="px-4 py-3">{% if cycle.is_active %}{% component "ui_core.status_badge" label="Actif" tone="success" dot=True %}{% endcomponent %}{% else %}{% component "ui_core.status_badge" label="Inactif" tone="neutral" dot=True %}{% endcomponent %}{% endif %}</td>
+                <td class="px-4 py-3"><div class="flex justify-end gap-2"><a href="{% url 'superadmin:cycle_edit' cycle.pk %}" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-border px-3 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Modifier</a><form method="post" action="{% url 'superadmin:cycle_delete' cycle.pk %}" data-confirm-message="Supprimer ce cycle ? Cette action est irréversible." data-confirm-title="Supprimer le cycle" data-confirm-label="Supprimer">{% csrf_token %}<button type="submit" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-danger px-3 py-2 text-sm font-semibold text-ui-danger hover:bg-ui-danger-soft">Supprimer</button></form></div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% component "ui_core.empty_state" icon="layers-3" title="Aucun cycle" message="Les cycles que vous créez apparaîtront ici." %}{% endcomponent %}
+    {% endif %}
+  </section>
+{% endblock %}

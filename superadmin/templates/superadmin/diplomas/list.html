@@ -1,0 +1,16 @@
+{% extends "superadmin/unified_base.html" %}
+{% load component_tags %}
+
+{% block page_title %}Diplômes{% endblock %}
+{% block page_subtitle %}Gérez les diplômes proposés dans les programmes UFHOB.{% endblock %}
+
+{% block content_main %}
+  <section class="overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface" data-ui-core="data-table">
+    <header class="flex flex-wrap items-center justify-between gap-3 border-b border-ui-border px-4 py-3"><div><h2 class="text-sm font-bold text-ui-text">Diplômes</h2><p class="mt-1 text-sm text-ui-text-muted">{{ diplomas|length }} diplôme{{ diplomas|length|pluralize }} configuré{{ diplomas|length|pluralize }}.</p></div><a href="{% url 'superadmin:diploma_create' %}" class="inline-flex min-h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus"><i data-lucide="plus" class="h-4 w-4" aria-hidden="true"></i> Nouveau diplôme</a></header>
+    {% if diplomas %}
+      <div class="overflow-x-auto"><table class="w-full min-w-ui-table text-left text-sm"><thead class="bg-ui-surface-muted text-xs uppercase text-ui-text-muted"><tr><th scope="col" class="px-4 py-3 font-bold">Diplôme</th><th scope="col" class="px-4 py-3 font-bold">Niveau</th><th scope="col" class="px-4 py-3 font-bold">Programmes</th><th scope="col" class="px-4 py-3 text-right font-bold">Actions</th></tr></thead><tbody class="divide-y divide-ui-border">{% for diploma in diplomas %}<tr class="hover:bg-ui-surface-hover"><td class="px-4 py-3 font-semibold text-ui-text">{{ diploma.name }}</td><td class="px-4 py-3">{% if diploma.level == 'superieur' %}{% component "ui_core.status_badge" label="Supérieur" tone="info" %}{% endcomponent %}{% else %}{% component "ui_core.status_badge" label="Secondaire" tone="neutral" %}{% endcomponent %}{% endif %}</td><td class="px-4 py-3">{% component "ui_core.status_badge" label=diploma.programmes.count tone="info" %}{% endcomponent %}</td><td class="px-4 py-3"><div class="flex justify-end gap-2"><a href="{% url 'superadmin:diploma_edit' diploma.pk %}" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-border px-3 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Modifier</a><form method="post" action="{% url 'superadmin:diploma_delete' diploma.pk %}" data-confirm-message="Supprimer ce diplôme ? Cette action est irréversible." data-confirm-title="Supprimer le diplôme" data-confirm-label="Supprimer">{% csrf_token %}<button type="submit" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-danger px-3 py-2 text-sm font-semibold text-ui-danger hover:bg-ui-danger-soft">Supprimer</button></form></div></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}
+      {% component "ui_core.empty_state" icon="award" title="Aucun diplôme" message="Les diplômes que vous créez apparaîtront ici." %}{% endcomponent %}
+    {% endif %}
+  </section>
+{% endblock %}

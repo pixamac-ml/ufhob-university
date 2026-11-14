@@ -1,0 +1,12 @@
+{% load component_tags %}
+{% if form.non_field_errors %}
+  {% component "ui_core.alert" title="Formulaire invalide" message=form.non_field_errors|join:" " tone="danger" %}{% endcomponent %}
+{% endif %}
+
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+  {% for field in form.visible_fields %}
+    {% component "ui_core.django_form_field" field=field %}{% endcomponent %}
+  {% endfor %}
+</div>
+
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}

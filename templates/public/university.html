@@ -1,0 +1,245 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="{{ meta_description }}">
+<style>
+  html { scroll-behavior: smooth; }
+  .university-anchor { scroll-margin-top: 6rem; }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track { display: flex; width: max-content; animation: marquee 45s linear infinite; }
+  .marquee-track:hover { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+  }
+  .image-reveal { overflow: hidden; }
+  .image-reveal img { transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+  .image-reveal:hover img { transform: scale(1.05); }
+  .partner-logo { filter: brightness(0) invert(1); }
+  .team-track { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; cursor: grab; padding-bottom: 1rem; }
+  .team-track::-webkit-scrollbar { display: none; }
+  .team-track .team-card { flex: 0 0 260px; scroll-snap-align: start; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative isolate flex min-h-[90dvh] items-end overflow-hidden text-white sm:items-center">
+  <div class="absolute inset-0 -z-20">
+    {% if hero_image %}<img src="{{ hero_image }}" alt="UFHOB" class="h-full w-full object-cover" loading="eager">{% endif %}
+  </div>
+  <div class="absolute inset-0 -z-10 bg-ufhob-primary/80 mix-blend-multiply"></div>
+  <div class="mx-auto w-full max-w-ufhob-container px-4 pb-20 sm:px-6 sm:pb-0 lg:px-8">
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary">UFHOB · Université</p>
+    <h1 class="mt-4 max-w-4xl text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+      {% firstof institution.name "Université Félix Houphouët-Boigny – Mali" %}
+    </h1>
+    {% if intro_text %}
+    <div class="prose mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
+      {{ intro_text|safe|truncatewords_html:45 }}
+    </div>
+    {% endif %}
+    <a href="#qui-sommes-nous" class="mt-8 inline-flex items-center gap-2 text-sm font-bold text-ufhob-secondary hover:text-white">Découvrir l’institution →</a>
+  </div>
+</section>
+
+<nav class="public-subnav sticky top-0 z-40" aria-label="Sections de la page Université" data-public-subnav>
+  <div class="mx-auto flex max-w-ufhob-container gap-6 overflow-x-auto px-4 sm:px-6 lg:px-8">
+    <a href="#qui-sommes-nous" class="public-subnav__link" data-section-link="qui-sommes-nous">Présentation</a>
+    <a href="#dirigeant" class="public-subnav__link" data-section-link="dirigeant">Rectorat</a>
+    <a href="#administration" class="public-subnav__link" data-section-link="administration">Administration</a>
+    <a href="#infrastructures" class="public-subnav__link" data-section-link="infrastructures">Campus & espaces</a>
+  </div>
+</nav>
+
+{% if director_message %}
+<section id="dirigeant" class="university-anchor bg-ufhob-primary py-16 text-white sm:py-20">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="grid items-center gap-10 lg:grid-cols-[0.45fr_1fr]">
+      <div class="image-reveal border-l-4 border-ufhob-accent">
+        {% if director_message.photo %}
+        <img src="{{ director_message.photo.url }}" alt="{{ director_message.full_name }}" class="h-[28rem] w-full rounded-ufhob-lg object-cover sm:h-[32rem]" loading="lazy">
+        {% else %}
+        <div class="public-media-fallback flex h-[28rem] items-end p-7 sm:h-[32rem]"><span class="relative z-10 text-xs font-bold uppercase tracking-[0.2em] text-white/75">UFHOB · Direction</span></div>
+        {% endif %}
+      </div>
+      <div>
+        <p class="public-section-mark text-xs font-bold uppercase tracking-[0.2em] text-white/80">Mot du {{ director_message.position }}</p>
+        <h2 class="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">{{ director_message.title }}</h2>
+        <p class="mt-5 text-lg font-bold text-white">{{ director_message.full_name }}</p>
+        <p class="mt-1 text-base font-semibold text-white/80">{{ director_message.position }}</p>
+        <div class="mt-6 max-w-2xl text-base leading-7 text-white/90">
+          {{ director_message.message|linebreaks }}
+        </div>
+        {% if director_message.signature %}<p class="mt-8 border-l-2 border-ufhob-accent pl-4 text-sm font-bold text-white">{{ director_message.signature }}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if intro_text %}
+<section id="qui-sommes-nous" class="university-anchor bg-white py-16 sm:py-20">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="grid gap-10 lg:grid-cols-2">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Qui sommes-nous ?</p>
+        <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl lg:text-5xl">{% firstof intro_title "L’UFHOB en quelques mots" %}</h2>
+        <div class="mt-6 flex flex-wrap gap-3 text-sm font-semibold text-ufhob-primary">
+          <span>{{ school_count|default:0 }} écoles</span>
+          <span class="text-ufhob-border">·</span>
+          <span>{{ branch_count|default:0 }} campus</span>
+          <span class="text-ufhob-border">·</span>
+          <span>{{ programme_count|default:0 }} programmes</span>
+        </div>
+      </div>
+      <div class="prose max-w-none text-ufhob-muted">
+        {{ intro_text|safe }}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section id="administration" class="university-anchor bg-ufhob-ivory py-16 sm:py-20">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <c-public.section_header eyebrow="Gouvernance" title="Les membres de l’administration" text="La direction et les responsables administratifs publiés dans la plateforme sont présentés ici." />
+    {% if administration_members %}
+    <div class="mt-8 flex justify-end gap-2" aria-label="Navigation de l’équipe">
+      <button type="button" class="rounded-ufhob-sm border border-ufhob-border bg-white px-3 py-2 text-sm font-bold text-ufhob-primary hover:bg-ufhob-primary hover:text-white" data-team-scroll="previous" aria-label="Membres précédents">←</button>
+      <button type="button" class="rounded-ufhob-sm border border-ufhob-border bg-white px-3 py-2 text-sm font-bold text-ufhob-primary hover:bg-ufhob-primary hover:text-white" data-team-scroll="next" aria-label="Membres suivants">→</button>
+    </div>
+    <div class="team-track mt-4" data-team-track data-team-autoplay tabindex="0" aria-label="Membres de l’administration">
+      {% for member in administration_members %}
+      <article class="team-card group border border-ufhob-border bg-white p-6 transition hover:bg-ufhob-ivory">
+        <div class="relative aspect-[4/3] overflow-hidden border-l-4 border-ufhob-accent bg-ufhob-primary-soft">
+          {% if member.photo %}<img src="{{ member.photo.url }}" alt="{{ member.full_name }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">{% else %}<div class="public-media-fallback flex h-full items-end p-4"><span class="relative z-10 text-xl font-bold text-white">{{ member.full_name|slice:':2'|upper }}</span></div>{% endif %}
+        </div>
+        <h3 class="mt-4 font-bold text-ufhob-primary">{{ member.full_name }}</h3>
+        <p class="text-sm text-ufhob-muted">{{ member.position }}</p>
+        {% if member.bio %}<p class="mt-3 line-clamp-3 text-sm leading-6 text-ufhob-muted">{{ member.bio }}</p>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="public-editorial-card mt-10 border border-ufhob-border bg-white p-8"><p class="max-w-2xl text-sm leading-7 text-ufhob-muted">Les profils de direction et d’administration seront affichés ici dès leur publication dans l’administration UFHOB.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+{% if infrastructures %}
+<section id="infrastructures" class="university-anchor bg-ufhob-ivory py-16 sm:py-20">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <c-public.section_header eyebrow="L’université en action" title="Espaces & infrastructures" text="Des espaces d’apprentissage, de recherche et de vie universitaire à découvrir." />
+    <div class="mt-10 grid auto-rows-[180px] grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      {% for item in infrastructures %}
+      <article class="group relative overflow-hidden rounded-ufhob-lg {% if forloop.first or forloop.counter == 6 %}md:col-span-2 md:row-span-2{% elif forloop.counter == 3 %}md:row-span-2{% endif %}" data-aos="fade-up">
+        {% if item.image %}<img src="{% if item.image %}{{ item.image.url }}{% endif %}" alt="{{ item.name }}" class="h-full w-full object-cover transition duration-700 group-hover:scale-105" loading="lazy">{% endif %}
+        <div class="absolute inset-0 bg-gradient-to-t from-ufhob-primary/90 via-ufhob-primary/30 to-transparent p-5 flex flex-col justify-end text-white">
+          <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-ufhob-secondary">{{ item.get_category_display }}</p>
+          <h3 class="mt-1 text-lg font-bold leading-tight">{{ item.name }}</h3>
+          {% if item.description %}<p class="mt-1 line-clamp-2 text-xs text-white/80">{{ item.description }}</p>{% endif %}
+          {% if item.features.is_illustration %}<p class="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">Visuel d’illustration</p>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if partners %}
+<section class="university-anchor bg-ufhob-primary py-14 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <p class="text-center text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary">Nos partenaires</p>
+    <h2 class="mt-3 text-center text-2xl font-bold text-white sm:text-3xl">Ils nous accompagnent</h2>
+    <div class="relative mt-10 overflow-hidden">
+      <div class="marquee-track flex items-center gap-16">
+        {% for p in partners %}
+        <div class="flex h-16 w-32 shrink-0 items-center justify-center">
+          {% if p.logo %}<img src="{{ p.logo.url }}" alt="{{ p.name }}" class="partner-logo max-h-12 max-w-full object-contain">{% else %}<span class="text-sm font-bold text-white">{{ p.name }}</span>{% endif %}
+        </div>
+        {% endfor %}
+        {% for p in partners %}
+        <div class="flex h-16 w-32 shrink-0 items-center justify-center">
+          {% if p.logo %}<img src="{{ p.logo.url }}" alt="{{ p.name }}" class="partner-logo max-h-12 max-w-full object-contain">{% else %}<span class="text-sm font-bold text-white">{{ p.name }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="university-anchor bg-ufhob-ivory py-12 sm:py-16">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap justify-between gap-8 border-y border-ufhob-border py-8 sm:py-10">
+      <div>
+        <p class="text-4xl font-bold text-ufhob-primary">{{ school_count|default:0 }}</p>
+        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-ufhob-muted">Écoles</p>
+      </div>
+      <div>
+        <p class="text-4xl font-bold text-ufhob-primary">{{ branch_count|default:0 }}</p>
+        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-ufhob-muted">Campus</p>
+      </div>
+      <div>
+        <p class="text-4xl font-bold text-ufhob-primary">{{ programme_count|default:0 }}</p>
+        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-ufhob-muted">Programmes</p>
+      </div>
+      <div>
+        <p class="text-4xl font-bold text-ufhob-primary">{{ infrastructure_count|default:0 }}</p>
+        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-ufhob-muted">Infrastructures</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<c-public.cta title="{{ cta_title }}" text="{{ cta_text }}" button_text="{{ cta_button_text }}" button_url="{{ cta_button_url }}" />
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (() => {
+    const nav = document.querySelector('[data-public-subnav]');
+    if (!nav || !('IntersectionObserver' in window)) return;
+    const links = [...nav.querySelectorAll('[data-section-link]')];
+    const setActive = (id) => links.forEach((link) => link.dataset.active = String(link.dataset.sectionLink === id));
+    const sections = links.map((link) => document.getElementById(link.dataset.sectionLink)).filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActive(visible.target.id);
+    }, { rootMargin: '-30% 0px -58% 0px', threshold: [0.05, 0.2] });
+    sections.forEach((section) => observer.observe(section));
+    if (sections[0]) setActive(sections[0].id);
+  })();
+  document.querySelectorAll('[data-team-scroll]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const track = document.querySelector('[data-team-track]');
+      if (track) track.scrollBy({ left: button.dataset.teamScroll === 'next' ? 285 : -285, behavior: 'smooth' });
+    });
+  });
+  const teamTrack = document.querySelector('[data-team-autoplay]');
+  if (teamTrack && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let paused = false;
+    let lastFrame = null;
+    const pause = () => { paused = true; };
+    const resume = () => { paused = false; };
+    ['mouseenter', 'focusin', 'pointerdown', 'touchstart'].forEach((eventName) => teamTrack.addEventListener(eventName, pause));
+    ['mouseleave', 'focusout', 'pointerup', 'touchend'].forEach((eventName) => teamTrack.addEventListener(eventName, resume));
+    const advance = (timestamp) => {
+      if (lastFrame !== null && !paused) {
+        teamTrack.scrollLeft += (timestamp - lastFrame) * 0.018;
+        if (teamTrack.scrollLeft >= teamTrack.scrollWidth - teamTrack.clientWidth - 1) teamTrack.scrollLeft = 0;
+      }
+      lastFrame = timestamp;
+      window.requestAnimationFrame(advance);
+    };
+    window.requestAnimationFrame(advance);
+  }
+</script>
+{% endblock %}

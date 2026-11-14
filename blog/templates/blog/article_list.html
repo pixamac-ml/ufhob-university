@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load component_tags %}
 
-{% block title %}Blog & Articles – ESFE{% endblock %}
+{% block title %}Blog & Articles – ESFé{% endblock %}
 
 {% block content %}
 
@@ -43,7 +43,7 @@
         x-transition:enter-end="opacity-100 translate-y-0"
         class="inline-flex items-center gap-3
                bg-white/10 backdrop-blur-sm
-               px-5 sm:px-6 py-2.5 sm:py-3 rounded-full
+               px-5 sm:px-6 py-2.5 sm:py-3 rounded-sm
                text-xs uppercase tracking-wider font-medium">
 
         <span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
@@ -68,7 +68,7 @@
         x-transition:enter-start="opacity-0 -translate-y-4"
         x-transition:enter-end="opacity-100 translate-y-0"
         class="text-base sm:text-lg text-white/80 max-w-3xl leading-relaxed">
-        Analyses académiques, réflexions pédagogiques et actualités stratégiques de l'École de Santé Félix Houphouët-Boigny.
+        Analyses académiques, réflexions pédagogiques et publications de l'ESFé.
       </p>
 
       <!-- Recherche -->
@@ -85,7 +85,7 @@
             name="q"
             value="{{ request.GET.q }}"
             placeholder="Rechercher un article..."
-            class="w-full pl-12 pr-4 py-3 sm:py-3.5 rounded-xl bg-white/10 backdrop-blur-sm
+            class="w-full pl-12 pr-4 py-3 sm:py-3.5 rounded-md bg-white/10 backdrop-blur-sm
                    border border-white/20 text-white placeholder-white/60
                    focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent
                    focus:bg-white/15 transition-all duration-300">
@@ -124,8 +124,8 @@
     x-transition:enter="transition ease-out duration-700"
     x-transition:enter-start="opacity-0 translate-y-8"
     x-transition:enter-end="opacity-100 translate-y-0"
-    class="bg-white rounded-2xl border border-primary-50 overflow-hidden
-           shadow-sm hover:shadow-2xl transition-all duration-500 group">
+    class="bg-white rounded-md border border-slate-200 overflow-hidden
+           shadow-sm hover:shadow-md transition-all duration-300 group">
 
     <div class="grid lg:grid-cols-2">
 
@@ -216,7 +216,7 @@
       </h3>
 
       <!-- Grid avec animations staggered -->
-      <div class="grid sm:grid-cols-2 gap-6 sm:gap-10"
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6"
            x-data="{ shown: false }"
            x-intersect:enter.once="shown = true">
 
@@ -231,7 +231,10 @@
             {% component "blog_article_card" article=article %}{% endcomponent %}
           </div>
         {% empty %}
-          <p class="text-gray-500 col-span-full text-center py-12">Aucun article disponible.</p>
+          <div class="col-span-full rounded-md border border-dashed border-slate-300 bg-white px-8 py-14 text-center">
+            <p class="text-base font-semibold text-slate-700">Aucun article publié pour le moment.</p>
+            <p class="mt-2 text-sm text-slate-500">Les publications de la rédaction seront affichées ici.</p>
+          </div>
         {% endfor %}
 
       </div>
@@ -242,7 +245,7 @@
         <div class="flex items-center gap-2">
           {% if articles.has_previous %}
           <a href="?page={{ articles.previous_page_number }}"
-             class="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-600
+             class="px-4 py-2 rounded-md bg-white border border-gray-200 text-gray-600
                     hover:bg-primary-50 hover:border-primary-200 hover:text-primary-600
                     transition-all duration-200">
             Précédent
@@ -255,7 +258,7 @@
 
           {% if articles.has_next %}
           <a href="?page={{ articles.next_page_number }}"
-             class="px-4 py-2 rounded-lg bg-primary-600 text-white
+             class="px-4 py-2 rounded-md bg-primary-600 text-white
                     hover:bg-primary-700 transition-all duration-200">
             Suivant
           </a>
@@ -273,8 +276,7 @@
       {% component "blog_sidebar" categories=categories %}{% endcomponent %}
 
       <!-- Bloc institutionnel -->
-      <div class="bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl p-6 sm:p-8 border border-primary-200
-                  hover:shadow-lg transition-shadow duration-300">
+      <div class="bg-primary-50 rounded-md p-6 sm:p-8 border border-primary-200">
 
         <h4 class="font-semibold text-primary-700 mb-4 flex items-center gap-2">
 
@@ -294,9 +296,8 @@
 
         <a href="/contact/"
            class="inline-flex items-center gap-2 mt-6 bg-primary-600 text-white px-5 py-2.5
-                  rounded-lg text-sm font-medium shadow-sm
-                  hover:bg-primary-700 hover:shadow-md
-                  active:scale-[0.98] transition-all duration-200">
+                  rounded-sm text-sm font-medium
+                  hover:bg-primary-700 transition-all duration-200">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>

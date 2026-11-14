@@ -1,0 +1,42 @@
+{% load static %}
+{% if reveal_after_hero %}<div x-data="publicNavbarVisibility()" x-init="init()" x-cloak :class="navVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'" class="fixed inset-x-0 top-0 z-[90] transform transition duration-500 ease-premium">{% endif %}
+<header x-data="{ menuOpen: false, schoolsOpen: false }" class="z-[90] border-b-2 border-ufhob-accent bg-ufhob-primary text-white shadow-soft {% if not reveal_after_hero %}sticky top-0{% endif %}">
+  <nav class="mx-auto flex h-[4.5rem] max-w-ufhob-container items-center gap-3 px-4 sm:px-5 lg:px-6 xl:h-20 xl:gap-1 xl:px-6 2xl:gap-3 2xl:px-8" aria-label="Navigation principale">
+    <a href="{% url 'core:home' %}" class="flex shrink-0 items-center gap-3" aria-label="UFHOB — Université">
+      {% firstof logo_url branding.logo_full as active_logo %}
+      <img src="{{ active_logo }}" alt="Logo UFHOB" class="h-12 w-auto max-w-[9.5rem] object-contain xl:h-14">
+      <span class="hidden text-sm font-bold leading-tight sm:block">UFHOB<br><span class="font-normal text-white/70">Mali</span></span>
+    </a>
+    <div class="ml-auto hidden min-w-0 items-center gap-0 xl:flex 2xl:gap-1">
+      <a href="{% url 'core:university' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-semibold 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'university' %}true{% else %}false{% endif %}">Université</a>
+      <div class="relative" @click.outside="schoolsOpen = false">
+        <button type="button" @click="schoolsOpen = !schoolsOpen" class="public-nav-item flex whitespace-nowrap items-center gap-1 px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'school_detail' %}true{% else %}false{% endif %}" :aria-expanded="schoolsOpen">Nos écoles <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg></button>
+        <div x-show="schoolsOpen" x-cloak x-transition.origin.top.left class="absolute left-0 mt-2 w-72 overflow-hidden border border-ufhob-border bg-white p-2 text-ufhob-text shadow-premium">
+          {% for school in schools %}
+            <a href="{% url 'core:school_detail' code=school.code|lower %}" @click="schoolsOpen = false" class="flex items-center gap-3 rounded-ufhob-sm px-3 py-3 hover:bg-ufhob-ivory"><span class="flex h-9 w-9 items-center justify-center rounded-full bg-ufhob-primary-soft text-xs font-bold text-ufhob-primary">{{ school.display_name|slice:':3' }}</span><span><strong class="block text-sm">{{ school.display_name }}</strong></span></a>
+          {% empty %}<span class="block px-3 py-3 text-sm text-ufhob-muted">Les écoles seront présentées ici dès leur publication.</span>{% endfor %}
+        </div>
+      </div>
+      <a href="{% url 'formations:list' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.namespace == 'formations' %}true{% else %}false{% endif %}">Formations</a>
+      <a href="{% url 'core:campus_life' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'campus_life' %}true{% else %}false{% endif %}">Vie universitaire</a>
+      <a href="{% url 'core:research_innovation' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'research_innovation' %}true{% else %}false{% endif %}">Recherche & Innovation</a>
+      <a href="{% url 'news:list' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.namespace == 'news' %}true{% else %}false{% endif %}">Actualités</a>
+      <a href="{% url 'core:contact' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'contact' %}true{% else %}false{% endif %}">Contact</a>
+    </div>
+    <div class="ml-auto hidden items-center gap-2 md:flex xl:ml-1 2xl:ml-2"><a href="{% url 'admissions:admission_tunnel' %}" class="public-action whitespace-nowrap bg-ufhob-accent px-3 py-2.5 text-[13px] font-bold text-ufhob-primary shadow-soft 2xl:px-4 2xl:text-sm">Candidater <span aria-hidden="true">→</span></a><a href="{% url 'login' %}" class="public-action whitespace-nowrap border border-white/30 px-3 py-2.5 text-[13px] font-semibold hover:bg-white/10 2xl:px-4 2xl:text-sm">Connexion</a></div>
+    <button type="button" @click="menuOpen = !menuOpen" class="ml-auto rounded-ufhob-sm border border-white/20 p-2.5 xl:hidden" :aria-expanded="menuOpen" aria-label="Ouvrir le menu"><svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" :d="menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"/></svg></button>
+  </nav>
+  <div x-show="menuOpen" x-cloak x-transition class="border-t border-white/10 px-4 pb-5 xl:hidden">
+    <div class="mx-auto grid max-w-ufhob-container gap-1 pt-3 text-sm">
+      <a href="{% url 'core:home' %}" class="rounded-ufhob-sm bg-white/10 px-3 py-2.5">Université</a>
+      <div class="rounded-ufhob-sm bg-white/5 px-3 py-2.5"><span class="font-semibold">Nos écoles</span>{% if schools %}<div class="mt-2 flex flex-wrap gap-2">{% for school in schools %}<a href="{% url 'core:school_detail' code=school.code|lower %}" @click="menuOpen=false" class="rounded-full border border-white/20 px-2.5 py-1 text-xs text-white/75">{{ school.display_name }}</a>{% endfor %}</div>{% endif %}</div>
+      <a href="{% url 'formations:list' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Formations</a>
+      <a href="{% url 'core:campus_life' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Vie universitaire</a>
+      <a href="{% url 'core:research_innovation' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Recherche & Innovation</a>
+      <a href="{% url 'news:list' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Actualités</a>
+      <a href="{% url 'core:contact' %}" class="rounded-ufhob-sm px-3 py-2.5">Contact</a>
+      <div class="mt-2 grid grid-cols-2 gap-2"><a href="{% url 'admissions:admission_tunnel' %}" class="rounded-ufhob-sm bg-ufhob-accent px-3 py-3 text-center font-bold text-ufhob-primary">Candidater</a><a href="{% url 'login' %}" class="rounded-ufhob-sm border border-white/30 px-3 py-3 text-center font-semibold">Connexion</a></div>
+    </div>
+  </div>
+</header>
+{% if reveal_after_hero %}</div>{% endif %}

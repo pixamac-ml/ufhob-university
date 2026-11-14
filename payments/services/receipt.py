@@ -8,13 +8,13 @@ def generate_receipt_number(payment):
     Génère un numéro de reçu UNIQUE.
 
     Format :
-    ESFE-2026-000001
+    UFHOB-REC-2026-000001
     """
 
     year = timezone.now().year
     payment_id = payment.id or 0
 
-    return f"ESFE-{year}-{payment_id:06d}"
+    return f"UFHOB-REC-{year}-{payment_id:06d}"
 
 
 from reportlab.pdfgen import canvas

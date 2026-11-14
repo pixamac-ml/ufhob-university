@@ -1,0 +1,864 @@
+{% extends "portal/staff/director_dashboard.html" %}
+{% load static %}
+
+{% block public_navbar %}{% endblock %}
+{% block public_footer %}{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+
+{% block title %}Dashboard Informaticien{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'vendor/tabulator/tabulator.min.css' %}">
+<script defer src="{% static 'vendor/tabulator/tabulator.min.js' %}"></script>
+<script defer src="{% static 'src/js/portal/notes_tabulator.js' %}?v=notes-fluid-save-5"></script>
+<style>
+  [x-cloak] { display: none !important; }
+  body { background: #f8fafc; color: #0f172a; }
+  .dark body { background: #020617; color: #e2e8f0; }
+  .it-sidebar { background: #082f49; color: #fff; }
+  .it-nav-btn { display: flex; width: 100%; align-items: center; gap: .85rem; border-radius: 14px; padding: .7rem 1rem; text-align: left; font-size: .88rem; font-weight: 800; color: rgb(226 232 240 / .86); transition: .16s ease; border: none; background: none; cursor: pointer; }
+  .it-nav-btn:hover { background: rgb(255 255 255 / .10); }
+  .it-nav-btn.active { background: #2563eb; color: #fff; }
+  .wkc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+  .wkc label { display: grid; gap: .4rem; font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #64748b; }
+  .wkc select, .wkc input { height: 46px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; padding: 0 .9rem; color: #0f172a; font-size: .92rem; font-weight: 700; outline: none; }
+  .dark .wkc select, .dark .wkc input { border-color: #334155; background: #0f172a; color: #e2e8f0; }
+  .panel { border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; padding: 1.2rem; box-shadow: 0 10px 28px rgb(15 23 42 / .06); }
+  .dark .panel { border-color: #334155; background: #0f172a; }
+  .band { border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; padding: 1.2rem; box-shadow: 0 10px 28px rgb(15 23 42 / .06); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-left-width: 6px; }
+  .dark .band { border-color: #334155; background: #0f172a; }
+  .band h3 { margin-top: .25rem; font-size: 1.25rem; font-weight: 950; }
+  .band p { margin-top: .35rem; color: #64748b; font-size: .9rem; font-weight: 600; }
+  .band > div > span.badge { border-radius: 999px; background: #eff6ff; padding: .5rem .75rem; color: #1d4ed8; font-size: .78rem; font-weight: 900; white-space: nowrap; }
+  .b-empty { border-left-color: #64748b; }
+  .b-in_progress { border-left-color: #2563eb; }
+  .b-ready_to_publish_normal, .b-ready_to_publish_final, .b-ready_to_validate { border-left-color: #d97706; }
+  .b-normal_published, .b-final_published, .b-validated, .b-transmitted { border-left-color: #059669; }
+  .b-retake_in_progress { border-left-color: #4f46e5; }
+  .kicker { margin: 0; color: #2563eb; font-size: .72rem; font-weight: 950; text-transform: uppercase; letter-spacing: .16em; }
+  .btn { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: .5rem; border-radius: 12px; padding: .55rem 1rem; font-size: .85rem; font-weight: 900; transition: .16s ease; border: none; cursor: pointer; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+  .btn-secondary:hover { background: #f1f5f9; }
+  .dark .btn-secondary { border-color: #475569; background: #020617; color: #e2e8f0; }
+  .btn-amber { background: #d97706; color: #fff; }
+  .btn-amber:hover { background: #b45309; }
+  .btn-green { background: #059669; color: #fff; }
+  .btn-green:hover { background: #047857; }
+  .btn-danger { border: 1px solid #fecdd3; background: #fff1f2; color: #be123c; }
+  .btn-danger:hover { background: #ffe4e6; }
+  .chip { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .25rem .65rem; font-size: .72rem; font-weight: 900; white-space: nowrap; }
+  .c-ok { background: #dcfce7; color: #166534; }
+  .c-bad { background: #ffe4e6; color: #be123c; }
+  .c-warn { background: #fef3c7; color: #92400e; }
+  .c-info { background: #dbeafe; color: #1d4ed8; }
+  .c-mute { background: #f1f5f9; color: #475569; }
+  .dark .c-mute { background: #1e293b; color: #94a3b8; }
+  .row { display: flex; align-items: center; gap: .9rem; padding: .75rem 0; border-bottom: 1px solid #eef2f7; }
+  .dark .row { border-color: #1e293b; }
+  .row:last-child { border-bottom: none; }
+  .avatar { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-weight: 900; font-size: .8rem; color: #fff; flex: 0 0 38px; }
+  .it-drawer-backdrop { position: fixed; inset: 0; z-index: 85; background: rgba(15,23,42,.48); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .22s ease, visibility .22s ease; }
+  .it-drawer-backdrop.is-visible { opacity: 1; visibility: visible; pointer-events: auto; }
+  .it-drawer { position: fixed; top: 0; bottom: 0; right: 0; z-index: 90; width: 100%; max-width: 100vw; height: 100%; max-height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; color: #0f172a; transform: translateX(100%); transition: transform .22s ease; }
+  .it-drawer.is-open { transform: translateX(0); }
+  .dark .it-drawer { background: #fff; color: #0f172a; }
+  .it-drawer-content { min-height: 0; flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; background: #f6f8fc; color: #0f172a; font-size: .95rem; line-height: 1.55; }
+  .dark .it-drawer-content { background: #f6f8fc; color: #0f172a; }
+  .it-drawer-page { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #f6f8fc; color: #0f172a; }
+  .dark .it-drawer-page { background: #f6f8fc; color: #0f172a; }
+  .it-drawer-head { flex: 0 0 auto; background: #fff; color: #0f172a; }
+  .dark .it-drawer-head { background: #fff; color: #0f172a; }
+  .it-drawer-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .it-drawer-side, .it-drawer-main { min-height: 0; }
+  .it-drawer-empty { flex: 1 1 auto; display: grid; place-items: center; padding: 1.5rem; color: #64748b; font-size: .9rem; font-weight: 700; text-align: center; }
+  .it-drawer-content .kicker { color: #1d4ed8 !important; }
+  .it-drawer-content .btn-primary { color: #fff !important; }
+  .it-drawer-content .btn-secondary { color: #1f2937 !important; background: #fff !important; }
+  .seg { display: flex; gap: .4rem; background: #f1f5f9; border-radius: 12px; padding: .3rem; flex-wrap: wrap; }
+  .dark .seg { background: #0b1220; }
+  .seg-b { flex: 1; border-radius: 9px; padding: .5rem; font-size: .78rem; font-weight: 900; color: #475569; border: none; background: none; cursor: pointer; min-width: 80px; }
+  .seg-b.active { background: #2563eb; color: #fff; }
+  .fl { display: block; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 900; color: #64748b; margin: 1rem 0 .4rem; }
+  .fi { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; padding: .65rem .8rem; font-size: .9rem; font-weight: 700; color: #0f172a; background: #fff; outline: none; }
+  .fi:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+  .kv { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-bottom: 1px dashed #e2e8f0; font-size: .88rem; }
+  .dark .kv { border-color: #334155; }
+  .kv span { color: #64748b; font-weight: 700; }
+  .kv b { font-weight: 900; }
+  .kbd-hint { display: inline-flex; align-items: center; gap: .3rem; border-radius: 8px; border: 1px solid #cbd5e1; padding: .15rem .45rem; font-size: .7rem; font-weight: 800; color: #64748b; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  table.grid th { position: sticky; top: 0; background: #f1f5f9; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: #475569; font-weight: 900; padding: .6rem .7rem; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  .dark table.grid th { background: #0b1220; color: #94a3b8; border-color: #334155; }
+  table.grid td { padding: .5rem .7rem; border-bottom: 1px solid #eef2f7; font-weight: 700; }
+  .dark table.grid td { border-color: #1e293b; }
+  .gcell { width: 64px; border: 1px solid #cbd5e1; border-radius: 8px; padding: .35rem; font-size: .85rem; font-weight: 800; text-align: center; outline: none; background: #fff; color: #0f172a; }
+  .gcell:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+  .gcell:disabled { background: #f1f5f9; color: #94a3b8; }
+  .progress-track { margin-top: .7rem; height: 10px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+  .dark .progress-track { background: #1e293b; }
+  .progress-track div { height: 100%; border-radius: inherit; background: #2563eb; transition: width .3s ease; }
+  /* Backward compat aliases for shared component templates */
+  .workflow-btn { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: .5rem; border-radius: 12px; padding: .55rem 1rem; font-size: .85rem; font-weight: 900; transition: .16s ease; border: none; cursor: pointer; }
+  .workflow-btn.btn-primary { background: #2563eb; color: #fff; }
+  .workflow-btn.btn-primary:hover { background: #1d4ed8; }
+  .workflow-btn.btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+  .dark .workflow-btn.btn-secondary { border-color: #475569; background: #020617; color: #e2e8f0; }
+  .workflow-band { border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; padding: 1.2rem; box-shadow: 0 10px 28px rgb(15 23 42 / .06); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-left-width: 6px; }
+  .dark .workflow-band { border-color: #334155; background: #0f172a; }
+  .workflow-kicker { margin: 0; color: #2563eb; font-size: .72rem; font-weight: 950; text-transform: uppercase; letter-spacing: .16em; }
+  .workflow-context { color: #64748b; font-size: .9rem; font-weight: 600; }
+  .workflow-table-shell { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; overflow: hidden; }
+  .dark .workflow-table-shell { border-color: #334155; background: #0f172a; }
+  .workflow-stack { display: grid; gap: .75rem; }
+  .workflow-muted { color: #64748b; font-size: .78rem; font-weight: 600; }
+  .workflow-empty { padding: 2rem; text-align: center; color: #94a3b8; font-weight: 700; font-size: .9rem; }
+  .workflow-progress { margin-top: .7rem; height: 10px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+  .dark .workflow-progress { background: #1e293b; }
+  .workflow-progress div { height: 100%; border-radius: inherit; background: #2563eb; transition: width .3s ease; }
+  .workflow-toast { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: .8rem 1rem; }
+  .dark .workflow-toast { border-color: #334155; background: #0f172a; }
+  .workflow-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  /* Mode saisie : le drawer certifie devient un poste de travail plein ecran
+     uniquement lorsque la maquette de notes est chargee. */
+  [data-ui-core="drawer"].it-notes-entry-mode aside { width: 100vw; max-width: none; }
+  [data-ui-core="drawer"].it-notes-entry-mode aside > header { display: none; }
+  [data-ui-core="drawer"].it-notes-entry-mode #it-dashboard-drawer-content { padding: 0; overflow: hidden; }
+  [data-ui-core="drawer"].it-notes-entry-mode .it-notes-entry-grid,
+  [data-ui-core="drawer"].it-notes-entry-mode .it-notes-entry-grid > .workflow-table-shell,
+  [data-ui-core="drawer"].it-notes-entry-mode #notes-workspace,
+  [data-ui-core="drawer"].it-notes-entry-mode #notes-workspace > .maq-root,
+  [data-ui-core="drawer"].it-notes-entry-mode .maq-shell,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-shell,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-viewport { min-height: 0; height: 100%; }
+  [data-ui-core="drawer"].it-notes-entry-mode .it-notes-entry-grid,
+  [data-ui-core="drawer"].it-notes-entry-mode .it-notes-entry-grid > .workflow-table-shell,
+  [data-ui-core="drawer"].it-notes-entry-mode #notes-workspace,
+  [data-ui-core="drawer"].it-notes-entry-mode #notes-workspace > .maq-root,
+  [data-ui-core="drawer"].it-notes-entry-mode .maq-shell,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-shell { display: flex; flex-direction: column; }
+  [data-ui-core="drawer"].it-notes-entry-mode .workflow-table-shell { border: 0; border-radius: 0; }
+  [data-ui-core="drawer"].it-notes-entry-mode .workflow-table-head { display: none; }
+  [data-ui-core="drawer"].it-notes-entry-mode .maq-toolbar > header,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-toolbar > header { display: none; }
+  [data-ui-core="drawer"].it-notes-entry-mode .maq-toolbar,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-toolbar { position: relative; z-index: 30; padding: 10px 16px; }
+  [data-ui-core="drawer"].it-notes-entry-mode .maq-scroll,
+  [data-ui-core="drawer"].it-notes-entry-mode .notes-tabulator-viewport { flex: 1 1 auto; max-height: none; }
+  @media (max-width: 900px) {
+    .wkc { grid-template-columns: 1fr; }
+    .it-drawer { width: 100%; max-width: 100vw; }
+  }
+  #it-topbar-loader { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: #2563eb; z-index: 200; transition: width .18s ease, opacity .3s ease; opacity: 0; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section
+  data-dashboard-section="{{ initial_module|default:'home' }}"
+  class="min-w-0 max-w-full"
+  {% if not initial_workspace_html %}
+  hx-get="{% if selected_class and selected_semester %}{% url 'accounts_portal:it_notes_workspace' %}?class_id={{ selected_class.id }}&amp;semester_id={{ selected_semester.id }}{% else %}{% url 'accounts_portal:it_home_workspace' %}{% endif %}"
+  hx-trigger="load"
+  hx-target="#it-dashboard-workspace"
+  hx-swap="innerHTML"
+  {% endif %}
+>
+  {% if initial_workspace_html %}{{ initial_workspace_html }}{% else %}<div class="rounded-ui-card border border-ui-border bg-ui-surface p-4 text-sm text-ui-text-muted">{% if selected_class and selected_semester %}Workspace Notes{% else %}Chargement du workspace…{% endif %}</div>{% endif %}
+</section>
+
+{% if not dashboard_shell %}
+<div
+  x-data="itFlowDashboard()"
+  x-init="init()"
+  @keydown.escape.window="closeModal(); closeDrawer()"
+  @certified-dashboard:navigate.window="if ($event.detail.key === 'it-dashboard') openModule($event.detail.section)"
+  x-cloak
+>
+  <div id="it-topbar-loader"></div>
+  <div class="flex min-h-screen">
+    {% if not dashboard_shell %}
+    <aside class="it-sidebar fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-200" :class="collapsed ? 'w-[82px]' : 'w-[280px]'">
+      <div class="flex h-20 items-center gap-3 px-4">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15">
+          <i data-lucide="workflow" class="h-6 w-6"></i>
+        </div>
+        <div x-show="!collapsed" x-transition class="min-w-0">
+          <p class="truncate text-base font-black">{{ branch.name|default:"Support global" }}</p>
+          <p class="truncate text-xs font-bold uppercase tracking-widest text-sky-100/70">Informaticien d'annexe</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="absolute right-[-18px] top-6 grid h-10 w-10 place-items-center rounded-2xl bg-blue-600 shadow-lg ring-4 ring-slate-50 dark:ring-slate-950"
+        @click="toggleSidebar()"
+        title="Sidebar"
+      >
+        <i data-lucide="panel-left-close" class="h-5 w-5" :class="collapsed ? 'rotate-180' : ''"></i>
+      </button>
+      <nav class="mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+        <template x-for="module in modules" :key="module.key">
+          <button
+            type="button"
+            class="it-nav-btn"
+            :class="activeModule === module.key ? 'active' : ''"
+            :hx-get="module.url"
+            hx-target="#it-workspace"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            @click="openModule(module.key)"
+          >
+            <i :data-lucide="module.icon" class="h-5 w-5 shrink-0"></i>
+            <span x-show="!collapsed" x-transition x-text="module.label" class="navlabel"></span>
+          </button>
+        </template>
+      </nav>
+      <div class="p-3">
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="it-nav-btn justify-center border border-white/10 bg-white/10">
+            <i data-lucide="log-out" class="h-5 w-5"></i>
+            <span x-show="!collapsed" x-transition class="navlabel">Déconnexion</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+    {% endif %}
+
+    <main class="min-h-screen flex-1 {% if not dashboard_shell %}transition-all duration-200{% endif %}" {% if not dashboard_shell %}:class="collapsed ? 'ml-[82px]' : 'ml-[280px]'"{% endif %}>
+      <div class="mx-auto max-w-7xl px-5 py-6">
+        {% if not dashboard_shell %}
+        <header class="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p class="kicker" x-text="activeKicker()"></p>
+            <h1 class="mt-1 text-3xl font-black tracking-tight" x-text="activeLabel()"></h1>
+            <p class="mt-2 text-sm font-semibold text-slate-500">Support technique, accès et santé du portail · scope : <span x-text="branchName()"></span></p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="chip c-info">Gestion des notes</span>
+              <span class="chip c-warn">Inscriptions sans affectation</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="btn btn-primary"
+              hx-get="{% url 'accounts_portal:it_my_account_workspace' %}"
+              hx-target="#it-workspace"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+              @click="openModule('settings')"
+            >
+              <i data-lucide="settings" class="mr-2 h-4 w-4"></i>
+              Compte
+            </button>
+            <div class="relative" @click.outside="notificationDropdownOpen = false">
+              <button
+                type="button"
+                class="btn btn-secondary relative"
+                @click="toggleNotificationDropdown()"
+                title="Notifications"
+              >
+                <i data-lucide="bell" class="h-4 w-4"></i>
+                <span
+                  x-show="unreadCount > 0"
+                  x-cloak
+                  class="absolute -right-1 -top-1 grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white"
+                  x-text="unreadCount"
+                ></span>
+              </button>
+              <div
+                x-show="notificationDropdownOpen"
+                x-cloak
+                x-transition
+                class="absolute right-0 z-50 mt-2 w-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                id="it-notif-dropdown"
+              >
+                <div class="border-b border-slate-100 px-5 py-3">
+                  <p class="text-sm font-black text-slate-900">Notifications</p>
+                </div>
+                <div id="it-notif-dropdown-content" hx-get="{% url 'accounts_portal:it_notifications_workspace' %}?partial=dropdown" hx-trigger="load" hx-swap="innerHTML">
+                  <div class="p-6 text-center text-sm text-slate-500">Chargement...</div>
+                </div>
+                <div class="border-t border-slate-100 bg-slate-50 px-5 py-2.5">
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-center gap-1 text-xs font-black text-blue-600 hover:text-blue-800"
+                    hx-get="{% url 'accounts_portal:it_notifications_workspace' %}"
+                    hx-target="#it-workspace"
+                    hx-swap="innerHTML"
+                    hx-push-url="true"
+                    @click="notificationDropdownOpen = false; openModule('notifications')"
+                  >
+                    Voir toutes les notifications
+                    <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="relative" @click.outside="profileOpen = false">
+              <button type="button" class="btn btn-secondary" @click="profileOpen = !profileOpen">
+                <span class="grid h-7 w-7 place-items-center rounded-full bg-blue-600 text-xs font-black text-white">
+                  {{ request.user.first_name|first|default:request.user.username|first|upper }}
+                </span>
+                <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+              </button>
+              <div x-show="profileOpen" x-transition class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                <button type="button" class="block w-full px-4 py-3 text-left text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-900" hx-get="{% url 'accounts_portal:it_my_account_workspace' %}" hx-target="#it-workspace" hx-swap="innerHTML" hx-push-url="true" @click="activeModule='settings'; profileOpen=false">Mon profil</button>
+                <a href="{% url 'password_change' %}" class="block w-full px-4 py-3 text-left text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-900">Mot de passe</a>
+                <form method="post" action="{% url 'accounts:logout' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="block w-full px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50">Déconnexion</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </header>
+        {% endif %}
+
+        <div id="crumbBar" class="flex items-center gap-2 mb-4 text-sm font-bold" x-show="activeModule !== 'home'">
+          <button
+            class="text-blue-600 hover:underline"
+            hx-get="{% url 'accounts_portal:it_home_workspace' %}"
+            hx-target="#it-workspace"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            @click="openModule('home')"
+          >Accueil</button>
+          <template x-for="(crumb, i) in crumbs" :key="i">
+            <span class="flex items-center gap-2">
+              <i data-lucide="chevron-right" class="h-3 w-3 text-slate-300"></i>
+              <span class="text-slate-500" x-text="crumb"></span>
+            </span>
+          </template>
+        </div>
+
+        <section
+          id="it-workspace"
+          {% if not initial_workspace_html %}
+          hx-get="{% if selected_class and selected_semester %}{% url 'accounts_portal:it_notes_workspace' %}?class_id={{ selected_class.id }}&amp;semester_id={{ selected_semester.id }}{% else %}{% url 'accounts_portal:it_home_workspace' %}{% endif %}"
+          hx-trigger="load"
+          hx-target="#it-workspace"
+          hx-swap="innerHTML"
+          {% endif %}
+        >
+          {% if initial_workspace_html %}{{ initial_workspace_html }}{% else %}<div class="panel">{% if selected_class and selected_semester %}Workspace Notes{% else %}Chargement du workflow...{% endif %}</div>{% endif %}
+        </section>
+
+        <div id="it-modal-root"></div>
+        <div id="it-drawer-backdrop" class="it-drawer-backdrop" role="button" aria-label="Fermer le drawer" onclick="window.itCloseDrawer && window.itCloseDrawer()"></div>
+        <aside id="it-drawer-shell" class="it-drawer" role="complementary" aria-label="Drawer détaillé" aria-hidden="true">
+          <div id="it-drawer-content" class="it-drawer-content">
+            <div class="it-drawer-empty">
+              <div>
+                <div class="text-lg font-black text-slate-900">Sélectionnez une classe</div>
+                <div class="mt-2">Le drawer détaillé affiche la classe, les UE et les EC sur toute la hauteur disponible.</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  function itFlowDashboard() {
+    return {
+      collapsed: false,
+      profileOpen: false,
+      notificationDropdownOpen: false,
+      unreadCount: 0,
+      activeModule: '{{ initial_module|default:"home" }}',
+      crumbs: [],
+      modules: [
+        { key: 'home', label: 'Accueil', icon: 'home', kicker: 'Actions rapides et priorités', url: "{% url 'accounts_portal:it_home_workspace' %}" },
+        { key: 'notes', label: 'Notes & Résultats', icon: 'file-spreadsheet', kicker: 'Classe → Semestre → État → Action', url: "{% url 'accounts_portal:it_notes_flow_workspace' %}" },
+        { key: 'import', label: 'Import / export', icon: 'upload-cloud', kicker: 'Excel notes et export classe', url: "{% url 'accounts_portal:it_import_workspace' %}" },
+        { key: 'cards', label: 'Cartes & QR', icon: 'badge', kicker: 'Émission → Suivi → Vérification', url: "{% url 'accounts_portal:it_cards_workspace' %}" },
+        { key: 'accounts', label: 'Utilisateurs', icon: 'shield-check', kicker: 'Utilisateur → État compte → Action', url: "{% url 'accounts_portal:it_accounts_flow_workspace' %}" },
+        { key: 'audit', label: 'Journal d\'audit', icon: 'history', kicker: 'Historique des actions de l\'annexe', url: "{% url 'accounts_portal:it_audit_workspace' %}" },
+        { key: 'notifications', label: 'Notifications', icon: 'bell', kicker: 'Alertes, messages et communications', url: "{% url 'accounts_portal:it_notifications_workspace' %}" },
+        { key: 'settings', label: 'Compte', icon: 'settings', kicker: 'Profil, sécurité et préférences', url: "{% url 'accounts_portal:it_my_account_workspace' %}" },
+      ],
+      init() {
+        this.collapsed = window.localStorage.getItem('it_flow_sidebar') === '1';
+        if (this.activeModule !== 'home') {
+          const current = this.currentModule();
+          this.crumbs = current ? [current.label] : [];
+        }
+        this.$nextTick(() => this.renderIcons());
+        this.loadUnreadCount();
+        this.initTopbarLoader();
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+          this.renderIcons();
+          if (event.detail && event.detail.target && event.detail.target.id === 'it-drawer-content') {
+            this.openDrawer();
+          }
+        });
+        document.body.addEventListener('htmx:afterSettle', (event) => {
+          this.renderIcons();
+        });
+        document.body.addEventListener('notif-update', () => this.loadUnreadCount());
+        document.body.addEventListener('it-modal-close', () => this.closeModal());
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+          const elt = event && event.detail ? event.detail.elt : null;
+          if (elt && elt.getAttribute && elt.getAttribute('hx-target') === '#it-drawer-content') {
+            this.openDrawer();
+          }
+        });
+        document.body.addEventListener('it-drawer-close', () => this.closeDrawer());
+        window.itOpenDrawer = () => this.openDrawer();
+        window.itCloseDrawer = () => this.closeDrawer();
+      },
+      initTopbarLoader() {
+        const bar = document.getElementById('it-topbar-loader');
+        if (!bar) return;
+        let pendingTimer = null;
+        let visible = false;
+        const isWorkspaceRequest = (event) => {
+          const target = event && event.detail && event.detail.target;
+          return !!target && target.id === 'it-workspace';
+        };
+        const show = () => {
+          visible = true;
+          bar.style.transition = 'none';
+          bar.style.width = '0';
+          bar.style.opacity = '1';
+          requestAnimationFrame(() => {
+            bar.style.transition = 'width .18s ease, opacity .3s ease';
+            bar.style.width = '35%';
+          });
+        };
+        const hide = () => {
+          if (!visible) return;
+          visible = false;
+          bar.style.width = '100%';
+          setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0'; }, 220);
+        };
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+          if (!isWorkspaceRequest(event)) return;
+          clearTimeout(pendingTimer);
+          pendingTimer = setTimeout(show, 300);
+        });
+        document.body.addEventListener('htmx:afterRequest', (event) => {
+          if (!isWorkspaceRequest(event)) return;
+          clearTimeout(pendingTimer);
+          hide();
+        });
+      },
+      branchName() {
+        return '{{ branch.name|default:"Annexe courante"|escapejs }}';
+      },
+      loadUnreadCount() {
+        fetch('{% url "accounts_portal:it_notifications_workspace" %}?count_only=1')
+          .then(r => r.text())
+          .then(html => {
+            const match = html.match(/>(\d+)<\/span>/);
+            if (match) this.unreadCount = parseInt(match[1], 10);
+          })
+          .catch(() => {});
+      },
+      toggleNotificationDropdown() {
+        this.notificationDropdownOpen = !this.notificationDropdownOpen;
+        if (this.notificationDropdownOpen) {
+          this.$nextTick(() => {
+            const content = document.getElementById('it-notif-dropdown-content');
+            if (content && content.getAttribute('hx-trigger') === 'load' && !content.dataset.loaded) {
+              content.dataset.loaded = '1';
+              if (window.htmx) window.htmx.process(content);
+            }
+          });
+        }
+      },
+      currentModule() {
+        return this.modules.find((item) => item.key === this.activeModule) || this.modules[0];
+      },
+      activeLabel() {
+        return this.currentModule().label;
+      },
+      activeKicker() {
+        return this.currentModule().kicker;
+      },
+      openModule(moduleKey) {
+        // Etat cosmetique uniquement : la navigation reseau est portee par les
+        // attributs hx-get/hx-push-url declares sur le bouton cliqueur lui-meme.
+        this.activeModule = moduleKey;
+        this.closeModal();
+        const module = this.modules.find(m => m.key === moduleKey);
+        this.crumbs = module ? [module.label] : [];
+        this.$nextTick(() => this.renderIcons());
+      },
+      toggleSidebar() {
+        this.collapsed = !this.collapsed;
+        window.localStorage.setItem('it_flow_sidebar', this.collapsed ? '1' : '0');
+      },
+      renderIcons() {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      },
+      closeModal() {
+        const modalRoot = document.getElementById('it-modal-root');
+        if (modalRoot) {
+          modalRoot.innerHTML = '';
+        }
+      },
+      openDrawer() {
+        const backdrop = document.getElementById('it-drawer-backdrop');
+        const drawer = document.getElementById('it-drawer-shell');
+        if (backdrop) backdrop.classList.add('is-visible');
+        if (drawer) {
+          drawer.classList.add('is-open');
+          drawer.removeAttribute('aria-hidden');
+        }
+        document.body.classList.add('it-overlay-open');
+        document.body.style.overflow = 'hidden';
+      },
+      closeDrawer() {
+        const backdrop = document.getElementById('it-drawer-backdrop');
+        const drawer = document.getElementById('it-drawer-shell');
+        const content = document.getElementById('it-drawer-content');
+        if (backdrop) backdrop.classList.remove('is-visible');
+        if (drawer) {
+          drawer.classList.remove('is-open');
+          drawer.setAttribute('aria-hidden', 'true');
+        }
+        if (content) {
+          content.innerHTML = '<div class="it-drawer-empty"><div><div class="text-lg font-black text-slate-900">Sélectionnez une classe</div><div class="mt-2">Le drawer détaillé affiche la classe, les UE et les EC sur toute la hauteur disponible.</div></div></div>';
+        }
+        document.body.classList.remove('it-overlay-open');
+        document.body.style.overflow = '';
+      },
+    };
+  }
+
+</script>
+{% endif %}
+<script>
+  // Calcul instantane (cosmetique) de la grille de notes informaticien.
+  // Le serveur reste seul a valider/persister ; ce code ne fait que
+  // reproduire l'affichage pour eviter tout aller-retour reseau visible
+  // a la frappe. Defini ici (shell persistant) pour etre disponible avant
+  // que la grille ne soit inseree par un swap HTMX.
+  function notesGrid() {
+    return {
+      structure: [],
+      ecsPerRow: 0,
+      init() {
+        const raw = this.$root.querySelector('[data-maq-structure]');
+        try {
+          this.structure = raw ? JSON.parse(raw.textContent) : [];
+        } catch (e) {
+          this.structure = [];
+        }
+        this.ecsPerRow = this.structure.reduce((sum, ue) => sum + ue.ecs.length, 0);
+        this.syncHeaderOffsets();
+        this.headerResizeObserver = new ResizeObserver(() => this.syncHeaderOffsets());
+        const grid = this.$root.querySelector('.maq-grid');
+        if (grid) this.headerResizeObserver.observe(grid);
+        this.bindImport();
+        this.$root.addEventListener('htmx:beforeRequest', (event) => this.onSaveStarted(event));
+        this.$root.addEventListener('htmx:afterRequest', (event) => this.onSaveSettled(event));
+      },
+      syncHeaderOffsets() {
+        [1, 2, 3, 4].forEach((number) => {
+          const cells = this.$root.querySelectorAll(`.maq-cell--h-row${number}`);
+          const height = Array.from(cells).reduce(
+            (largest, cell) => Math.max(largest, Math.ceil(cell.getBoundingClientRect().height)),
+            0,
+          );
+          this.$root.style.setProperty(`--maq-head-row${number}`, `${height}px`);
+        });
+      },
+      bindImport() {
+        const form = this.$root.querySelector('.js-notes-import-form');
+        if (!form || form.dataset.bound === '1') return;
+        form.dataset.bound = '1';
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const status = form.querySelector('[data-notes-import-status]');
+          const button = form.querySelector('button[type="submit"]');
+          const file = form.querySelector('input[type="file"]');
+          if (!file || !file.files || !file.files.length) return;
+          if (status) {
+            status.textContent = 'Import en cours…';
+            status.className = 'text-xs font-medium text-indigo-700';
+          }
+          if (button) button.disabled = true;
+          try {
+            const response = await fetch(this.$root.dataset.importUrl, {
+              method: 'POST',
+              body: new FormData(form),
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload || payload.ok !== true) {
+              const detail = payload && (payload.error || payload.errors);
+              const issues = payload && payload.result && Array.isArray(payload.result.student_issues)
+                ? payload.result.student_issues.slice(0, 2).map((issue) => issue.message).filter(Boolean)
+                : [];
+              const message = Array.isArray(detail) ? detail.join(' ') : (detail || `Import refusé (${response.status}).`);
+              throw new Error(issues.length ? `${message} ${issues.join(' ')}` : message);
+            }
+            if (status) {
+              const imported = Number(payload.result && payload.result.updated || 0);
+              const empty = Number(payload.result && payload.result.skipped_empty || 0);
+              status.textContent = empty
+                ? `${imported} note(s) importée(s) · ${empty} cellule(s) vide(s) à compléter`
+                : `${imported} note(s) importée(s) · grille complète`;
+              status.className = empty
+                ? 'text-xs font-medium text-amber-700'
+                : 'text-xs font-medium text-emerald-700';
+            }
+            const gridUrl = this.$root.dataset.gridUrl;
+            if (window.htmx && gridUrl) {
+              const params = new URLSearchParams({
+                class_id: form.elements.class_id.value,
+                semester_id: form.elements.semester_id.value,
+                session: this.$root.dataset.session || 'normal',
+                imported: String(Number(payload.result && payload.result.updated || 0)),
+                empty: String(Number(payload.result && payload.result.skipped_empty || 0)),
+              });
+              window.setTimeout(() => window.htmx.ajax('GET', `${gridUrl}?${params.toString()}`, '#notes-workspace'), 350);
+            }
+          } catch (error) {
+            if (status) {
+              status.textContent = error && error.message ? error.message : 'Import non effectué.';
+              status.className = 'text-xs font-medium text-rose-700';
+            }
+          } finally {
+            if (button) button.disabled = false;
+          }
+        });
+      },
+      onSaveStarted(event) {
+        const elt = event.detail && event.detail.elt;
+        if (!elt || !elt.classList || !elt.classList.contains('score-input')) return;
+        const rowEl = elt.closest('.maq-row-student');
+        const rowIndex = rowEl ? rowEl.dataset.rowIndex : null;
+        const ecId = elt.dataset.ecId;
+        const statusEl = rowIndex !== null && rowIndex !== undefined && ecId
+          ? this.$root.querySelector(`#save-status-${rowIndex}-${ecId}`)
+          : null;
+        elt.classList.remove('is-saved', 'is-error', 'is-attention', 'is-editing');
+        elt.classList.add('is-saving');
+        if (!statusEl) return;
+        clearTimeout(statusEl._flashTimer);
+        statusEl.textContent = 'Enregistrement de la note.';
+        statusEl.title = 'La note est en cours d’enregistrement.';
+        statusEl.className = 'save-status sr-only htmx-indicator';
+      },
+      onSaveSettled(event) {
+        const elt = event.detail && event.detail.elt;
+        if (!elt || !elt.classList || !elt.classList.contains('score-input')) return;
+        const rowEl = elt.closest('.maq-row-student');
+        const rowIndex = rowEl ? rowEl.dataset.rowIndex : null;
+        const ecId = elt.dataset.ecId;
+        if (rowIndex === null || rowIndex === undefined || !ecId) return;
+        const statusEl = this.$root.querySelector(`#save-status-${rowIndex}-${ecId}`);
+        if (!statusEl) return;
+        const xhr = event.detail.xhr;
+        const responseText = (xhr && xhr.responseText ? xhr.responseText : '').trim();
+        const requiresOtp = responseText.includes('grade_otp_modal') || responseText.includes('otp_request_id');
+        const ok = !!event.detail.successful && !requiresOtp;
+        const errorMessage = responseText && !requiresOtp
+          ? new DOMParser().parseFromString(responseText, 'text/html').body.textContent.trim()
+          : '';
+        elt.classList.remove('is-saving', 'is-editing');
+        elt.classList.toggle('is-saved', ok);
+        elt.classList.toggle('is-attention', requiresOtp);
+        elt.classList.toggle('is-error', !ok && !requiresOtp);
+        statusEl.textContent = ok
+          ? 'Note enregistrée.'
+          : requiresOtp
+            ? 'Validation OTP requise pour modifier cette note.'
+            : (errorMessage || 'Note non enregistrée. Vérifiez la valeur et le statut de session.');
+        statusEl.title = statusEl.textContent;
+        statusEl.className = ok
+          ? 'save-status sr-only htmx-indicator'
+          : requiresOtp
+            ? 'save-status is-attention htmx-indicator'
+            : 'save-status is-error htmx-indicator';
+        clearTimeout(statusEl._flashTimer);
+        if (ok) {
+          statusEl._flashTimer = setTimeout(() => {
+            elt.classList.remove('is-saved');
+            statusEl.textContent = '…';
+          }, 520);
+        }
+      },
+      resolveEcThreshold(coefficient) {
+        if (coefficient <= 1) return 8;
+        if (coefficient <= 2) return 10;
+        return 12;
+      },
+      round2(value) {
+        return Math.round((value + Number.EPSILON) * 100) / 100;
+      },
+      fmt(value) {
+        if (value === null || value === undefined || isNaN(value)) return '0,00';
+        return value.toFixed(2).replace('.', ',');
+      },
+      parseNum(text) {
+        if (!text) return 0;
+        const n = parseFloat(String(text).trim().replace(',', '.'));
+        return isNaN(n) ? 0 : n;
+      },
+      getText(id) {
+        const el = document.getElementById(id);
+        return el ? el.textContent : '';
+      },
+      setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      },
+      toggleCreditStatus(id, isZero) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('maq-cell--bad', isZero);
+        el.classList.toggle('maq-cell--ok', !isZero);
+      },
+      applyNoteStatus(input, status) {
+        input.classList.remove('is-validated', 'is-failed', 'is-invalid');
+        const cell = input.closest('.maq-cell--note');
+        if (cell) cell.classList.remove('maq-cell--ok', 'maq-cell--bad', 'maq-cell--empty');
+        if (status === 'invalid') {
+          input.classList.add('is-invalid');
+          if (cell) cell.classList.add('maq-cell--empty');
+        } else if (status === 'empty') {
+          if (cell) cell.classList.add('maq-cell--empty');
+        } else if (status === 'ok') {
+          input.classList.add('is-validated');
+          if (cell) cell.classList.add('maq-cell--ok');
+        } else if (status === 'bad') {
+          input.classList.add('is-failed');
+          if (cell) cell.classList.add('maq-cell--bad');
+        }
+      },
+      computeEc(rowIndex, ec) {
+        const input = document.getElementById(`note-${rowIndex}-${ec.id}`);
+        if (!input) {
+          return { note: null, noteCoefficient: 0, creditObtained: 0, status: null };
+        }
+        if (input.disabled) {
+          // Matiere verrouillee (deja validee en session normale) : la valeur
+          // affichee n'est pas forcement celle du champ (logique final_score
+          // cote serveur). On garde l'affichage serveur tel quel.
+          return {
+            note: 'locked',
+            noteCoefficient: this.parseNum(this.getText(`notecoef-${rowIndex}-${ec.id}`)),
+            creditObtained: this.parseNum(this.getText(`credit-${rowIndex}-${ec.id}`)),
+            status: null,
+          };
+        }
+        const raw = input.value.trim().replace(',', '.');
+        if (raw === '') {
+          return { note: null, noteCoefficient: 0, creditObtained: 0, status: 'empty' };
+        }
+        const parsed = parseFloat(raw);
+        if (isNaN(parsed) || parsed < 0 || parsed > 20) {
+          return { note: null, noteCoefficient: 0, creditObtained: 0, status: 'invalid' };
+        }
+        const threshold = this.resolveEcThreshold(ec.coefficient);
+        const noteCoefficient = this.round2(parsed * ec.coefficient);
+        const isValidated = parsed >= threshold;
+        const creditObtained = isValidated ? ec.creditRequired : 0;
+        return { note: parsed, noteCoefficient, creditObtained, status: isValidated ? 'ok' : 'bad' };
+      },
+      recomputeRow(rowEl) {
+        if (!this.structure || !this.structure.length) return;
+        const rowIndex = rowEl.dataset.rowIndex;
+        if (rowIndex === null || rowIndex === undefined || rowIndex === '') return;
+        let totalUeCoef = 0;
+        let totalUeNoteCoef = 0;
+        let totalCreditReq = 0;
+        let totalCreditObt = 0;
+        let rowMissing = false;
+
+        this.structure.forEach((ue) => {
+          let ueEnteredCoefSum = 0;
+          let ueNoteCoefSum = 0;
+          let ueCreditSum = 0;
+          let ueMissing = false;
+
+          ue.ecs.forEach((ec) => {
+            const result = this.computeEc(rowIndex, ec);
+            if (result.note !== null) ueEnteredCoefSum += ec.coefficient;
+            ueNoteCoefSum += result.noteCoefficient;
+            ueCreditSum += result.creditObtained;
+            if (result.note === null) ueMissing = true;
+            this.setText(`notecoef-${rowIndex}-${ec.id}`, this.fmt(result.noteCoefficient));
+            this.setText(`credit-${rowIndex}-${ec.id}`, this.fmt(result.creditObtained));
+            if (result.status) {
+              const input = document.getElementById(`note-${rowIndex}-${ec.id}`);
+              if (input) this.applyNoteStatus(input, result.status);
+            }
+          });
+
+          // Moyenne provisoire : seules les matières déjà notées participent
+          // au dénominateur. Une matière vide ne vaut jamais zéro.
+          const ueAverage = ueEnteredCoefSum > 0 ? (ueNoteCoefSum / ueEnteredCoefSum) : null;
+          // La validation du semestre reste, elle, bloquée tant que toute la
+          // grille n'est pas saisie.
+          if (ueMissing || ueAverage === null) rowMissing = true;
+          this.setText(`ueavg-${rowIndex}-${ue.id}`, ueAverage === null ? '0,00' : this.fmt(ueAverage));
+          this.setText(`uenotecoef-${rowIndex}-${ue.id}`, this.fmt(ueNoteCoefSum));
+          this.setText(`uecredit-${rowIndex}-${ue.id}`, this.fmt(ueCreditSum));
+          this.toggleCreditStatus(`uecredit-${rowIndex}-${ue.id}`, ueCreditSum === 0);
+
+          totalUeCoef += ue.coefficient;
+          if (ueAverage !== null) totalUeNoteCoef += ueAverage * ue.coefficient;
+          totalCreditReq += ue.creditRequired;
+          totalCreditObt += ueCreditSum;
+        });
+
+        const semesterAverage = (!rowMissing && totalUeCoef > 0) ? (totalUeNoteCoef / totalUeCoef) : null;
+        const percentage = totalCreditReq > 0 ? (totalCreditObt / totalCreditReq) * 100 : 0;
+        this.setText(`semavg-${rowIndex}`, semesterAverage === null ? '0,00' : this.fmt(semesterAverage));
+        this.setText(`sempct-${rowIndex}`, this.fmt(percentage) + '%');
+        this.setText(`semcredit-${rowIndex}`, this.fmt(totalCreditObt));
+        this.toggleCreditStatus(`semcredit-${rowIndex}`, totalCreditObt === 0);
+      },
+      onInput(event) {
+        const input = event.target;
+        if (!input.classList || !input.classList.contains('score-input')) return;
+        input.classList.remove('is-saved', 'is-error', 'is-attention');
+        input.classList.add('is-editing');
+        const rowEl = input.closest('.maq-row-student');
+        const rowIndex = rowEl ? rowEl.dataset.rowIndex : null;
+        const statusEl = rowIndex !== null && rowIndex !== undefined && input.dataset.ecId
+          ? this.$root.querySelector(`#save-status-${rowIndex}-${input.dataset.ecId}`)
+          : null;
+        if (statusEl) {
+          clearTimeout(statusEl._flashTimer);
+          statusEl.textContent = '…';
+          statusEl.className = 'save-status sr-only htmx-indicator';
+        }
+        if (rowEl) this.recomputeRow(rowEl);
+      },
+      onKeydown(event) {
+        const input = event.target;
+        if (!input.classList || !input.classList.contains('score-input')) return;
+        if (event.key === 'Escape') {
+          input.value = input.defaultValue;
+          input.blur();
+          return;
+        }
+        if (event.key !== 'Enter' && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        const allInputs = Array.from(this.$root.querySelectorAll('.score-input:not(:disabled)'));
+        const idx = allInputs.indexOf(input);
+        const offset = this.ecsPerRow || 1;
+        const targetIdx = (event.key === 'ArrowUp') ? idx - offset : idx + offset;
+        const target = allInputs[targetIdx];
+        if (target) {
+          target.focus({ preventScroll: true });
+          target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+      },
+    };
+  }
+</script>
+{% endblock %}

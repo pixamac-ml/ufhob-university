@@ -1,0 +1,29 @@
+{% if not school_code or not branch_id %}
+<div class='rounded-ufhob-md border border-dashed border-ufhob-border bg-ufhob-ivory p-4 text-sm text-ufhob-muted' role='status'>
+  Sélectionnez une école et un campus pour charger les cycles disponibles.
+</div>
+{% else %}
+<div class='mb-3 flex items-center justify-between'>
+  <p class='text-sm font-semibold text-ufhob-primary'>Cycles disponibles</p>
+  <p class='text-xs text-ufhob-muted'>{{ cycles|length }} résultat{{ cycles|length|pluralize }}</p>
+</div>
+{% if cycles %}
+<div class='grid gap-3 lg:grid-cols-2'>
+  {% for cycle in cycles %}
+  <button type='button'
+          data-cycle-slug="{{ cycle.slug }}"
+          class='rounded-ufhob-md border px-4 py-4 text-left transition'
+          :class="formData.current_level === '{{ cycle.slug|escapejs }}' ? 'border-ufhob-secondary bg-ufhob-primary-soft ring-1 ring-ufhob-secondary/30' : (errors.current_level ? 'border-red-400' : 'border-ufhob-border hover:border-ufhob-secondary')"
+          @click="selectCycle('{{ cycle.slug|escapejs }}', '{{ cycle.name|escapejs }}')" :aria-pressed="formData.current_level === '{{ cycle.slug|escapejs }}'">
+    <strong class='block text-ufhob-primary'>{{ cycle.name }}</strong>
+    <span class='mt-1 block text-xs text-ufhob-muted'>Cycle {{ cycle.slug }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class='rounded-ufhob-md border border-dashed border-ufhob-border bg-ufhob-ivory p-4 text-sm text-ufhob-muted' role='status'>
+  Aucun cycle n'est disponible pour cette école sur ce campus.
+</div>
+{% endif %}
+{% endif %}

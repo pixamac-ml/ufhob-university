@@ -1,0 +1,23 @@
+{% extends "workspace_base.html" %}
+
+{% block title %}{% block auth_title %}Accès sécurisé | UFHOB{% endblock %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Authentification : même système chromatique que la vitrine UFHOB. */
+  .auth-ufhob :is(.bg-primary-900, .bg-primary-800, .bg-primary-700, .bg-primary-600, .bg-primary-500) { background-color: var(--ufhob-primary) !important; }
+  .auth-ufhob .bg-gradient-to-br { background-image: linear-gradient(135deg, var(--ufhob-primary-hover), var(--ufhob-primary)) !important; }
+  .auth-ufhob :is(.text-primary-900, .text-primary-700, .text-primary-500) { color: var(--ufhob-primary) !important; }
+  .auth-ufhob :is(.text-secondary, .hover\\:text-secondary:hover) { color: var(--ufhob-secondary-dark) !important; }
+  .auth-ufhob :is(.border-primary-100, .border-primary-200, .border-primary-300) { border-color: var(--ufhob-border) !important; }
+  .auth-ufhob :is(.bg-primary-50, .bg-primary-100) { background-color: var(--ufhob-primary-soft) !important; }
+  .auth-ufhob :is(.focus\\:border-secondary:focus, .focus\\:border-primary-500:focus) { border-color: var(--ufhob-primary) !important; }
+  .auth-ufhob :is(.focus\\:ring-secondary\/10:focus, .focus\\:ring-primary-200:focus) { --tw-ring-color: rgb(var(--ufhob-primary-rgb) / .18) !important; }
+  .auth-ufhob :is(button, input, [role="alert"], .rounded-xl, .rounded-2xl) { border-radius: var(--ufhob-radius-sm); }
+  .auth-ufhob a:focus-visible, .auth-ufhob button:focus-visible, .auth-ufhob input:focus-visible { outline: 2px solid var(--ufhob-accent); outline-offset: 3px; }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>document.body.classList.add('auth-ufhob');</script>
+{% endblock %}

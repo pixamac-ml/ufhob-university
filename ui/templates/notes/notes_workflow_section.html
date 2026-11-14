@@ -1,0 +1,26 @@
+{% load component_tags %}
+{% if state %}
+<section class="space-y-4 p-4" data-ui-core="notes-workflow">
+  {% component "ui_core.page_header" eyebrow="Workflow notes" title=state.label subtitle=state.description %}{% endcomponent %}
+
+  {% component "notes_workflow_bar" state_code=state.code has_candidates=state.retake_candidates_count %}{% endcomponent %}
+
+  <div class="grid gap-3 md:grid-cols-4">
+    {% component "ui_core.stat_card" label="Saisie" value=state.entered_grades icon="pen-line" description=state.expected_grades compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Progression" value=state.progress_percent unit="%" icon="chart-no-axes-combined" tone="info" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Notes manquantes" value=state.missing_grades icon="circle-alert" tone="warning" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Rattrapage" value=state.retake_candidates_count icon="rotate-ccw" tone="accent" compact=True %}{% endcomponent %}
+  </div>
+
+  {% if state.technical_alerts %}
+    {% component "ui_core.alert" message=state.technical_alerts|join:" · " tone="warning" %}{% endcomponent %}
+  {% endif %}
+  <div>
+    {% if drawer_mode %}
+      {% component "notes_actions" actions=actions academic_class=academic_class semester=semester target="#it-dashboard-drawer-content" drawer_mode=True %}{% endcomponent %}
+    {% else %}
+      {% component "notes_actions" actions=actions academic_class=academic_class semester=semester %}{% endcomponent %}
+    {% endif %}
+  </div>
+</section>
+{% endif %}

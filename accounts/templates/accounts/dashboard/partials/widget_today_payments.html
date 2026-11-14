@@ -1,0 +1,8 @@
+{% load component_tags %}
+{% load humanize %}
+<div id="widget-today-payments"
+     hx-get="{% url 'accounts:widget_today_payments' %}"
+     hx-trigger="every 30s, paymentUpdated from:body, dashboardStatsUpdated from:body"
+     hx-swap="outerHTML">
+  {% component "ui_core.stat_card" label=stat_card.label value=stat_card.value unit=stat_card.unit icon=stat_card.icon tone=stat_card.tone description=stat_card.description %}{% endcomponent %}
+</div>

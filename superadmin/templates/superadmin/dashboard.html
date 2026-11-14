@@ -1,0 +1,455 @@
+{% extends "superadmin/unified_base.html" %}
+{% load humanize %}
+
+{% block page_title %}Tableau de bord{% endblock %}
+{% block page_subtitle %}Suivi des admissions, inscriptions et finances{% endblock %}
+
+{% block dashboard_content %}
+<div id="dashboard-root" class="space-y-6" x-data="dashboardCockpit()" x-init="init()">
+    <section class="card">
+        <div class="card-body flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button"
+                        class="btn btn-sm {% if dashboard_period == '7d' %}btn-primary{% else %}btn-outline{% endif %}"
+                        @click="persistPeriod('7d')"
+                        hx-get="{% url 'superadmin:dashboard' %}?period=7d"
+                        hx-target="#dashboard-root"
+                        hx-select="#dashboard-root"
+                        hx-swap="outerHTML"
+                        hx-push-url="true">7 jours</button>
+                <button type="button"
+                        class="btn btn-sm {% if dashboard_period == '30d' %}btn-primary{% else %}btn-outline{% endif %}"
+                        @click="persistPeriod('30d')"
+                        hx-get="{% url 'superadmin:dashboard' %}?period=30d"
+                        hx-target="#dashboard-root"
+                        hx-select="#dashboard-root"
+                        hx-swap="outerHTML"
+                        hx-push-url="true">30 jours</button>
+                <button type="button"
+                        class="btn btn-sm {% if dashboard_period == 'quarter' %}btn-primary{% else %}btn-outline{% endif %}"
+                        @click="persistPeriod('quarter')"
+                        hx-get="{% url 'superadmin:dashboard' %}?period=quarter"
+                        hx-target="#dashboard-root"
+                        hx-select="#dashboard-root"
+                        hx-swap="outerHTML"
+                        hx-push-url="true">Trimestre</button>
+            </div>
+
+            <label class="inline-flex items-center gap-2 text-sm text-ui-text">
+                <input type="checkbox" {% if widget_autorefresh %}checked{% endif %} @change="toggleAutorefresh($event.target.checked)">
+                Actualisation automatique (30s)
+            </label>
+        </div>
+    </section>
+
+    <section id="mini-widgets"
+             hx-get="{% url 'superadmin:dashboard_widgets_fragment' %}"
+             hx-trigger="load{% if widget_autorefresh %}, every 30s{% endif %}"
+             hx-swap="innerHTML"
+             class="card p-4">
+        <div class="text-sm text-ui-text-muted">Chargement des mini-widgets...</div>
+    </section>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article x-data="{ hovered: false }" @mouseenter="hovered = true" @mouseleave="hovered = false" :class="hovered ? 'ring-2 ring-amber-100' : ''" class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-ui-text-muted mb-1">Candidatures à traiter</p>
+                    <p class="text-2xl font-bold tracking-tight text-ui-text">{{ candidatures_pending|default:0 }}</p>
+                    <p class="text-xs text-amber-600 mt-1">sur {{ candidatures_count|default:0|intcomma }} total</p>
+                    <p class="text-xs mt-1 {% if trends.candidatures.up %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                        {% if trends.candidatures.up %}+{% endif %}{{ trends.candidatures.pct }}% vs {{ comparison_label }}
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                    <i data-lucide="clock-3" class="w-5 h-5"></i>
+                </span>
+            </div>
+        </article>
+
+        <article x-data="{ hovered: false }" @mouseenter="hovered = true" @mouseleave="hovered = false" :class="hovered ? 'ring-2 ring-emerald-100' : ''" class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-ui-text-muted mb-1">Inscriptions actives</p>
+                    <p class="text-2xl font-bold tracking-tight text-ui-text">{{ inscriptions_active|default:0|intcomma }}</p>
+                    <p class="text-xs text-emerald-600 mt-1">{{ inscriptions_count|default:0|intcomma }} dossiers créés</p>
+                    <p class="text-xs mt-1 {% if trends.inscriptions.up %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                        {% if trends.inscriptions.up %}+{% endif %}{{ trends.inscriptions.pct }}% vs {{ comparison_label }}
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <i data-lucide="user-check" class="w-5 h-5"></i>
+                </span>
+            </div>
+        </article>
+
+        <article x-data="{ hovered: false }" @mouseenter="hovered = true" @mouseleave="hovered = false" :class="hovered ? 'ring-2 ring-cyan-100' : ''" class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-ui-text-muted mb-1">Paiements validés</p>
+                    <p class="text-2xl font-bold tracking-tight text-ui-text">{{ payments_total|default:0|intcomma }}</p>
+                    <p class="text-xs text-ui-text-muted mt-1">FCFA</p>
+                    <p class="text-xs mt-1 {% if trends.payments.up %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                        {% if trends.payments.up %}+{% endif %}{{ trends.payments.pct }}% vs {{ comparison_label }}
+                    </p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
+                    <i data-lucide="wallet" class="w-5 h-5"></i>
+                </span>
+            </div>
+        </article>
+
+        <article class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-ui-text-muted mb-1">Messages à traiter</p>
+                    <p class="text-2xl font-bold tracking-tight text-ui-text">{{ messages_unread|default:0|intcomma }}</p>
+                    <p class="text-xs text-ui-text-muted mt-1">boite de reception</p>
+                </div>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                    <i data-lucide="mail" class="w-5 h-5"></i>
+                </span>
+            </div>
+        </article>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <article class="xl:col-span-2 rounded-xl border border-ui-border bg-ui-surface shadow-sm">
+            <header class="flex items-center justify-between border-b border-ui-border px-5 py-4">
+                <div>
+                    <h2 class="text-base font-bold tracking-tight text-ui-text mb-0">Navigation rapide</h2>
+                    <p class="text-sm text-ui-text-muted mb-0">Acces direct aux modules critiques</p>
+                </div>
+                <a href="{% url 'superadmin:search_global' %}" class="text-sm font-medium text-[var(--primary)] no-underline hover:opacity-80 transition-all duration-300">Recherche globale</a>
+            </header>
+
+            <div class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <a href="{% url 'superadmin:candidature_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ candidatures_count|default:0|intcomma }}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Candidatures</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Étude, validation et décisions</p>
+                </a>
+
+                <a href="{% url 'superadmin:inscription_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                            <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ inscriptions_count|default:0|intcomma }}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Inscriptions</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Finalisation administrative</p>
+                </a>
+
+                <a href="{% url 'superadmin:student_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 text-cyan-700">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ students_count|default:0|intcomma }}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Étudiants</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Comptes et dossiers étudiants</p>
+                </a>
+
+                <a href="{% url 'superadmin:formation_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ formations_count|default:0|intcomma }}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Programmes</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Catalogue, cycles et filières</p>
+                </a>
+
+                <a href="{% url 'superadmin:payment_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                            <i data-lucide="credit-card" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ payments_total|default:0|intcomma }} FCFA</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Paiements</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Transactions et statuts</p>
+                </a>
+
+                <a href="{% url 'superadmin:settings' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-700">
+                            <i data-lucide="settings-2" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">Configuration</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Paramètres</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Réglages institutionnels</p>
+                </a>
+
+                <a href="{% url 'superadmin:page_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                            <i data-lucide="scale" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">Conformité</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Pages légales</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Mentions, confidentialité, conditions</p>
+                </a>
+
+                <a href="{% url 'superadmin:article_list' %}" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
+                            <i data-lucide="newspaper" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">{{ articles_count|default:0|intcomma }}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Contenu</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Articles et actualités</p>
+                </a>
+
+                <a href="{% url 'admin:index' %}" target="_blank" rel="noopener" class="group rounded-xl border border-ui-border bg-ui-surface-soft hover:bg-ui-surface hover:border-ui-border p-4 transition-all duration-300 no-underline">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-ui-surface-muted text-ui-text">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        </span>
+                        <span class="text-xs text-ui-text-muted">Avancé</span>
+                    </div>
+                    <h3 class="text-sm font-semibold text-ui-text mb-1">Utilisateurs</h3>
+                    <p class="text-xs text-ui-text-muted mb-0">Gestion avancée Django Admin</p>
+                </a>
+            </div>
+        </article>
+
+        <article class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5">
+            <header class="mb-4">
+                <h2 class="text-base font-bold tracking-tight text-ui-text mb-1">Activité récente</h2>
+                <p class="text-sm text-ui-text-muted mb-0">Derniers dossiers enregistrés</p>
+            </header>
+
+            {% if recent_candidatures %}
+                <div class="space-y-3">
+                    {% for cand in recent_candidatures|slice:":6" %}
+                    <div class="flex items-start gap-3 p-3 rounded-lg border border-ui-border bg-ui-surface-soft/70">
+                        <span class="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-ui-text mb-0 truncate">{{ cand.full_name|default:"Candidat" }}</p>
+                            <p class="text-xs text-ui-text-muted mb-1">{{ cand.programme.title|default:"Programme non renseigne" }}</p>
+                            <div class="flex items-center gap-2 text-xs text-ui-text-muted">
+                                <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                                <span>{{ cand.submitted_at|date:"d/m/Y H:i" }}</span>
+                            </div>
+                        </div>
+                        <span class="badge-status badge-{% if cand.status == 'submitted' %}warning{% elif cand.status == 'accepted' %}success{% elif cand.status == 'rejected' %}danger{% else %}draft{% endif %}">
+                            {{ cand.get_status_display|default:cand.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="rounded-xl border border-dashed border-ui-border bg-ui-surface-soft p-6 text-center">
+                    <span class="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-ui-surface-muted text-ui-text-muted">
+                        <i data-lucide="inbox" class="w-6 h-6"></i>
+                    </span>
+                    <p class="text-sm font-medium text-ui-text mb-1">Aucune activité récente</p>
+                    <p class="text-xs text-ui-text-muted mb-0">Les nouveaux dossiers apparaîtront ici.</p>
+                </div>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <article class="xl:col-span-2 rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5">
+            <header class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-base font-bold tracking-tight text-ui-text mb-1">Évolution des admissions</h2>
+                    <p class="text-sm text-ui-text-muted mb-0">Candidatures et inscriptions sur la période sélectionnée</p>
+                </div>
+                <span class="inline-flex items-center gap-2 rounded-full border border-ui-border px-3 py-1 text-xs text-ui-text">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Données à jour
+                </span>
+            </header>
+
+            <div class="rounded-xl border border-ui-border bg-ui-surface-soft p-4" x-init="renderTrendChart()">
+                <canvas x-ref="trendChart" class="w-full h-52" aria-label="Graphique d'activite"></canvas>
+            </div>
+        </article>
+
+        <article class="rounded-xl border border-ui-border bg-ui-surface shadow-sm p-5">
+            <header class="mb-4">
+                <h2 class="text-base font-bold tracking-tight text-ui-text mb-1">Pipeline administratif</h2>
+                <p class="text-sm text-ui-text-muted mb-0">Avancement des dossiers et du catalogue</p>
+            </header>
+
+            <div class="space-y-4">
+                <div>
+                    <div class="mb-1 flex items-center justify-between text-xs text-ui-text">
+                        <span>Candidatures traitées</span>
+                        <span>{{ candidatures_processed_percent|default:0 }}%</span>
+                    </div>
+                    <div class="h-2 rounded-full bg-ui-surface-muted overflow-hidden">
+                        <div class="h-full bg-[var(--accent)]" style="width:{{ candidatures_processed_percent|default:0 }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-1 flex items-center justify-between text-xs text-ui-text">
+                        <span>Inscriptions actives</span>
+                        <span>{{ inscriptions_active_percent|default:0 }}%</span>
+                    </div>
+                    <div class="h-2 rounded-full bg-ui-surface-muted overflow-hidden">
+                        <div class="h-full bg-[var(--secondary)]" style="width:{{ inscriptions_active_percent|default:0 }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-1 flex items-center justify-between text-xs text-ui-text">
+                        <span>Formations publiees</span>
+                        <span>{{ formations_published_percent|default:0 }}%</span>
+                    </div>
+                    <div class="h-2 rounded-full bg-ui-surface-muted overflow-hidden">
+                        <div class="h-full bg-[var(--primary)]" style="width:{{ formations_published_percent|default:0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </section>
+</div>
+
+{{ trend_labels|json_script:"trend-labels" }}
+{{ trend_candidatures_series|json_script:"trend-candidatures" }}
+{{ trend_inscriptions_series|json_script:"trend-inscriptions" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function dashboardCockpit() {
+    return {
+        chart: null,
+        prefsUrl: "{% url 'superadmin:cockpit_preferences_update' %}",
+        init() {
+            this.$nextTick(() => this.renderTrendChart());
+        },
+        persistPeriod(period) {
+            this.persistPreference({ dashboard_period: period });
+        },
+        toggleAutorefresh(enabled) {
+            this.persistPreference({ widget_autorefresh: enabled ? '1' : '0' });
+        },
+        persistPreference(payload) {
+            var params = new URLSearchParams(payload).toString();
+            fetch(this.prefsUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': this.getCsrfToken(),
+                },
+                body: params,
+            }).catch(function () {});
+        },
+        getCsrfToken() {
+            var value = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var c = cookies[i].trim();
+                    if (c.substring(0, 10) === 'csrftoken=') {
+                        value = decodeURIComponent(c.substring(10));
+                        break;
+                    }
+                }
+            }
+            return value;
+        },
+        readJson(id) {
+            var node = document.getElementById(id);
+            if (!node) return [];
+            try { return JSON.parse(node.textContent || '[]'); } catch (e) { return []; }
+        },
+        renderTrendChart() {
+            if (!this.$refs.trendChart || typeof Chart === 'undefined') return;
+
+            var labels = this.readJson('trend-labels');
+            var candidatures = this.readJson('trend-candidatures');
+            var inscriptions = this.readJson('trend-inscriptions');
+
+            if (this.chart) {
+                this.chart.destroy();
+            }
+
+            var ctx = this.$refs.trendChart.getContext('2d');
+            var gradPrimary = ctx.createLinearGradient(0, 0, 0, 280);
+            gradPrimary.addColorStop(0, 'rgba(30,79,111,0.28)');
+            gradPrimary.addColorStop(1, 'rgba(30,79,111,0.03)');
+
+            var gradSecondary = ctx.createLinearGradient(0, 0, 0, 280);
+            gradSecondary.addColorStop(0, 'rgba(29,181,176,0.22)');
+            gradSecondary.addColorStop(1, 'rgba(29,181,176,0.02)');
+
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Candidatures',
+                            data: candidatures,
+                            borderColor: '#1e4f6f',
+                            backgroundColor: gradPrimary,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Inscriptions',
+                            data: inscriptions,
+                            borderColor: '#1db5b0',
+                            backgroundColor: gradSecondary,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                borderRadius: 4,
+                                color: '#475569',
+                                font: { family: 'Inter' }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(148,163,184,.18)' },
+                            ticks: { color: '#64748b', precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

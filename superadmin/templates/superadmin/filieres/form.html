@@ -1,0 +1,14 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}{% if filiere %}Modifier la filière{% else %}Nouvelle filière{% endif %}{% endblock %}
+{% block page_subtitle %}Définissez une filière réutilisable dans les programmes UFHOB.{% endblock %}
+
+{% block content_main %}
+  <form method="post" class="mx-auto max-w-3xl overflow-hidden rounded-ui-card border border-ui-border bg-ui-surface">
+    {% csrf_token %}
+    <header class="border-b border-ui-border px-5 py-4"><h2 class="text-base font-bold text-ui-text">Informations générales</h2><p class="mt-1 text-sm text-ui-text-muted">Les champs marqués d’un astérisque sont obligatoires.</p></header>
+    <div class="space-y-5 p-5"><div class="space-y-1.5"><label for="name" class="block text-sm font-semibold text-ui-text">Nom de la filière <span class="text-ui-danger" aria-hidden="true">*</span></label><input id="name" name="name" type="text" required value="{{ filiere.name|default:'' }}" placeholder="Ex. Sciences informatiques, Gestion, Droit" class="h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus"></div><div class="space-y-1.5"><label for="description" class="block text-sm font-semibold text-ui-text">Description</label><textarea id="description" name="description" rows="5" placeholder="Description utile à l’administration" class="min-h-24 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus">{{ filiere.description|default:'' }}</textarea></div></div>
+    <section class="border-t border-ui-border px-5 py-4"><h2 class="text-base font-bold text-ui-text">Statut</h2><label for="is_active" class="mt-4 flex min-h-ui-control items-center gap-3 rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm font-semibold text-ui-text"><input id="is_active" name="is_active" type="checkbox" {% if filiere.is_active %}checked{% endif %} class="rounded border-ui-border text-ui-primary focus:ring-ui-focus"> Active</label></section>
+    <footer class="flex flex-wrap justify-end gap-3 border-t border-ui-border px-5 py-4"><a href="{% url 'superadmin:filiere_list' %}" class="inline-flex min-h-ui-control items-center rounded-ui-button border border-ui-border px-4 py-2 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Annuler</a><button type="submit" class="inline-flex min-h-ui-control items-center rounded-ui-button bg-ui-primary px-4 py-2 text-sm font-semibold text-ui-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus">Enregistrer</button></footer>
+  </form>
+{% endblock %}

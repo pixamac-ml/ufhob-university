@@ -1,0 +1,14 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}Identite, presentation et visibilite du profil public.{% endblock %}
+
+{% block content_main %}
+<section class="card mx-auto max-w-4xl">
+  <form method="post" enctype="multipart/form-data" class="card-body space-y-6">{% csrf_token %}
+    {% if staff_member.photo %}<div class="flex items-center gap-3 rounded-ui border border-ui-border bg-ui-surface-muted p-3"><img class="h-14 w-14 rounded-full object-cover" src="{{ staff_member.photo.url }}" alt="{{ staff_member.full_name }}"><span class="text-sm text-ui-text-muted">Une nouvelle photo remplacera celle-ci.</span></div>{% endif %}
+    {% include "superadmin/partials/_django_form_fields.html" with form=form %}
+    <div class="flex flex-wrap justify-end gap-2 border-t border-ui-border pt-4"><a href="{% url 'superadmin:public_staff_list' %}" class="btn btn-outline">Annuler</a><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+  </form>
+</section>
+{% endblock %}

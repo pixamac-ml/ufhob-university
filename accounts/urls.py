@@ -3,11 +3,16 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 
+from .auth_views import PortalLoginView, PortalPasswordChangeView
+from .appearance import update_appearance
+from .financial_approvals import financial_approval_confirm, financial_approval_detail
+
 # Import des vues principales
 from .views import (
     register,
     edit_profile,
     update_email,
+    edit_preferences,
     profile_detail,
     profile_activity,
     profile_topics,
@@ -15,12 +20,14 @@ from .views import (
     profile_badges,
     profile_settings,
     dashboard_redirect,
+    payslip_download,
+    honorarium_download,
 )
 
 # Import des dashboards
 from .dashboards.admissions_dashboard import admissions_dashboard
 from .dashboards.finance_dashboard import finance_dashboard
-from .dashboards.executive_dashboard import executive_dashboard
+from .services.redirects import legacy_executive_dashboard
 
 # Import des vues HTMX Admissions
 from .dashboards.htmx_admissions import (
@@ -29,6 +36,7 @@ from .dashboards.htmx_admissions import (
     validate_document_htmx,
     set_candidature_under_review_htmx,
     set_candidature_to_complete_htmx,
+    inscription_positioning_modal_htmx,
     create_inscription_htmx,
     get_candidature_detail_htmx,
     get_inscription_detail_htmx,
@@ -60,24 +68,26 @@ from .dashboards.exports import (
     export_executive_csv,
 )
 from .dashboards.manager_dashboard import *
+from portal.views.annex_manager import legacy_manager_entry
 
 
 from .dashboards.htmx_manager import *
+from .dashboards.htmx_candidatures import candidature_document_add, candidature_document_validate
+from .dashboards.htmx_manager import donation_create, export_report_xlsx, export_report_pdf, widget_cash_balance, widget_scope_bar, widget_alerts_badge, widget_today_payments, widget_active_sessions, widget_sidebar_badges, widget_active_coupons
 
 
 app_name = "accounts"
 
 
 urlpatterns = [
+    path("preferences/appearance/", update_appearance, name="appearance_update"),
 
     # ==========================================================
     # AUTHENTIFICATION
     # ==========================================================
     path(
         "login/",
-        auth_views.LoginView.as_view(
-            template_name="accounts/registration/login.html"
-        ),
+        PortalLoginView.as_view(),
         name="login",
     ),
     path(
@@ -86,6 +96,18 @@ urlpatterns = [
             template_name="registration/logged_out.html"
         ),
         name="logout",
+    ),
+    path(
+        "password_change/",
+        PortalPasswordChangeView.as_view(),
+        name="password_change",
+    ),
+    path(
+        "password_change/done/",
+        auth_views.PasswordChangeDoneView.as_view(
+            template_name="registration/password_change_done.html"
+        ),
+        name="password_change_done",
     ),
     path(
         "register/",
@@ -102,6 +124,8 @@ urlpatterns = [
         dashboard_redirect,
         name="dashboard_redirect"
     ),
+    path("financial-approvals/<int:pk>/", financial_approval_detail, name="financial_approval_detail"),
+    path("financial-approvals/<int:pk>/confirm/", financial_approval_confirm, name="financial_approval_confirm"),
     path(
         "dashboard/admissions/",
         admissions_dashboard,
@@ -114,7 +138,7 @@ urlpatterns = [
     ),
     path(
         "dashboard/executive/",
-        executive_dashboard,
+        legacy_executive_dashboard,
         name="executive_dashboard"
     ),
 
@@ -136,6 +160,11 @@ urlpatterns = [
         "profile/email/",
         update_email,
         name="update_email"
+    ),
+    path(
+        "profile/preferences/",
+        edit_preferences,
+        name="edit_preferences"
     ),
 
 
@@ -170,6 +199,21 @@ urlpatterns = [
 
 
     # ==========================================================
+    # FICHES DE PAIE - TELECHARGEMENT
+    # ==========================================================
+    path(
+        "payslip/<int:pk>/download/",
+        payslip_download,
+        name="payslip_download"
+    ),
+    path(
+        "honorarium/<int:pk>/download/",
+        honorarium_download,
+        name="honorarium_download"
+    ),
+
+
+    # ==========================================================
     # HTMX - ADMISSIONS (Candidatures)
     # ==========================================================
     path(
@@ -196,6 +240,11 @@ urlpatterns = [
         "htmx/candidature/<int:candidature_id>/to-complete/",
         set_candidature_to_complete_htmx,
         name="set_candidature_to_complete_htmx"
+    ),
+    path(
+        "htmx/candidature/<int:candidature_id>/inscription-positioning/",
+        inscription_positioning_modal_htmx,
+        name="inscription_positioning_modal_htmx"
     ),
     path(
         "htmx/candidature/<int:candidature_id>/create-inscription/",
@@ -342,44 +391,150 @@ urlpatterns = [
         export_executive_csv,
         name="export_executive_csv"
     ),
-    path(
-        "manager/",
-        manager_dashboard,
-        name="manager_dashboard"
-    ),
-
     # =============================================
     # MANAGER DASHBOARD
     # =============================================
-    path("manager/", manager_dashboard, name="manager_dashboard"),
+    path("manager/", legacy_manager_entry, name="manager_dashboard"),
     path("manager/candidatures/", manager_candidatures, name="manager_candidatures"),
     path("manager/inscriptions/", manager_inscriptions, name="manager_inscriptions"),
     path("manager/paiements/", manager_paiements, name="manager_paiements"),
 
+    # Documents contextuels securises du dashboard gestionnaire
+    path("manager/inscription/<int:pk>/fiche/", inscription_sheet_pdf,
+         name="manager_inscription_sheet_pdf"),
+    path("manager/payment/<int:pk>/receipt/", payment_receipt_pdf,
+         name="manager_payment_receipt_pdf"),
+    path("manager/payroll/<int:pk>/sheet/", payroll_sheet_pdf,
+         name="manager_payroll_sheet_pdf"),
+    path("manager/honorarium/<int:pk>/statement/", honorarium_statement_pdf,
+         name="manager_honorarium_statement_pdf"),
+    path("manager/honorarium/<int:pk>/service-sheet/", teacher_service_sheet_pdf,
+         name="manager_teacher_service_sheet_pdf"),
+    path("manager/donation/<int:pk>/receipt/", donation_receipt_pdf,
+         name="manager_donation_receipt_pdf"),
+    path("manager/expense/<int:pk>/supporting-document/", expense_supporting_document_pdf,
+         name="manager_expense_supporting_document_pdf"),
+    path("manager/bank-transfer/<int:pk>/slip/", bank_transfer_slip_pdf,
+         name="manager_bank_transfer_slip_pdf"),
+    path("manager/bank-transfer/<int:pk>/proof/", bank_transfer_proof,
+         name="manager_bank_transfer_proof"),
+
     # =============================================
     # HTMX ACTIONS - CANDIDATURES
     # =============================================
-    path("htmx/candidature/<int:pk>/detail/", candidature_detail, name="htmx_candidature_detail"),
-    path("htmx/candidature/<int:pk>/accept/", candidature_accept, name="htmx_candidature_accept"),
-    path("htmx/candidature/<int:pk>/reject/", candidature_reject, name="htmx_candidature_reject"),
-    path("htmx/candidature/<int:pk>/to-complete/", candidature_to_complete,
+    path("htmx/manager/candidature/<int:pk>/detail/", candidature_detail, name="htmx_candidature_detail"),
+    path("htmx/manager/candidature/<int:pk>/documents/add/", candidature_document_add, name="htmx_candidature_document_add"),
+    path("htmx/manager/candidature-document/<int:pk>/validate/", candidature_document_validate, name="htmx_candidature_document_validate"),
+    path("manager/candidature-document/<int:pk>/download/", candidature_document_download,
+         name="manager_candidature_document_download"),
+    path("htmx/manager/candidature/<int:pk>/under-review/", candidature_under_review, name="htmx_candidature_under_review"),
+    path("htmx/manager/candidature/<int:pk>/accept/", candidature_accept, name="htmx_candidature_accept"),
+    path("htmx/manager/candidature/<int:pk>/reject/", candidature_reject, name="htmx_candidature_reject"),
+    path("htmx/manager/candidature/<int:pk>/to-complete/", candidature_to_complete,
          name="htmx_candidature_to_complete"),
+    path("htmx/manager/candidature/<int:pk>/delete/", candidature_delete, name="htmx_candidature_delete"),
 
     # =============================================
     # HTMX ACTIONS - INSCRIPTIONS
     # =============================================
-    path("htmx/inscription/<int:pk>/detail/", inscription_detail, name="htmx_inscription_detail"),
-    path("htmx/inscription/<int:pk>/create/", inscription_create, name="htmx_inscription_create"),
+    path("htmx/manager/inscription/<int:pk>/detail/", inscription_detail, name="htmx_inscription_detail"),
+    path("htmx/manager/inscription/<int:pk>/positioning/", inscription_positioning_modal, name="htmx_inscription_positioning"),
+    path("htmx/manager/inscription/<int:pk>/create/", inscription_create, name="htmx_inscription_create"),
+    path("htmx/manager/inscription/<int:pk>/apply-coupon/", inscription_apply_coupon, name="htmx_inscription_apply_coupon"),
+    path("htmx/manager/coupon/preview/", coupon_preview, name="htmx_coupon_preview"),
 
     # =============================================
     # HTMX ACTIONS - PAIEMENTS
     # =============================================
-    path("htmx/payment/<int:pk>/detail/", payment_detail, name="htmx_payment_detail"),
-    path("htmx/payment/<int:pk>/validate/", payment_validate, name="htmx_payment_validate"),
-    path("htmx/payment/<int:pk>/cancel/", payment_cancel, name="htmx_payment_cancel"),
+    path("htmx/manager/payment/<int:pk>/detail/", payment_detail, name="htmx_payment_detail"),
+    path("htmx/manager/payment/<int:pk>/validate/", payment_validate, name="htmx_payment_validate"),
+    path("htmx/manager/payment/<int:pk>/cancel/", payment_cancel, name="htmx_payment_cancel"),
+    path("htmx/manager/payment/<int:pk>/correct/", payment_correct, name="htmx_payment_correct"),
+    path("htmx/manager/payment/<int:pk>/correct/confirm-otp/", payment_correct_confirm_otp, name="htmx_payment_correct_confirm_otp"),
+
+    # =============================================
+    # HTMX ACTIONS - SESSIONS CASH GESTIONNAIRE
+    # =============================================
+    path("htmx/manager/inscription/<int:pk>/cash-session/create/", cash_session_create,
+         name="htmx_manager_cash_session_create"),
+    path("htmx/manager/cash-session/<int:pk>/regenerate/", cash_session_regenerate,
+         name="htmx_manager_cash_session_regenerate"),
+    path("htmx/manager/cash-session/<int:pk>/complete/", cash_session_complete,
+         name="htmx_manager_cash_session_complete"),
+    path("htmx/manager/cash-session/<int:pk>/cancel/", cash_session_cancel,
+         name="htmx_manager_cash_session_cancel"),
+
+    # =============================================
+    # HTMX ACTIONS - SALAIRES GESTIONNAIRE
+    # =============================================
+    path("htmx/manager/salary/<int:pk>/detail/", salary_detail, name="htmx_manager_salary_detail"),
+    path("htmx/manager/salary/<int:pk>/save/", salary_upsert, name="htmx_manager_salary_upsert"),
+    path("htmx/manager/salary/<int:pk>/correct/confirm-otp/", salary_correct_confirm_otp, name="htmx_manager_salary_correct_confirm_otp"),
+    path("htmx/manager/salary/<int:pk>/advance/", salary_advance, name="htmx_manager_salary_advance"),
+    path("htmx/manager/payroll/<int:pk>/pay/", salary_pay, name="htmx_manager_salary_pay"),
+    path("htmx/manager/payroll/prepare-all/", salary_prepare_all, name="htmx_manager_salary_prepare_all"),
+    path("htmx/manager/payroll/pay-ready-all/", salary_pay_ready_all, name="htmx_manager_salary_pay_ready_all"),
+    path("htmx/manager/honorarium/<int:pk>/detail/", teacher_honorarium_detail, name="htmx_manager_teacher_honorarium_detail"),
+    path("htmx/manager/honorarium/<int:pk>/save/", teacher_honorarium_upsert, name="htmx_manager_teacher_honorarium_upsert"),
+    path("htmx/manager/honorarium/<int:pk>/correct/confirm-otp/", teacher_honorarium_correct_confirm_otp, name="htmx_manager_teacher_honorarium_correct_confirm_otp"),
+    path("htmx/manager/honorarium/<int:pk>/pay/", teacher_honorarium_pay, name="htmx_manager_teacher_honorarium_pay"),
+    path("htmx/manager/honorarium/prepare-all/", teacher_honorarium_prepare_all, name="htmx_manager_teacher_honorarium_prepare_all"),
+    path("htmx/manager/honorarium/pay-ready-all/", teacher_honorarium_pay_ready_all, name="htmx_manager_teacher_honorarium_pay_ready_all"),
+    path("payment-signature/<str:token>/", payment_signature_tablet, name="payment_signature_tablet"),
+    path("payment-signature/<str:token>/submit/", payment_signature_tablet_submit, name="payment_signature_tablet_submit"),
+    path("htmx/manager/payment-signature/<str:payment_type>/<int:pk>/start/", payment_signature_start, name="htmx_manager_payment_signature_start"),
+    path("htmx/manager/payment-signature/<int:pk>/approve/", payment_signature_approve, name="htmx_manager_payment_signature_approve"),
+    path("htmx/manager/closure/create/", monthly_closure_create, name="htmx_manager_monthly_closure_create"),
+    path("htmx/manager/bank-transfer/create/", bank_transfer_create, name="htmx_manager_bank_transfer_create"),
+    path("htmx/manager/bank-transfer/<int:pk>/proof/", bank_transfer_proof_upload,
+         name="htmx_manager_bank_transfer_proof_upload"),
+    path("htmx/manager/closure/<int:pk>/validate/", monthly_closure_validate, name="htmx_manager_monthly_closure_validate"),
+    path("htmx/manager/closure/<int:pk>/close/", monthly_closure_close, name="htmx_manager_monthly_closure_close"),
+
+    # =============================================
+    # HTMX ACTIONS - DEPENSES ET CAISSE GESTIONNAIRE
+    # =============================================
+    path("htmx/manager/expense/create/", expense_create, name="htmx_manager_expense_create"),
+    path("htmx/manager/expense/<int:pk>/approve/", expense_approve, name="htmx_manager_expense_approve"),
+    path("htmx/manager/expense/<int:pk>/reject/", expense_reject, name="htmx_manager_expense_reject"),
+    path("htmx/manager/expense/<int:pk>/pay/", expense_pay, name="htmx_manager_expense_pay"),
+    path("htmx/manager/cash-movement/create/", cash_movement_create, name="htmx_manager_cash_movement_create"),
+    path("htmx/manager/cash-register/open/", cash_register_open, name="htmx_manager_cash_register_open"),
+    path("htmx/manager/cash-register/close/", cash_register_close, name="htmx_manager_cash_register_close"),
+    path("htmx/manager/wallet/create/", wallet_create, name="htmx_manager_wallet_create"),
+    path("htmx/manager/wallet/<int:pk>/allocate/", wallet_allocate, name="htmx_manager_wallet_allocate"),
+    path("htmx/manager/wallet/<int:pk>/return/", wallet_return, name="htmx_manager_wallet_return"),
+    path("htmx/manager/wallet/<int:pk>/transfer/", wallet_transfer, name="htmx_manager_wallet_transfer"),
+    path("htmx/manager/wallet/<int:pk>/close/", wallet_close, name="htmx_manager_wallet_close"),
+    path("htmx/manager/cash/sync/", cash_sync, name="htmx_manager_cash_sync"),
+    path("htmx/manager/cash-movement/<int:pk>/receipt/", cash_movement_receipt,
+         name="htmx_manager_cash_movement_receipt"),
+
+    # =============================================
+    # =============================================
+    # EXPORT
+    # =============================================
+    path("manager/export/report/xlsx/", export_report_xlsx, name="manager_export_report_xlsx"),
+    path("manager/export/report/pdf/", export_report_pdf, name="manager_export_report_pdf"),
+
+    # =============================================
+    # DONS / DONATIONS
+    # =============================================
+    path("htmx/manager/donation/create/", donation_create, name="htmx_manager_donation_create"),
 
     # =============================================
     # RECHERCHE
     # =============================================
-    path("htmx/search/", global_search, name="htmx_search"),
+    path("htmx/manager/search/", global_search, name="htmx_search"),
+
+    # =============================================
+    # WIDGETS LIVE
+    # =============================================
+    path("widget/cash-balance/", widget_cash_balance, name="widget_cash_balance"),
+    path("widget/scope-bar/", widget_scope_bar, name="widget_scope_bar"),
+    path("widget/alerts-badge/", widget_alerts_badge, name="widget_alerts_badge"),
+    path("widget/today-payments/", widget_today_payments, name="widget_today_payments"),
+    path("widget/active-sessions/", widget_active_sessions, name="widget_active_sessions"),
+    path("widget/active-coupons/", widget_active_coupons, name="widget_active_coupons"),
+    path("widget/sidebar-badges/", widget_sidebar_badges, name="widget_sidebar_badges"),
 ]

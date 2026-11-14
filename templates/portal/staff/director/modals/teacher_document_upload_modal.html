@@ -1,0 +1,13 @@
+{% load component_tags %}
+<div class="space-y-5" data-director-modal-size="standard">
+  <div class="border-b border-ui-border pb-4"><p class="text-xs font-semibold uppercase text-ui-primary">Dossier enseignant</p><h2 class="mt-1 text-xl font-bold text-ui-text">Ajouter une pièce</h2><p class="mt-1 text-sm text-ui-text-muted">PDF, image ou document bureautique, jusqu’à 10 Mo.</p></div>
+  {% if toast %}{% component "ui_core.alert" title="Dépôt non effectué" message=toast.message tone="danger" %}{% endcomponent %}{% endif %}
+  <form method="post" enctype="multipart/form-data" novalidate hx-encoding="multipart/form-data" hx-post="{% url 'accounts_portal:director_teacher_document_upload' %}" hx-target="#director-modal-content" hx-swap="innerHTML" hx-indicator="#director-teacher-document-loading" hx-disabled-elt="button[type='submit']" class="space-y-4">
+    {% csrf_token %}{% if teacher_document_form.non_field_errors %}<div class="rounded-ui-card border border-ui-danger bg-ui-danger-soft p-3 text-sm font-semibold text-ui-danger">{{ teacher_document_form.non_field_errors }}</div>{% endif %}
+    {% include "portal/staff/director/partials/evaluation_sessions/_field.html" with field=teacher_document_form.teacher_id %}
+    {% include "portal/staff/director/partials/evaluation_sessions/_field.html" with field=teacher_document_form.document_type %}
+    {% include "portal/staff/director/partials/evaluation_sessions/_field.html" with field=teacher_document_form.note %}
+    {% include "portal/staff/director/partials/evaluation_sessions/_field.html" with field=teacher_document_form.file help_text="Formats : PDF, PNG, JPG, DOC, DOCX. Taille maximale : 10 Mo." %}
+    <div class="flex items-center justify-end gap-3 border-t border-ui-border pt-4"><span id="director-teacher-document-loading" class="htmx-indicator text-xs font-semibold text-ui-text-muted">Dépôt…</span><button type="submit" class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary"><i data-lucide="upload" class="h-4 w-4"></i>Ajouter la pièce</button></div>
+  </form>
+</div>

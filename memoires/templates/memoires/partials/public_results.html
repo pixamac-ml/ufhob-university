@@ -1,0 +1,19 @@
+{% load component_tags %}
+{% if memoires %}
+<div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+  {% for memoire in memoires %}
+    <article class="flex h-full flex-col border border-ufhob-border bg-white p-6 shadow-soft">
+      <p class="text-xs font-bold uppercase tracking-[.14em] text-ufhob-secondary-dark">{% if memoire.type_travail == 'memoire' %}Mémoire{% elif memoire.type_travail == 'these' %}Thèse{% elif memoire.type_travail == 'article' or memoire.type_travail == 'rapport' %}Publication / travail de recherche{% else %}{{ memoire.get_type_travail_display }}{% endif %} · {{ memoire.annee }}</p>
+      <h2 class="mt-3 text-xl font-bold text-ufhob-primary">{{ memoire.titre }}</h2>
+      <p class="mt-2 text-sm text-ufhob-muted">{{ memoire.auteurs }}</p>
+      <p class="mt-1 text-xs text-ufhob-muted">{{ memoire.filiere.name }}</p>
+      {% if memoire.resume %}<p class="mt-4 line-clamp-3 text-sm leading-6 text-ufhob-muted">{{ memoire.resume|striptags|truncatewords:32 }}</p>{% endif %}
+      {% if memoire.encadreur %}<p class="mt-3 text-xs text-ufhob-muted">Encadrement : {{ memoire.encadreur }}</p>{% endif %}
+      <a href="{{ memoire.get_absolute_url }}" class="public-text-link mt-auto pt-5 text-sm text-ufhob-primary">Consulter <span aria-hidden="true">→</span></a>
+    </article>
+  {% endfor %}
+</div>
+{% if is_paginated %}<nav class="mt-8 flex justify-center gap-3" aria-label="Pagination">{% if page_obj.has_previous %}<a class="btn btn-outline" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>{% endif %}<span class="px-4 py-2 text-sm">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-outline" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>{% endif %}</nav>{% endif %}
+{% else %}
+<c-public.empty_state title="Aucun travail publié" text="Aucun document ne correspond aux filtres sélectionnés." />
+{% endif %}

@@ -1,0 +1,178 @@
+{% load component_tags %}
+{% url 'accounts_portal:teacher_support_workspace' as workspace_url %}
+<section class="min-w-0 space-y-5" data-teacher-support-workspace data-studio-class-id="{{ selected_class.id|default:'' }}" data-studio-ec-id="{{ selected_ec.id|default:'' }}" data-studio-chapter-id="{{ selected_chapter.id|default:'' }}" data-studio-target="{{ teacher_support_target|escapejs }}" data-studio-url="{{ workspace_url }}" x-data="{ tab: 'content', planOpen: false }">
+  {% if toast %}{% component "ui_core.alert" title="Information" message=toast.message tone=toast.level %}{% endcomponent %}{% endif %}
+  {% include "portal/staff/shared/academic_class_context.html" with academic_class=selected_class %}
+
+  <section class="rounded-ui-card border border-ui-border bg-ui-surface p-4 shadow-ui-card">
+    <div class="grid gap-4 md:grid-cols-[minmax(14rem,1fr)_minmax(16rem,1fr)_auto] md:items-end">
+      <label class="block text-sm font-semibold text-ui-text">Classe
+        <select name="class_id" hx-get="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-vals='{"support_target":"{{ teacher_support_target|escapejs }}"}' class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm">
+          {% for row in teacher_support_classes %}<option value="{{ row.class_id }}"{% if selected_class.id == row.class_id %} selected{% endif %}>{{ row.school_code }} · {{ row.class_name }} · {{ row.academic_year_name }}</option>{% empty %}<option>Aucune classe autorisée</option>{% endfor %}
+        </select>
+      </label>
+      <label class="block text-sm font-semibold text-ui-text">Matière
+        <select name="ec_id" {% if selected_class %}hx-get="{{ workspace_url }}?class_id={{ selected_class.id }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-vals='{"support_target":"{{ teacher_support_target|escapejs }}"}'{% else %}disabled{% endif %} class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm disabled:opacity-50">
+          {% for ec in teacher_support_ecs %}<option value="{{ ec.id }}"{% if selected_ec.id == ec.id %} selected{% endif %}>{{ ec.title }}</option>{% empty %}<option>Choisissez une classe</option>{% endfor %}
+        </select>
+      </label>
+      {% if selected_class %}<div class="pb-2 text-sm text-ui-text-muted"><span class="block text-ui-micro font-bold uppercase tracking-ui-label">Année académique</span>{{ selected_class.academic_year.name|default:"Contexte actif" }}</div>{% endif %}
+    </div>
+  </section>
+
+  {% if selected_ec %}
+    <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]">
+      <aside class="min-w-0 rounded-ui-card border border-ui-border bg-ui-surface shadow-ui-card" :class="planOpen ? 'block' : 'hidden xl:block'">
+        <header class="flex items-center justify-between border-b border-ui-border px-4 py-3"><div><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Plan du cours</p><p class="mt-1 text-sm font-semibold">{{ selected_ec.title }}</p></div><button type="button" @click="planOpen = false" class="grid h-9 w-9 place-items-center rounded-ui-button hover:bg-ui-surface-hover xl:hidden" aria-label="Fermer le plan"><i data-lucide="x" class="h-4 w-4"></i></button></header>
+        <div class="max-h-[calc(100vh-17rem)] overflow-y-auto p-3">
+          {% for chapter in teacher_support_chapters %}
+            <section class="mb-5 last:mb-0" x-data="{ open: true }">
+              <div class="flex items-center gap-1"><button type="button" @click="open = !open" class="ui-focus-ring flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-ui-button px-2 text-left text-sm font-bold hover:bg-ui-surface-hover"><i data-lucide="chevron-down" class="h-4 w-4 shrink-0 transition-transform" :class="open && 'rotate-180'"></i><span class="truncate">{{ chapter.title }}</span></button><button type="button" data-rename-chapter="{{ chapter.id }}" data-chapter-title="{{ chapter.title|escapejs }}" class="grid h-9 w-9 shrink-0 place-items-center rounded-ui-button text-ui-text-muted hover:bg-ui-surface-hover" title="Renommer ce chapitre"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-chapter="{{ chapter.id }}" data-chapter-title="{{ chapter.title|escapejs }}" class="grid h-9 w-9 shrink-0 place-items-center rounded-ui-button text-ui-text-muted hover:bg-ui-danger-soft hover:text-ui-danger" title="Supprimer ce chapitre"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div>
+              <div x-show="open" x-cloak class="ml-4 border-l border-ui-border pl-2">
+                {% for content in chapter.contents %}<button type="button" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-vals='{"action":"fetch_content","content_id":"{{ content.id }}","class_id":"{{ selected_class.id }}","ec_id":"{{ selected_ec.id }}","chapter_id":"{{ chapter.id }}","support_target":"{{ teacher_support_target|escapejs }}"}' class="ui-focus-ring flex min-h-10 w-full items-center gap-2 rounded-ui-button px-2 text-left text-sm {% if editing_content.id == content.id %}bg-ui-primary-soft font-bold text-ui-primary{% else %}text-ui-text hover:bg-ui-surface-hover{% endif %}"><i data-lucide="{% if content.status == 'published' %}circle-check{% else %}circle{% endif %}" class="h-3.5 w-3.5 shrink-0 {% if content.status == 'published' %}text-ui-success{% else %}text-ui-text-muted{% endif %}"></i><span class="truncate">{{ content.title }}</span></button>{% empty %}<p class="px-2 py-2 text-xs text-ui-text-muted">Aucune leçon.</p>{% endfor %}
+                <button type="button" hx-get="{{ workspace_url }}?class_id={{ selected_class.id }}&ec_id={{ selected_ec.id }}&chapter_id={{ chapter.id }}&support_target={{ teacher_support_target|urlencode }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" class="mt-1 inline-flex min-h-9 items-center gap-2 rounded-ui-button px-2 text-xs font-bold text-ui-primary hover:bg-ui-primary-soft"><i data-lucide="plus" class="h-4 w-4"></i>Ajouter une leçon</button>
+              </div>
+            </section>
+          {% empty %}<p class="p-2 text-sm text-ui-text-muted">Créez le premier chapitre de ce cours.</p>{% endfor %}
+        </div>
+        <form method="post" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" class="border-t border-ui-border p-3">{% csrf_token %}<input type="hidden" name="action" value="create_chapter"><input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="chapter_id" value="{{ selected_chapter.id|default:'' }}"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><label class="sr-only" for="new-chapter-title">Titre du chapitre</label><div class="flex gap-2"><input id="new-chapter-title" required name="chapter_title" class="min-w-0 flex-1 rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm" placeholder="Nouveau chapitre"><button class="ui-focus-ring min-h-10 rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary">Ajouter</button></div></form>
+      </aside>
+
+      <main class="min-w-0">
+        <button type="button" @click="planOpen = true" class="mb-3 inline-flex min-h-10 items-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-3 text-sm font-semibold xl:hidden"><i data-lucide="list-tree" class="h-4 w-4"></i>Plan du cours</button>
+        <section class="rounded-ui-card border border-ui-border bg-ui-surface shadow-ui-card">
+          <header class="border-b border-ui-border px-4 pt-4 sm:px-6 sm:pt-6"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Espace de travail</p><h2 class="mt-1 text-xl font-bold">{{ editing_content.title|default:"Nouvelle leçon" }}</h2><p class="mt-1 text-sm text-ui-text-muted">{{ selected_chapter.title|default:"Choisissez un chapitre pour commencer." }}</p><nav class="mt-5 flex gap-1 overflow-x-auto" aria-label="Sections de la leçon"><button type="button" @click="tab = 'content'" :class="tab === 'content' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold">Contenu</button><button type="button" @click="tab = 'resources'" :class="tab === 'resources' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold" {% if not editing_content %}disabled{% endif %}>Ressources</button><button type="button" @click="tab = 'video'" :class="tab === 'video' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold" {% if not editing_content %}disabled{% endif %}>Vidéo</button><button type="button" @click="tab = 'publication'" :class="tab === 'publication' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold" {% if not editing_content %}disabled{% endif %}>Publication</button></nav></header>
+
+          <div class="p-4 sm:p-6">
+            {% if editing_content %}<div class="mb-4 flex justify-end"><a href="{% url 'accounts_portal:teacher_course_preview' editing_content.id %}" target="_blank" rel="noopener" class="ui-focus-ring inline-flex min-h-10 items-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold hover:bg-ui-surface-hover"><i data-lucide="eye" class="h-4 w-4"></i>Prévisualiser</a></div>{% endif %}
+            <form x-show="tab === 'content'" method="post" enctype="multipart/form-data" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-encoding="multipart/form-data" class="space-y-5">{% csrf_token %}<input type="hidden" name="action" value="{% if editing_content %}edit_content{% else %}create_content{% endif %}">{% if editing_content %}<input type="hidden" name="content_id" value="{{ editing_content.id }}">{% endif %}<input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><input type="hidden" name="publication_status" value="{{ editing_content.status|default:'draft' }}"><div class="grid gap-3 lg:grid-cols-[minmax(13rem,.62fr)_minmax(20rem,1.7fr)_minmax(11rem,.45fr)]"><label class="text-sm font-semibold">Chapitre<select required name="chapter_id" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm">{% for chapter in teacher_support_chapters %}<option value="{{ chapter.id }}"{% if editing_content.chapter_id == chapter.id or not editing_content and selected_chapter.id == chapter.id %} selected{% endif %}>{{ chapter.title }}</option>{% endfor %}</select></label><label class="text-sm font-semibold">Titre de la leçon<input required name="content_title" value="{{ editing_content.title|default:'' }}" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm" placeholder="Ex. Bonne pratique professionnelle"></label><label class="text-sm font-semibold">Format<select name="content_type" data-studio-content-type class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm"><option value="text"{% if not editing_content or editing_content.content_type == 'text' %} selected{% endif %}>Rédigée</option><option value="video"{% if editing_content.content_type == 'video' %} selected{% endif %}>Vidéo</option></select></label></div><section data-studio-text><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Contenu pédagogique</p><label class="sr-only" for="id_text_content">Rédigez votre leçon</label><div class="mt-2" data-course-editor>{{ lesson_content_form.text_content }}</div></section><section data-studio-video class="hidden rounded-ui-button border border-ui-border bg-ui-surface-muted p-4"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Vidéo principale</p><div class="mt-3 grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">URL vidéo<input type="url" name="video_url" value="{{ editing_content.video_url|default:'' }}" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm" placeholder="https://…"></label><label class="text-sm font-semibold">Ou fichier vidéo<input type="file" name="file" accept="video/*" class="mt-2 block w-full text-sm"></label></div></section><div class="flex flex-wrap items-center gap-3 border-t border-ui-border pt-4"><button class="ui-focus-ring min-h-11 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">{% if editing_content %}Enregistrer{% else %}Créer la leçon{% endif %}</button>{% if editing_content %}<button type="button" data-delete-content="{{ editing_content.id }}" class="ui-focus-ring min-h-11 rounded-ui-button border border-ui-danger px-4 text-sm font-semibold text-ui-danger">Supprimer la leçon</button>{% endif %}</div></form>
+
+            <section x-show="tab === 'resources'" x-cloak class="space-y-5"><div><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Ressources de la leçon</p><h3 class="mt-1 text-lg font-bold">Fichiers complémentaires</h3></div>{% if editing_content.resources %}<div class="divide-y divide-ui-border rounded-ui-card border border-ui-border">{% for resource in editing_content.resources %}<article class="flex flex-wrap items-center justify-between gap-3 p-4"><div class="min-w-0"><strong class="block truncate text-sm">{{ resource.title }}</strong><span class="mt-1 block text-xs text-ui-text-muted">{{ resource.resource_type_label }} · {{ resource.status_label }}{% if resource.size_label %} · {{ resource.size_label }}{% endif %}</span></div><button type="button" data-delete-resource="{{ resource.id }}" data-resource-title="{{ resource.title|escapejs }}" class="ui-focus-ring inline-flex min-h-10 items-center gap-2 rounded-ui-button border border-ui-danger px-3 text-sm font-semibold text-ui-danger"><i data-lucide="trash-2" class="h-4 w-4"></i>Supprimer</button></article>{% endfor %}</div>{% else %}<p class="rounded-ui-button border border-dashed border-ui-border p-4 text-sm text-ui-text-muted">Aucune ressource associée à cette leçon.</p>{% endif %}<form method="post" enctype="multipart/form-data" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-encoding="multipart/form-data" class="grid gap-4 rounded-ui-button bg-ui-surface-muted p-4 sm:grid-cols-2">{% csrf_token %}<input type="hidden" name="action" value="create_resource"><input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="lesson_id" value="{{ editing_content.id }}"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><label class="text-sm font-semibold">Titre<input name="resource_title" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm" placeholder="Support de cours"></label><label class="text-sm font-semibold">Type<select required name="resource_type" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm"><option value="pdf">PDF</option><option value="doc">Document Word</option><option value="ppt">Présentation PowerPoint</option><option value="excel">Fichier Excel</option><option value="image">Image</option><option value="other">Autre fichier</option></select></label><label class="text-sm font-semibold sm:col-span-2">Fichier<input required type="file" name="resource_file" class="mt-2 block w-full text-sm"></label><div class="sm:col-span-2"><button class="ui-focus-ring min-h-11 rounded-ui-button border border-ui-primary px-4 text-sm font-semibold text-ui-primary">Ajouter une ressource</button></div></form></section>
+
+            <section x-show="tab === 'video'" x-cloak class="space-y-5"><div><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Vidéo</p><h3 class="mt-1 text-lg font-bold">Média principal de la leçon</h3></div>{% if editing_content.content_type == 'video' %}<form method="post" enctype="multipart/form-data" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML" hx-encoding="multipart/form-data" class="space-y-4 rounded-ui-button bg-ui-surface-muted p-4">{% csrf_token %}<input type="hidden" name="action" value="edit_content"><input type="hidden" name="content_id" value="{{ editing_content.id }}"><input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="chapter_id" value="{{ editing_content.chapter_id }}"><input type="hidden" name="content_title" value="{{ editing_content.title }}"><input type="hidden" name="content_type" value="video"><input type="hidden" name="text_content" value=""><input type="hidden" name="publication_status" value="{{ editing_content.status }}"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><label class="block text-sm font-semibold">URL vidéo<input type="url" name="video_url" value="{{ editing_content.video_url|default:'' }}" class="mt-1 h-ui-control w-full rounded-ui-input border-ui-border bg-ui-surface px-3 text-sm" placeholder="https://…"></label><label class="block text-sm font-semibold">Ou fichier vidéo<input type="file" name="file" accept="video/*" class="mt-2 block w-full text-sm"></label><p class="text-xs text-ui-text-muted">Utilise le contrat vidéo existant ; aucun nouveau stockage n’est créé.</p><button class="ui-focus-ring min-h-11 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Enregistrer la vidéo</button></form>{% else %}<p class="rounded-ui-button border border-dashed border-ui-border p-4 text-sm text-ui-text-muted">Aucune vidéo associée. Le contrat actuel distingue une leçon rédigée d’une leçon vidéo : son contenu pédagogique n’est donc jamais remplacé automatiquement.</p>{% endif %}</section>
+
+            <section x-show="tab === 'publication'" x-cloak class="space-y-5"><div><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Publication</p><h3 class="mt-1 text-lg font-bold">Statut de la leçon</h3></div><div class="rounded-ui-button border border-ui-border p-4"><p class="text-sm text-ui-text-muted">{% if editing_content.status == 'published' %}Cette leçon est publiée et visible des étudiants autorisés.{% else %}Cette leçon est un brouillon : elle reste privée pour les étudiants.{% endif %}</p><div class="mt-4 flex flex-wrap gap-3"><form method="post" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML">{% csrf_token %}<input type="hidden" name="action" value="set_publication"><input type="hidden" name="content_id" value="{{ editing_content.id }}"><input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="publication_status" value="draft"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><button class="ui-focus-ring min-h-11 rounded-ui-button border border-ui-border px-4 text-sm font-semibold">Enregistrer le brouillon</button></form><form method="post" hx-post="{{ workspace_url }}" hx-target="{{ teacher_support_target }}" hx-swap="innerHTML">{% csrf_token %}<input type="hidden" name="action" value="set_publication"><input type="hidden" name="content_id" value="{{ editing_content.id }}"><input type="hidden" name="class_id" value="{{ selected_class.id }}"><input type="hidden" name="ec_id" value="{{ selected_ec.id }}"><input type="hidden" name="publication_status" value="published"><input type="hidden" name="support_target" value="{{ teacher_support_target }}"><button class="ui-focus-ring min-h-11 rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Publier</button></form></div></div></section>
+          </div>
+        </section>
+      </main>
+    </div>
+  {% else %}{% component "ui_core.empty_state" icon="book-open" title="Sélectionnez une matière" message="Choisissez une classe puis une matière affectée pour ouvrir son espace de conception." %}{% endcomponent %}{% endif %}
+</section>
+<script>
+(() => {
+  const root = document.querySelector("[data-teacher-support-workspace]");
+  if (!root || root.dataset.bound === "1") return;
+  root.dataset.bound = "1";
+  const contentType = root.querySelector("[data-studio-content-type]");
+  const syncContentType = () => { const video = contentType?.value === "video"; root.querySelector("[data-studio-text]")?.classList.toggle("hidden", video); root.querySelector("[data-studio-video]")?.classList.toggle("hidden", !video); };
+  contentType?.addEventListener("change", syncContentType); syncContentType();
+  const values = { class_id: "{{ selected_class.id|default:'' }}", ec_id: "{{ selected_ec.id|default:'' }}", chapter_id: "{{ selected_chapter.id|default:'' }}", support_target: "{{ teacher_support_target|escapejs }}" };
+  const post = (button, action, extra) => {
+    if (button.dataset.pending === "1") return;
+    button.dataset.pending = "1";
+    button.disabled = true;
+    window.htmx?.ajax("POST", "{{ workspace_url|escapejs }}", { target: "{{ teacher_support_target|escapejs }}", swap: "innerHTML", values: { action, ...values, ...extra } });
+  };
+  root.querySelectorAll("[data-delete-content]").forEach((button) => button.addEventListener("click", () => { if (window.confirm("Supprimer cette leçon ? Les ressources associées seront également retirées.")) post(button, "delete_content", { content_id: button.dataset.deleteContent }); }));
+  root.querySelectorAll("[data-rename-chapter]").forEach((button) => button.addEventListener("click", () => { const title = window.prompt("Nouveau titre du chapitre", button.dataset.chapterTitle); if (title && title.trim()) post(button, "rename_chapter", { chapter_id: button.dataset.renameChapter, chapter_title: title.trim() }); }));
+  root.querySelectorAll("[data-delete-resource]").forEach((button) => button.addEventListener("click", () => { if (window.confirm(`Supprimer la ressource « ${button.dataset.resourceTitle} » ?`)) post(button, "delete_resource", { resource_id: button.dataset.deleteResource }); }));
+})();
+</script>
+<script>
+(() => {
+  // This dedicated Studio dialog follows the UI Core overlay conventions while
+  // supporting the chapter-specific move-or-delete decision.
+  if (window.__esfeCourseStudioChapterDialogBound) return;
+  window.__esfeCourseStudioChapterDialogBound = true;
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-delete-chapter]");
+    if (!trigger || !trigger.closest("[data-teacher-support-workspace]")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const root = trigger.closest("[data-teacher-support-workspace]");
+    const sourceId = trigger.dataset.deleteChapter;
+    const sourceTitle = trigger.dataset.chapterTitle;
+    const chapterSection = trigger.closest("section[x-data]");
+    const lessonCount = chapterSection ? chapterSection.querySelectorAll("button[hx-post]").length : 0;
+    const destinations = Array.from(root.querySelectorAll("[data-delete-chapter]"))
+      .filter((button) => button.dataset.deleteChapter !== sourceId)
+      .map((button) => ({ id: button.dataset.deleteChapter, title: button.dataset.chapterTitle }));
+    const values = {
+      class_id: root.dataset.studioClassId,
+      ec_id: root.dataset.studioEcId,
+      chapter_id: root.dataset.studioChapterId,
+      support_target: root.dataset.studioTarget,
+    };
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-50 grid place-items-center bg-ui-overlay/45 p-4";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.innerHTML = `<section class="w-full max-w-lg rounded-ui-modal bg-ui-surface p-5 shadow-ui-modal"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-danger">Suppression du chapitre</p><h2 class="mt-1 text-lg font-bold text-ui-text"></h2><p data-dialog-message class="mt-3 text-sm text-ui-text-muted"></p><div data-dialog-actions class="mt-5 flex flex-wrap justify-end gap-2"></div></section>`;
+    const close = () => overlay.remove();
+    const title = overlay.querySelector("h2");
+    const message = overlay.querySelector("[data-dialog-message]");
+    const actions = overlay.querySelector("[data-dialog-actions]");
+    title.textContent = `Supprimer « ${sourceTitle} » ?`;
+    const button = (label, className, handler) => {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.textContent = label;
+      element.className = `ui-focus-ring min-h-10 rounded-ui-button px-4 text-sm font-semibold ${className}`;
+      element.addEventListener("click", handler);
+      actions.append(element);
+      return element;
+    };
+    const mutate = (action, extra, actionButton) => {
+      if (actionButton.dataset.pending === "1") return;
+      actionButton.dataset.pending = "1";
+      actionButton.disabled = true;
+      close();
+      window.htmx?.ajax("POST", root.dataset.studioUrl, {
+        target: root.dataset.studioTarget,
+        swap: "innerHTML",
+        values: { action, ...values, ...extra },
+      });
+    };
+    const renderInitial = () => {
+      actions.replaceChildren();
+      if (!lessonCount) {
+        message.textContent = "Ce chapitre est vide. Il sera supprimé sans modifier les autres chapitres.";
+        button("Annuler", "border border-ui-border text-ui-text", close);
+        button("Supprimer", "bg-ui-danger text-ui-on-primary", (e) => mutate("delete_chapter", { chapter_id: sourceId }, e.currentTarget));
+        return;
+      }
+      message.textContent = `« ${sourceTitle} » contient ${lessonCount} leçon(s). Choisissez le traitement à appliquer.`;
+      button("Annuler", "border border-ui-border text-ui-text", close);
+      button("Déplacer les leçons", "border border-ui-primary text-ui-primary", renderMove);
+      button("Supprimer le chapitre et ses leçons", "bg-ui-danger text-ui-on-primary", renderDestructiveConfirmation);
+    };
+    const renderMove = () => {
+      actions.replaceChildren();
+      message.textContent = destinations.length
+        ? `${lessonCount} leçon(s) seront déplacées sans recréation de contenu, de ressource ou de média.`
+        : "Aucun autre chapitre disponible. Créez un chapitre de destination ou supprimez également les leçons.";
+      const select = document.createElement("select");
+      select.className = "mt-4 h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm";
+      select.disabled = !destinations.length;
+      const placeholder = new Option("Sélectionner un chapitre", "");
+      placeholder.disabled = true; placeholder.selected = true; select.add(placeholder);
+      destinations.forEach((destination) => select.add(new Option(destination.title, destination.id)));
+      message.after(select);
+      button("Retour", "border border-ui-border text-ui-text", () => { select.remove(); renderInitial(); });
+      const confirmMove = button("Déplacer et supprimer", "bg-ui-primary text-ui-on-primary", (e) => mutate("move_chapter_contents", { chapter_id: sourceId, destination_chapter_id: select.value }, e.currentTarget));
+      confirmMove.disabled = !destinations.length;
+      select.addEventListener("change", () => { confirmMove.disabled = !select.value; });
+    };
+    const renderDestructiveConfirmation = () => {
+      actions.replaceChildren();
+      message.textContent = `Supprimer définitivement « ${sourceTitle} » et ses ${lessonCount} leçon(s) ? Les leçons, leurs ressources et leurs progressions associées seront supprimées selon les relations Django existantes.`;
+      button("Annuler", "border border-ui-border text-ui-text", close);
+      button("Supprimer définitivement", "bg-ui-danger text-ui-on-primary", (e) => mutate("delete_chapter_with_contents", { chapter_id: sourceId }, e.currentTarget));
+    };
+    overlay.addEventListener("click", (event) => { if (event.target === overlay) close(); });
+    document.body.append(overlay);
+    renderInitial();
+  }, true);
+})();
+</script>

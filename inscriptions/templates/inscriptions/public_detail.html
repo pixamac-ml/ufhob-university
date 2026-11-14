@@ -1,208 +1,57 @@
-{% extends "base.html" %}
-{% load component_tags %}
+{% extends "portal/auth_base.html" %}
 {% load humanize %}
 
-{% block extra_head %}
-<style>
-    .hero-gradient {
-        background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8a 50%, #1e4f6f 100%);
-    }
-
-    .card-shadow {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                    0 2px 4px -1px rgba(0, 0, 0, 0.03),
-                    0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    }
-
-    .card-hover {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .card-hover:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
-                    0 8px 10px -6px rgba(0, 0, 0, 0.05);
-    }
-
-    .animate-slide-up {
-        animation: slideUp 0.5s ease-out forwards;
-    }
-
-    .animate-slide-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
-    .animate-slide-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
-    .animate-slide-up-delay-3 { animation-delay: 0.3s; opacity: 0; }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .progress-pulse {
-        animation: progressPulse 2s ease-in-out infinite;
-    }
-
-    @keyframes progressPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .stat-card {
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(to bottom, #1e4f6f, #1db5b0);
-        border-radius: 4px 0 0 4px;
-    }
-</style>
-{% endblock %}
+{% block title %}Dossier annuel | UFHOB{% endblock %}
 
 {% block content %}
-
-<!-- ============================================ -->
-<!-- HEADER INSTITUTIONNEL AVEC BRANDING         -->
-<!-- ============================================ -->
-<div class="hero-gradient text-white relative overflow-hidden pt-20">
-    <!-- Decorative elements -->
-    <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-
-    <div class="max-w-5xl mx-auto px-6 py-12 relative z-10">
-
-        <!-- Top bar with logo and reference -->
-        <div class="flex justify-between items-start mb-8 animate-slide-up">
-            <!-- Logo / Institution -->
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-xs text-white/70 uppercase tracking-wider">Établissement Supérieur</p>
-                    <h2 class="text-lg font-bold">ESFE</h2>
-                </div>
-            </div>
-
-            <!-- Reference badge -->
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
-                <p class="text-xs text-white/60">Référence dossier</p>
-                <p class="font-mono text-sm font-semibold">{{ inscription.reference }}</p>
-            </div>
+<main class="min-h-screen bg-ufhob-ivory py-6 sm:py-10">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6">
+    <header class="border border-ufhob-border bg-ufhob-surface">
+      <div class="border-b-4 border-ufhob-primary px-5 py-5 sm:px-8">
+        <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+          <div class="flex min-w-0 items-center gap-4"><div class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden border border-ufhob-border bg-ufhob-primary-soft text-lg font-bold text-ufhob-primary">{% if student_photo %}<img src="{{ student_photo }}" alt="Photo de {{ candidature.full_name }}" class="h-full w-full object-cover">{% else %}{{ candidature.first_name|first|upper }}{{ candidature.last_name|first|upper }}{% endif %}</div><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-[.18em] text-ufhob-primary">Université Félix Houphouët-Boigny — Mali</p><h1 class="mt-2 text-2xl font-bold text-ufhob-text sm:text-3xl">{{ candidature.last_name|upper }} {{ candidature.first_name|title }}</h1><p class="mt-2 text-sm text-ufhob-muted">Dossier administratif et financier annuel · {{ programme.title }}</p></div></div>
+          <div class="border-l-2 border-ufhob-secondary pl-4 text-sm sm:text-right"><p class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Référence du dossier</p><p class="mt-1 font-mono font-semibold text-ufhob-primary">{{ inscription.public_reference }}</p><p class="mt-1 text-xs text-ufhob-muted">Mise à jour le {{ inscription.updated_at|date:"d/m/Y à H:i" }}</p></div>
         </div>
+      </div>
+      <dl class="grid divide-y divide-ufhob-border text-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+        <div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">École</dt><dd class="mt-1 font-semibold text-ufhob-text">{{ programme.school.code|default:"Non renseignée" }}</dd></div>
+        <div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Campus</dt><dd class="mt-1 font-semibold text-ufhob-text">{{ candidature.branch.name|default:"Non renseigné" }}</dd></div>
+        <div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Année académique</dt><dd class="mt-1 font-semibold text-ufhob-text">{{ candidature.academic_year }}</dd></div>
+        <div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Niveau / classe</dt><dd class="mt-1 font-semibold text-ufhob-text">{% firstof inscription.academic_class inscription.academic_level "À communiquer" %}</dd></div>
+      </dl>
+    </header>
 
-        <!-- Main hero content -->
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 animate-slide-up animate-slide-up-delay-1">
-
-            <!-- Student info -->
-            <div class="flex-1">
-                <div class="flex items-center gap-3 mb-3">
-                    <span class="px-3 py-1 bg-white/20 rounded-full text-xs font-medium">
-                        Dossier d'inscription
-                    </span>
-                    {% if inscription.status == 'active' %}
-                    <span class="px-3 py-1 bg-secondary/30 rounded-full text-xs font-medium flex items-center gap-1">
-                        <span class="w-2 h-2 bg-secondary rounded-full"></span>
-                        Actif
-                    </span>
-                    {% elif inscription.status == 'created' %}
-                    <span class="px-3 py-1 bg-accent/30 rounded-full text-xs font-medium flex items-center gap-1">
-                        <span class="w-2 h-2 bg-accent rounded-full progress-pulse"></span>
-                        En attente
-                    </span>
-                    {% endif %}
-                </div>
-
-                <h1 class="text-3xl font-bold mb-2">
-                    {{ candidature.last_name|upper }} {{ candidature.first_name|title }}
-                </h1>
-
-                <p class="text-white/80 text-lg flex items-center gap-2">
-                    <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                    </svg>
-                    {{ programme.title }}
-                </p>
-            </div>
-
-            <!-- Quick stats -->
-            <div class="flex gap-4">
-                <div class="stat-card bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[140px] border border-white/10">
-                    <p class="text-xs text-white/60 mb-1">Montant payé</p>
-                    <p class="text-xl font-bold text-secondary">{{ inscription.amount_paid|intcomma }} F</p>
-                </div>
-                <div class="stat-card bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[140px] border border-white/10">
-                    <p class="text-xs text-white/60 mb-1">Solde restant</p>
-                    <p class="text-xl font-bold text-accent">{{ inscription.balance|intcomma }} F</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ============================================ -->
-<!-- MAIN CONTENT - CARTES AMÉLIORÉES            -->
-<!-- ============================================ -->
-
-<main class="max-w-5xl mx-auto px-6 mt-8 relative z-20 pb-20">
-
-    <!-- Cards grid -->
-    <div class="space-y-6">
-
-        <!-- Identity Card -->
-        <div class="animate-slide-up animate-slide-up-delay-1">
-            {% component "inscription_identity"
-                candidature=candidature
-                programme=programme
-            %}{% endcomponent %}
-        </div>
-
-        <!-- Status Card -->
-        <div class="animate-slide-up animate-slide-up-delay-2">
-            {% component "inscription_status"
-                inscription=inscription
-            %}{% endcomponent %}
-        </div>
-
-        <!-- Finance Card -->
-        <div class="animate-slide-up animate-slide-up-delay-3">
-            {% component "inscription_finance"
-                inscription=inscription
-                payments=payments
-                can_pay=can_pay
-                has_pending_payment=has_pending_payment
-                payment_form=payment_form
-            %}{% endcomponent %}
-        </div>
-
+    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+      <section class="border border-ufhob-border bg-ufhob-surface" aria-labelledby="identity-title"><div class="border-b border-ufhob-border px-5 py-4"><h2 id="identity-title" class="font-bold text-ufhob-text">Identité du candidat / étudiant</h2></div><dl class="grid divide-y divide-ufhob-border text-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0"><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Nom et prénom</dt><dd class="mt-1 font-semibold text-ufhob-text">{{ candidature.last_name|upper }} {{ candidature.first_name|title }}</dd></div><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Sexe</dt><dd class="mt-1 text-ufhob-text">{{ candidature.get_gender_display }}</dd></div><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Naissance</dt><dd class="mt-1 text-ufhob-text">{{ candidature.birth_date|date:"d/m/Y" }}{% if candidature.birth_place %} · {{ candidature.birth_place }}{% endif %}</dd></div><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Nationalité</dt><dd class="mt-1 text-ufhob-text">{{ candidature.country|default:"Non renseignée" }}</dd></div><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Téléphone</dt><dd class="mt-1 text-ufhob-text">{{ candidature.phone }}</dd></div><div class="p-4"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Email</dt><dd class="mt-1 break-all text-ufhob-text">{{ candidature.email }}</dd></div>{% if candidature.address or candidature.city %}<div class="p-4 sm:col-span-2"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Adresse</dt><dd class="mt-1 text-ufhob-text">{{ candidature.address }}{% if candidature.city %}{% if candidature.address %} · {% endif %}{{ candidature.city }}{% endif %}</dd></div>{% endif %}</dl></section>
+      <section class="border border-ufhob-border bg-ufhob-surface" aria-labelledby="academic-title"><div class="border-b border-ufhob-border px-5 py-4"><h2 id="academic-title" class="font-bold text-ufhob-text">Parcours académique</h2></div><dl class="divide-y divide-ufhob-border text-sm"><div class="grid grid-cols-2 gap-4 p-4"><dt class="text-ufhob-muted">École</dt><dd class="font-semibold text-ufhob-text">{{ programme.school.code }}</dd><dt class="text-ufhob-muted">Campus</dt><dd class="font-semibold text-ufhob-text">{{ candidature.branch.name }}</dd></div><div class="grid grid-cols-2 gap-4 p-4"><dt class="text-ufhob-muted">Formation</dt><dd class="font-semibold text-ufhob-text">{{ programme.title }}</dd><dt class="text-ufhob-muted">Cycle</dt><dd class="font-semibold text-ufhob-text">{% firstof programme.cycle inscription.academic_level "Non renseigné" %}</dd></div><div class="grid grid-cols-2 gap-4 p-4"><dt class="text-ufhob-muted">Niveau / classe</dt><dd class="font-semibold text-ufhob-text">{% firstof inscription.academic_class inscription.academic_level "À communiquer" %}</dd><dt class="text-ufhob-muted">Statut administratif</dt><dd class="font-semibold text-ufhob-text">{{ inscription.get_status_display }}</dd></div></dl></section>
     </div>
 
-    <!-- Footer info -->
-    <div class="mt-12 text-center">
-        <p class="text-sm text-gray-400">
-            Besoin d'aide ?
-            <a href="#" class="text-primary-500 hover:text-primary-600 font-medium">
-                Contacter l'administration
-            </a>
-        </p>
-        <p class="text-xs text-gray-300 mt-2">
-            Dernière mise à jour : {{ inscriptions.updated_at|date:"d/m/Y à H:i" }}
-        </p>
+    <section class="mt-6 border border-ufhob-border bg-ufhob-surface" aria-labelledby="finance-title">
+      <div class="border-b border-ufhob-border px-5 py-4 sm:px-6"><h2 id="finance-title" class="font-bold text-ufhob-text">Synthèse financière annuelle</h2></div>
+      <dl class="grid divide-y divide-ufhob-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+        <div class="p-5"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Frais annuels</dt><dd class="mt-2 text-xl font-bold text-ufhob-text">{{ inscription.amount_due|intcomma }} <span class="text-sm font-medium">FCFA</span></dd></div>
+        <div class="p-5"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Montant payé</dt><dd class="mt-2 text-xl font-bold text-ufhob-primary">{{ inscription.amount_paid|intcomma }} <span class="text-sm font-medium">FCFA</span></dd></div>
+        <div class="p-5"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Solde restant</dt><dd class="mt-2 text-xl font-bold {% if inscription.balance %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ inscription.balance|intcomma }} <span class="text-sm font-medium">FCFA</span></dd></div>
+        <div class="p-5"><dt class="text-xs font-semibold uppercase tracking-wide text-ufhob-muted">Statut / échéance</dt><dd class="mt-2 font-bold text-ufhob-text">{{ inscription.get_status_display }}</dd><p class="mt-1 text-xs text-ufhob-muted">Échéancier communiqué par l’administration.</p></div>
+      </dl>
+    </section>
+
+    <section class="mt-6 border border-ufhob-border bg-ufhob-surface" aria-labelledby="payments-title">
+      <div class="border-b border-ufhob-border px-5 py-4 sm:px-6"><h2 id="payments-title" class="font-bold text-ufhob-text">Historique des paiements</h2><p class="mt-1 text-sm text-ufhob-muted">Les opérations sont affichées avec leur statut de validation.</p></div>
+      <div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead class="bg-ufhob-primary-soft text-xs uppercase tracking-wide text-ufhob-text"><tr><th class="px-5 py-3 font-semibold">Date</th><th class="px-5 py-3 font-semibold">Référence</th><th class="px-5 py-3 font-semibold">Méthode</th><th class="px-5 py-3 text-right font-semibold">Montant</th><th class="px-5 py-3 font-semibold">Caisse</th><th class="px-5 py-3 font-semibold">Statut</th><th class="px-5 py-3 font-semibold">Reçu</th></tr></thead><tbody class="divide-y divide-ufhob-border">
+      {% for payment in payments %}<tr class="align-top"><td class="whitespace-nowrap px-5 py-4 text-ufhob-muted">{{ payment.paid_at|date:"d/m/Y" }}</td><td class="px-5 py-4 font-mono text-xs text-ufhob-primary">{{ payment.public_reference }}</td><td class="px-5 py-4 text-ufhob-text">{{ payment.get_method_display }}</td><td class="whitespace-nowrap px-5 py-4 text-right font-semibold text-ufhob-text">{{ payment.amount|intcomma }} FCFA</td><td class="px-5 py-4 text-ufhob-muted">{% if payment.agent %}{{ payment.agent.user.get_full_name|default:payment.agent.agent_code }}{% else %}—{% endif %}</td><td class="px-5 py-4"><span class="text-xs font-semibold {% if payment.status == 'validated' %}text-emerald-700{% elif payment.status == 'pending' %}text-amber-700{% else %}text-rose-700{% endif %}">{{ payment.get_status_display }}</span></td><td class="px-5 py-4">{% if payment.status == 'validated' and payment.receipt_number %}<a class="text-xs font-semibold text-ufhob-primary underline underline-offset-4" href="{% url 'payments:receipt_detail' payment.receipt_number %}">{{ payment.public_receipt_reference }}</a>{% else %}<span class="text-xs text-ufhob-muted">Indisponible</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="px-5 py-10 text-center text-sm text-ufhob-muted">Aucun paiement n’a encore été enregistré pour ce dossier annuel.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-[1.65fr_1fr]">
+      <section class="border border-ufhob-border bg-ufhob-surface" aria-labelledby="receipts-title"><div class="border-b border-ufhob-border px-5 py-4 sm:px-6"><h2 id="receipts-title" class="font-bold text-ufhob-text">Mes reçus et justificatifs</h2></div><div class="divide-y divide-ufhob-border">{% for payment in payment_receipts %}<div class="flex items-center justify-between gap-4 px-5 py-4"><div><p class="font-mono text-sm font-semibold text-ufhob-primary">{{ payment.public_receipt_reference }}</p><p class="mt-1 text-xs text-ufhob-muted">{{ payment.paid_at|date:"d/m/Y" }} · {{ payment.amount|intcomma }} FCFA</p></div><div class="flex gap-3">{% if payment.receipt_pdf %}<a class="text-sm font-semibold text-ufhob-primary underline underline-offset-4" href="{% url 'payments:receipt_pdf' payment.receipt_number %}">Télécharger</a>{% endif %}<a class="text-sm font-semibold text-ufhob-primary underline underline-offset-4" href="{% url 'payments:receipt_detail' payment.receipt_number %}">Consulter</a></div></div>{% empty %}<p class="px-5 py-8 text-sm text-ufhob-muted">Aucun reçu validé n’est disponible actuellement.</p>{% endfor %}</div></section>
+      <section class="border border-ufhob-border bg-ufhob-surface" aria-labelledby="timeline-title"><div class="border-b border-ufhob-border px-5 py-4"><h2 id="timeline-title" class="font-bold text-ufhob-text">Chronologie du dossier</h2></div><ol class="space-y-4 px-5 py-5 text-sm"><li><span class="font-semibold text-ufhob-primary">Candidature acceptée</span><span class="block text-ufhob-muted">Dossier administratif créé.</span></li><li><span class="font-semibold text-ufhob-primary">Inscription créée</span><span class="block text-ufhob-muted">{{ inscription.created_at|date:"d/m/Y" }}</span></li>{% for payment in payments %}{% if payment.status == 'validated' %}<li><span class="font-semibold text-ufhob-primary">Versement validé</span><span class="block text-ufhob-muted">{{ payment.paid_at|date:"d/m/Y" }} · {{ payment.amount|intcomma }} FCFA</span></li>{% endif %}{% endfor %}{% if inscription.is_active %}<li><span class="font-semibold text-emerald-700">Inscription active</span></li>{% endif %}</ol></section>
     </div>
 
+    <section class="mt-6 border border-ufhob-border bg-ufhob-surface" aria-labelledby="new-payment-title"><div class="border-b border-ufhob-border px-5 py-4 sm:px-6"><h2 id="new-payment-title" class="font-bold text-ufhob-text">Nouveau paiement</h2><p class="mt-1 text-sm text-ufhob-muted">Cette demande reste soumise aux règles et validations de l’administration.</p></div><div class="p-5 sm:p-6">{% include "payments/partials/inscription_finance.html" %}</div></section>
+    <div class="mt-6 text-center"><button type="button" class="text-sm font-semibold text-ufhob-primary underline underline-offset-4" onclick="document.getElementById('admin-contact').showModal()">Contacter l’administration</button></div>
+  </div>
 </main>
 
+<dialog id="admin-contact" class="w-[calc(100%-2rem)] max-w-lg border border-ufhob-border bg-ufhob-surface p-0 text-ufhob-text shadow-xl backdrop:bg-slate-950/40"><div class="border-b border-ufhob-border px-5 py-4"><h2 class="font-bold">Contacter l’administration</h2><p class="mt-1 text-sm text-ufhob-muted">Votre demande sera liée à {{ inscription.public_reference }}.</p></div><form method="post" action="{% url 'inscriptions:contact_administration' inscription.public_token %}" class="space-y-4 p-5">{% csrf_token %}<label class="block text-sm font-semibold">Catégorie<select name="category" class="mt-1.5 w-full border border-ufhob-border bg-ufhob-surface px-3 py-2.5 text-sm"><option value="payment">Paiement</option><option value="receipt">Reçu</option><option value="inscription">Inscription</option><option value="access">Accès au dossier</option><option value="documents">Documents</option><option value="information">Erreur sur mes informations</option><option value="other">Autre</option></select></label><label class="block text-sm font-semibold">Objet<input required name="title" class="mt-1.5 w-full border border-ufhob-border bg-ufhob-surface px-3 py-2.5 text-sm" maxlength="120"></label><label class="block text-sm font-semibold">Message<textarea required name="description" rows="4" class="mt-1.5 w-full border border-ufhob-border bg-ufhob-surface px-3 py-2.5 text-sm" placeholder="Décrivez votre demande."></textarea></label><p class="text-xs text-ufhob-muted">Votre identité, école, campus et année sont associées automatiquement à la demande.</p><button class="w-full bg-ufhob-primary px-4 py-3 text-sm font-semibold text-white transition duration-200 hover:bg-ufhob-primary-hover">Écrire à l’administration</button><button type="button" disabled class="block w-full border border-ufhob-border px-4 py-3 text-sm font-semibold text-ufhob-muted">WhatsApp indisponible : aucun numéro institutionnel configuré</button><button type="button" class="w-full text-sm font-semibold text-ufhob-primary" onclick="document.getElementById('admin-contact').close()">Fermer</button></form></dialog>
 {% endblock %}

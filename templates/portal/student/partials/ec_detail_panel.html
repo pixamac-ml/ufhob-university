@@ -1,0 +1,54 @@
+{% load component_tags %}
+{{ player_bundle|json_script:"ec-player-bundle-data" }}
+
+<div class="h-full min-w-0 text-ui-text" x-data="Object.assign(studentCourseImmersive(), { workspaceTab: 'content' })" x-init="init()">
+  <div x-show="docViewerUrl" x-cloak class="fixed inset-0 z-[90] flex flex-col bg-ui-overlay" role="dialog" aria-modal="true" aria-label="Lecteur de document">
+    <header class="flex items-center justify-between border-b border-white/10 bg-ui-sidebar px-4 py-3 text-ui-on-primary"><strong>Lecteur intégré</strong><button type="button" @click="closeDocViewer()" class="min-h-10 rounded-ui-button bg-white/10 px-4 text-sm font-semibold">Fermer</button></header>
+    <iframe :src="docViewerUrl" class="min-h-0 w-full flex-1 border-0 bg-white" title="Document pédagogique"></iframe>
+  </div>
+
+  {% component "course_player" title=ec.title subtitle=ec.ue.title collapsible=True %}
+    {% fill "header_actions" %}
+      <button type="button" @click="document.body.dispatchEvent(new CustomEvent('student-course:close'))" class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover"><i data-lucide="arrow-left" class="h-4 w-4"></i><span class="hidden sm:inline">Retour à Mes cours</span><span class="sm:hidden">Retour</span></button>
+    {% endfill %}
+    {% fill "header" %}
+      <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-ui-text-muted">
+        <span class="rounded-ui-badge bg-ui-surface-muted px-2.5 py-1">S{{ ec.ue.semester.number }} · {{ ec.ue.code }}</span>
+        <span class="rounded-ui-badge bg-ui-surface-muted px-2.5 py-1">{{ total_completed_content_count }}/{{ total_active_content_count }} leçons terminées</span>
+        <button type="button" @click="tocCollapsed = !tocCollapsed" class="ml-auto hidden min-h-9 items-center gap-2 rounded-ui-button border border-ui-border px-3 text-xs font-semibold text-ui-text hover:bg-ui-surface-hover lg:inline-flex"><i data-lucide="panel-right" class="h-4 w-4"></i><span x-text="tocCollapsed ? 'Afficher le sommaire' : 'Masquer le sommaire'"></span></button>
+      </div>
+    {% endfill %}
+    {% fill "sidebar" %}{% include "portal/student/partials/course_toc.html" %}{% endfill %}
+    {% fill "mobile_navigation" %}
+      <button type="button" @click="tocOpen=true" class="flex min-h-11 w-full items-center justify-between rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text"><span class="inline-flex items-center gap-2"><i data-lucide="list-tree" class="h-4 w-4"></i>Sommaire du cours</span><span>{{ total_completed_content_count }}/{{ total_active_content_count }}</span></button>
+      <div x-show="tocOpen" x-cloak class="fixed inset-0 z-[95] bg-ui-surface lg:hidden" role="dialog" aria-modal="true" aria-label="Sommaire du cours">
+        <header class="flex h-ui-topbar items-center justify-between border-b border-ui-border px-4"><strong>Sommaire</strong><button type="button" @click="tocOpen=false" class="grid h-10 w-10 place-items-center rounded-ui-button border border-ui-border" aria-label="Fermer le sommaire"><i data-lucide="x" class="h-5 w-5"></i></button></header>
+        <div class="h-[calc(100vh-4rem)] overflow-y-auto">{% include "portal/student/partials/course_toc.html" %}</div>
+      </div>
+    {% endfill %}
+    {% fill "default" %}
+      {% if chapters_available %}
+        <nav class="flex gap-1 overflow-x-auto border-b border-ui-border px-3" aria-label="Espaces du cours">
+          <button type="button" @click="workspaceTab='content'" class="min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold" :class="workspaceTab === 'content' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'">Contenu</button>
+          <button type="button" @click="workspaceTab='presentation'" class="min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold" :class="workspaceTab === 'presentation' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'">Présentation</button>
+          <button type="button" @click="workspaceTab='resources'" class="min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold" :class="workspaceTab === 'resources' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'">Ressources</button>
+        </nav>
+        <div x-show="workspaceTab === 'content'" x-cloak>
+        <div class="flex items-center gap-2 border-b border-ui-border p-3" x-show="activeId !== null && orderedIds.length" x-cloak>
+          <button type="button" @click="prevLesson()" :disabled="!canPrev" class="inline-flex min-h-10 items-center gap-1 rounded-ui-button border border-ui-border px-3 text-sm font-semibold disabled:opacity-40"><i data-lucide="chevron-left" class="h-4 w-4"></i><span class="hidden sm:inline">Précédent</span></button>
+          <button type="button" @click="nextLesson()" :disabled="!canNext" class="inline-flex min-h-10 items-center gap-1 rounded-ui-button border border-ui-border px-3 text-sm font-semibold disabled:opacity-40"><span class="hidden sm:inline">Suivant</span><i data-lucide="chevron-right" class="h-4 w-4"></i></button>
+          <span class="ml-auto min-w-0 truncate text-xs font-semibold text-ui-text-muted" x-text="activeLessonTitle()"></span>
+        </div>
+        <div class="min-w-0 overflow-x-hidden p-3 sm:p-4">
+          {% for chapter in chapters %}{% for content in chapter.active_contents %}<div x-show="activeId === {{ content.id }}" x-cloak>{% include "portal/student/partials/ec_content_lesson.html" with content=content only %}</div>{% endfor %}{% empty %}{% component "ui_core.empty_state" title="Aucun contenu publié" message="Les leçons de ce cours ne sont pas encore disponibles." icon="book-open" %}{% endcomponent %}{% endfor %}
+          {% if chapters and not total_active_content_count %}{% component "ui_core.empty_state" title="Leçons non disponibles" message="Les sections existent, mais aucun contenu actif n'est encore visible." icon="book-open" %}{% endcomponent %}{% endif %}
+        </div>
+        </div>
+        <section x-show="workspaceTab === 'presentation'" x-cloak class="space-y-4 p-4 sm:p-5"><div><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Présentation du cours</p><h3 class="mt-1 text-lg font-bold text-ui-text">{{ ec.title }}</h3><p class="mt-2 text-sm text-ui-text-muted">{{ ec.ue.title }} · Semestre {{ ec.ue.semester.number }}</p></div><dl class="grid gap-3 sm:grid-cols-2"><div class="rounded-ui-button bg-ui-surface-muted p-3"><dt class="text-xs text-ui-text-muted">Unité d'enseignement</dt><dd class="mt-1 text-sm font-semibold text-ui-text">{{ ec.ue.title }}</dd></div><div class="rounded-ui-button bg-ui-surface-muted p-3"><dt class="text-xs text-ui-text-muted">Parcours disponible</dt><dd class="mt-1 text-sm font-semibold text-ui-text">{{ chapter_count }} chapitre{{ chapter_count|pluralize }} · {{ total_active_content_count }} leçon{{ total_active_content_count|pluralize }}</dd></div></dl></section>
+        <section x-show="workspaceTab === 'resources'" x-cloak class="p-4 sm:p-5"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Ressources du cours</p><h3 class="mt-1 text-lg font-bold text-ui-text">Documents téléchargeables</h3><div class="mt-4 divide-y divide-ui-border">{% for chapter in chapters %}{% for content in chapter.active_contents %}{% for resource in content.available_resources %}<article class="flex min-h-12 items-center justify-between gap-3 py-3"><span class="min-w-0"><strong class="block truncate text-sm text-ui-text">{{ resource.title }}</strong><span class="block text-xs text-ui-text-muted">{{ chapter.title }} · {{ content.title }} · {{ resource.size_label }}</span></span><span class="flex shrink-0 gap-2">{% if resource.resource_type == 'pdf' %}<a href="{{ resource.preview_url }}" target="_blank" rel="noopener" class="text-xs font-semibold text-ui-primary">Consulter</a>{% endif %}<a href="{{ resource.download_url }}" class="text-xs font-semibold text-ui-primary">Télécharger</a></span></article>{% endfor %}{% if content.legacy_file_url and content.content_type != 'video' %}<article class="flex min-h-12 items-center justify-between gap-3 py-3"><span class="min-w-0"><strong class="block truncate text-sm text-ui-text">{{ content.title }}</strong><span class="block text-xs text-ui-text-muted">{{ chapter.title }} · {{ content.get_content_type_display }}</span></span><a href="{{ content.legacy_file_url }}" download class="shrink-0 text-xs font-semibold text-ui-primary">Télécharger</a></article>{% endif %}{% endfor %}{% empty %}<p class="py-5 text-sm text-ui-text-muted">Aucune ressource publiée.</p>{% endfor %}</div></section>
+      {% else %}
+        {% component "ui_core.empty_state" title="Lecteur non disponible" message="Les contenus pédagogiques détaillés ne sont pas disponibles dans cet environnement." icon="book-x" %}{% endcomponent %}
+      {% endif %}
+    {% endfill %}
+  {% endcomponent %}
+</div>

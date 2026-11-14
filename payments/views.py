@@ -6,9 +6,12 @@
 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
+from django.db import transaction
 from django.db.models import Q
+import logging
 
 from inscriptions.models import Inscription
 from payments.models import Payment, PaymentAgent, CashPaymentSession
@@ -18,6 +21,30 @@ from payments.services.cash import verify_agent_and_create_session, validate_cas
 from django.utils import timezone
 from datetime import timedelta
 import random
+
+from accounts.scoping import scoped
+
+
+logger = logging.getLogger(__name__)
+
+
+def _can_initiate_payment(inscription, has_pending_payment):
+    """Détermine si un dossier peut initier un nouveau paiement."""
+    payable_statuses = {
+        Inscription.STATUS_CREATED,
+        Inscription.STATUS_AWAITING_PAYMENT,
+        Inscription.STATUS_PARTIAL,
+    }
+    return (
+        inscription.status in payable_statuses
+        and inscription.balance > 0
+        and not has_pending_payment
+    )
+
+
+def _has_inscription_access(request, inscription):
+    session_key = f"inscription_access_{inscription.id}"
+    return bool(request.session.get(session_key))
 
 
 # ==================================================
@@ -36,15 +63,21 @@ def student_initiate_payment(request, token):
         public_token=token
     )
 
+    if not _has_inscription_access(request, inscription):
+        response = render(
+            request,
+            "payments/partials/payment_error.html",
+            {"message": "Accès non autorisé."},
+            status=403,
+        )
+        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Accès non autorisé."}}'
+        return response
+
     # Récupérer le contexte actuel
     payments = inscription.payments.order_by("-paid_at")
     has_pending_payment = payments.filter(status="pending").exists()
 
-    can_pay = (
-        inscription.status == "created"
-        and inscription.balance > 0
-        and not has_pending_payment
-    )
+    can_pay = _can_initiate_payment(inscription, has_pending_payment)
 
     # Initialiser le formulaire
     form = StudentPaymentForm(
@@ -65,6 +98,11 @@ def student_initiate_payment(request, token):
 
     # Validation du formulaire
     if not form.is_valid():
+        logger.warning(
+            "Formulaire paiement invalide: token=%s errors=%s",
+            token,
+            form.errors.get_json_data(),
+        )
         context["payment_form"] = form
         context["can_pay"] = can_pay
 
@@ -82,6 +120,13 @@ def student_initiate_payment(request, token):
     method = form.cleaned_data["method"]
 
     if amount > inscription.balance:
+        logger.warning(
+            "Montant paiement invalide: inscription=%s amount=%s balance=%s method=%s",
+            inscription.id,
+            amount,
+            inscription.balance,
+            method,
+        )
         form.add_error("amount", "Le montant dépasse le solde restant.")
         context["payment_form"] = form
         context["can_pay"] = can_pay
@@ -96,6 +141,11 @@ def student_initiate_payment(request, token):
         return response
 
     if has_pending_payment:
+        logger.warning(
+            "Paiement refuse car un paiement pending existe deja: inscription=%s method=%s",
+            inscription.id,
+            method,
+        )
         response = render(
             request,
             "payments/partials/payment_error.html",
@@ -104,15 +154,47 @@ def student_initiate_payment(request, token):
         response["HX-Trigger"] = '{"toast": {"type": "warning", "message": "Un paiement est déjà en attente."}}'
         return response
 
-    # Créer le paiement
-    payment = Payment.objects.create(
-        inscription=inscription,
-        amount=amount,
-        method=method,
-        status="pending",
-        reference="INITIATED_BY_STUDENT",
-        agent=form.agent if method == "cash" else None
-    )
+    with transaction.atomic():
+        inscription = (
+            Inscription.objects
+            .select_for_update()
+            .select_related("candidature", "candidature__programme")
+            .get(pk=inscription.pk)
+        )
+
+        has_pending_payment = inscription.payments.filter(status=Payment.STATUS_PENDING).exists()
+        can_pay = _can_initiate_payment(inscription, has_pending_payment)
+
+        if not can_pay:
+            logger.warning(
+                "Paiement impossible pour inscription=%s status=%s balance=%s method=%s",
+                inscription.id,
+                inscription.status,
+                inscription.balance,
+                method,
+            )
+            response = render(
+                request,
+                "payments/partials/payment_error.html",
+                {"message": "Paiement impossible pour ce dossier actuellement."},
+            )
+            response["HX-Trigger"] = '{"toast": {"type": "warning", "message": "Paiement impossible pour ce dossier actuellement."}}'
+            return response
+
+        payment = Payment.objects.create(
+            inscription=inscription,
+            amount=amount,
+            method=method,
+            status=Payment.STATUS_PENDING,
+            reference="INITIATED_BY_STUDENT",
+            agent=form.agent if method == Payment.METHOD_CASH else None,
+            cash_session=form.cash_session if method == Payment.METHOD_CASH else None,
+        )
+
+        # Au premier paiement initié, le dossier passe en attente de paiement.
+        if inscription.status == Inscription.STATUS_CREATED:
+            inscription.status = Inscription.STATUS_AWAITING_PAYMENT
+            inscription.save(update_fields=["status"])
 
     # Mettre à jour le contexte
     payments = inscription.payments.order_by("-paid_at")
@@ -149,6 +231,17 @@ def verify_agent(request, token):
     Vérifie l'agent en temps réel lors de la saisie.
     """
     inscription = get_object_or_404(Inscription, public_token=token)
+
+    if not _has_inscription_access(request, inscription):
+        response = render(
+            request,
+            "payments/partials/agent_input.html",
+            {"show_error": True, "error": "Accès non autorisé."},
+            status=403,
+        )
+        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Accès non autorisé."}}'
+        return response
+
     agent_name = request.POST.get("agent_name", "").strip()
 
     if not agent_name or len(agent_name) < 2:
@@ -191,6 +284,15 @@ def verify_agent(request, token):
 @require_POST
 def initiate_cash_session(request, token):
     inscription = get_object_or_404(Inscription, public_token=token)
+
+    if not _has_inscription_access(request, inscription):
+        return render(
+            request,
+            "payments/partials/agent_error.html",
+            {"error": "Accès non autorisé."},
+            status=403,
+        )
+
     agent_name = request.POST.get("agent_name", "").strip()
 
     agent, error = verify_agent_and_create_session(inscription, agent_name)
@@ -209,9 +311,25 @@ def initiate_cash_session(request, token):
 # 4. AFFICHAGE REÇU
 # ==================================================
 
+@login_required
 def receipt_public_detail(request, receipt_number):
-    payment = get_object_or_404(Payment, receipt_number=receipt_number, status="validated")
+    payment_queryset = Payment.objects
+    if request.user.is_staff:
+        payment_queryset = scoped(Payment, user=request.user)
+    payment = get_object_or_404(
+        payment_queryset.select_related(
+            "inscription__student__user",
+            "inscription__candidature__programme__school__institution",
+            "inscription__candidature__programme__cycle",
+            "inscription__candidature__branch",
+        ),
+        receipt_number=receipt_number,
+        status="validated",
+    )
     inscription = payment.inscription
+
+    if not request.user.is_staff and inscription.student.user != request.user:
+        raise Http404("Reçu introuvable.")
 
     return render(request, "payments/receipt_detail.html", {
         "payment": payment,
@@ -225,8 +343,19 @@ def receipt_public_detail(request, receipt_number):
 # 5. TÉLÉCHARGEMENT REÇU PDF
 # ==================================================
 
+@login_required
 def receipt_pdf(request, receipt_number):
-    payment = get_object_or_404(Payment, receipt_number=receipt_number, status="validated")
+    payment_queryset = Payment.objects
+    if request.user.is_staff:
+        payment_queryset = scoped(Payment, user=request.user)
+    payment = get_object_or_404(
+        payment_queryset.select_related("inscription__student__user"),
+        receipt_number=receipt_number,
+        status="validated",
+    )
+
+    if not request.user.is_staff and payment.inscription.student.user != request.user:
+        raise Http404("Reçu introuvable.")
 
     if not payment.receipt_pdf:
         raise Http404("Le reçu PDF n'est pas disponible.")
@@ -239,6 +368,7 @@ def receipt_pdf(request, receipt_number):
 # ==================================================
 
 @require_GET
+@login_required
 def agents_list(request):
     query = request.GET.get("q", "").strip()
 
@@ -246,10 +376,10 @@ def agents_list(request):
         return JsonResponse({"agents": []})
 
     agents = PaymentAgent.objects.select_related("user").filter(is_active=True).filter(
-        Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(agent_code__icontains=query)
+        Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query)
     )[:10]
 
-    return JsonResponse({"agents": [{"id": a.id, "name": a.user.get_full_name(), "code": a.agent_code} for a in agents]})
+    return JsonResponse({"agents": [{"id": a.id, "name": a.user.get_full_name()} for a in agents]})
 
 
 # ==================================================
@@ -260,8 +390,7 @@ def agents_list(request):
 def payment_status(request, token):
     inscription = get_object_or_404(Inscription, public_token=token)
 
-    session_key = f"inscription_access_{inscription.id}"
-    if not request.session.get(session_key):
+    if not _has_inscription_access(request, inscription):
         return JsonResponse({"error": "Accès non autorisé."}, status=403)
 
     payments = inscription.payments.order_by("-paid_at")
@@ -273,7 +402,7 @@ def payment_status(request, token):
         "amount_due": inscription.amount_due,
         "balance": inscription.balance,
         "has_pending_payment": payments.filter(status="pending").exists(),
-        "can_pay": inscription.status == "created" and inscription.balance > 0 and not payments.filter(status="pending").exists(),
+        "can_pay": _can_initiate_payment(inscription, payments.filter(status="pending").exists()),
         "latest_payment": {
             "status": latest_payment.status, "amount": latest_payment.amount,
             "method": latest_payment.method, "receipt_number": latest_payment.receipt_number
@@ -289,13 +418,12 @@ def payment_status(request, token):
 def refresh_finance(request, token):
     inscription = get_object_or_404(Inscription, public_token=token)
 
-    session_key = f"inscription_access_{inscription.id}"
-    if not request.session.get(session_key):
+    if not _has_inscription_access(request, inscription):
         raise Http404("Accès non autorisé.")
 
     payments = inscription.payments.order_by("-paid_at")
     has_pending_payment = payments.filter(status="pending").exists()
-    can_pay = inscription.status == "created" and inscription.balance > 0 and not has_pending_payment
+    can_pay = _can_initiate_payment(inscription, has_pending_payment)
     payment_form = StudentPaymentForm(inscription=inscription) if can_pay else None
 
     return render(

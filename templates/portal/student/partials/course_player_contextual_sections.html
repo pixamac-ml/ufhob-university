@@ -1,0 +1,26 @@
+<section class="mx-auto mt-8 w-full max-w-5xl rounded-ui-card border border-ui-border bg-ui-surface p-5 shadow-sm sm:p-6" x-data="{ courseTab: 'resources' }" aria-label="Compléments de la leçon">
+  <header>
+    <p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Compléments du cours</p>
+    <h3 class="mt-1 text-lg font-bold text-ui-text">Ressources et activités de la leçon</h3>
+  </header>
+  <div class="mt-4 flex gap-1 overflow-x-auto border-b border-ui-border" role="tablist" aria-label="Compléments de cours">
+    <button type="button" @click="courseTab = 'resources'" :class="courseTab === 'resources' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-semibold" role="tab">Ressources</button>
+    <button type="button" @click="courseTab = 'questions'" :class="courseTab === 'questions' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-semibold" role="tab">Questions &amp; réponses</button>
+    <button type="button" @click="courseTab = 'exercises'" :class="courseTab === 'exercises' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-semibold" role="tab">Exercices</button>
+    <button type="button" @click="courseTab = 'quiz'" :class="courseTab === 'quiz' ? 'border-ui-primary text-ui-primary' : 'border-transparent text-ui-text-muted'" class="min-h-10 shrink-0 border-b-2 px-3 text-sm font-semibold" role="tab">QCM</button>
+  </div>
+
+  <div class="pt-5" x-show="courseTab === 'resources'">
+    {% if content.available_resources or content.legacy_file_url %}
+      <div class="divide-y divide-ui-border rounded-ui-card border border-ui-border bg-ui-surface-muted">
+        {% for resource in content.available_resources %}<article class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div class="min-w-0"><p class="truncate text-sm font-bold text-ui-text">{{ resource.title }}</p><p class="mt-1 text-xs text-ui-text-muted">{{ resource.get_resource_type_display }} · {{ resource.size_label }}</p></div><div class="flex shrink-0 gap-2">{% if resource.resource_type == "pdf" %}<a href="{{ resource.preview_url }}" target="_blank" rel="noopener" class="ui-focus-ring inline-flex min-h-10 items-center rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Consulter</a>{% endif %}<a href="{{ resource.download_url }}" class="ui-focus-ring inline-flex min-h-10 items-center rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong">Télécharger</a></div></article>{% endfor %}{% if content.legacy_file_url and content.content_type != "video" %}<article class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div class="min-w-0"><p class="truncate text-sm font-bold text-ui-text">{{ content.title }}</p><p class="mt-1 text-xs text-ui-text-muted">{{ content.get_content_type_display }}{% if content.legacy_file_size_label %} · {{ content.legacy_file_size_label }}{% endif %}</p></div><a href="{{ content.legacy_file_url }}" download class="ui-focus-ring inline-flex min-h-10 items-center rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong">Télécharger</a></article>{% endif %}</div>
+    {% else %}
+      <p class="rounded-ui-button border border-dashed border-ui-border bg-ui-surface-muted p-4 text-sm text-ui-text-muted">Aucune ressource complémentaire n’est associée à cette leçon.</p>
+    {% endif %}
+  </div>
+  <div class="pt-5" x-show="courseTab === 'questions'" x-cloak>
+    <div id="course-interactions-panel" data-course-interactions-panel data-course-id="{{ ec.id }}" data-list-url="{{ course_interactions_url }}" data-thread-url="{% url 'portal_student:course_question_thread' ec.id 0 %}">{% include "portal/student/partials/course_interactions.html" %}</div>
+  </div>
+  <div class="pt-5" x-show="courseTab === 'exercises'" x-cloak><p class="rounded-ui-button border border-dashed border-ui-border bg-ui-surface-muted p-4 text-sm text-ui-text-muted">Aucun exercice n’est encore proposé pour cette leçon.</p></div>
+  <div class="pt-5" x-show="courseTab === 'quiz'" x-cloak><p class="rounded-ui-button border border-dashed border-ui-border bg-ui-surface-muted p-4 text-sm text-ui-text-muted">Aucun QCM n’est encore disponible pour cette leçon.</p></div>
+</section>

@@ -1,0 +1,35 @@
+{% load humanize notification_center_tags %}
+<div class="max-h-80 overflow-y-auto">
+  {% for notification in notifications %}
+    <a href="{% url 'notification_center:open_notification' notification.id %}"
+       class="block border-b border-ui-border px-5 py-4 transition hover:bg-ui-surface-hover {% if not notification.read_at %}bg-ui-info-soft{% endif %}">
+      <div class="flex items-start gap-3">
+        <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-ui-card bg-ui-surface-muted text-ui-text-muted">
+          <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold text-ui-text">{{ notification.title }}</p>
+          <p class="text-[11px] font-semibold text-ui-text-muted">{{ notification|notification_category }}</p>
+          <p class="mt-1 line-clamp-2 text-xs text-ui-text-muted">{{ notification.body }}</p>
+          <p class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ui-text-muted">{{ notification.created_at|timesince }}</p>
+        </div>
+        {% if not notification.read_at %}
+          <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-ui-info"></span>
+        {% endif %}
+      </div>
+    </a>
+  {% empty %}
+    <div class="p-5 text-sm text-ui-text-muted">Aucune notification.</div>
+  {% endfor %}
+</div>
+{% if unread_count > 0 %}
+  <div class="border-t border-ui-border bg-ui-surface-muted px-5 py-3">
+    <button
+      hx-post="{% url 'notification_center:mark_all_notifications_read' %}"
+      hx-target="#notification-dropdown-content"
+      hx-swap="innerHTML"
+      class="w-full text-center text-sm font-semibold text-ui-info hover:underline">
+      Tout marquer comme lu
+    </button>
+  </div>
+{% endif %}

@@ -1,0 +1,19 @@
+{% load component_tags %}
+<section class="space-y-5" data-overlay-title="Créer une classe">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-wide text-ui-primary">UFHOB · Structure académique</p>
+    <h3 class="mt-1 text-lg font-semibold">{% if editing_class %}Modifier la classe{% else %}Créer une classe pour une école{% endif %}</h3>
+    <p class="mt-2 text-sm text-ui-text-muted">La classe sera créée sur le campus choisi, pour l’année académique active, et pourra immédiatement être utilisée pour finaliser les inscriptions.</p>
+  </div>
+  <form method="post" action="{% url 'accounts_portal:dg_academic_class_editor' %}" class="space-y-4" data-dg-interactive-form onsubmit="return dgSubmitAction(this)">
+    {% csrf_token %}
+    {% if editing_class %}<input type="hidden" name="class_id" value="{{ editing_class.pk }}">{% endif %}
+    {% if form.non_field_errors %}<div role="alert" class="rounded-ui-card bg-ui-danger-soft p-3 text-sm text-ui-danger">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}{% component "ui_core.django_form_field" field=field %}{% endcomponent %}{% endfor %}
+    <div class="rounded-ui-card border border-sky-100 bg-sky-50 p-3 text-sm text-sky-900">Le DG peut créer la classe pour l’école et le campus autorisés par le contexte affiché. Une classe existante au même niveau sera réutilisée et réactivée par le service académique partagé.</div>
+    <div class="flex justify-end gap-3 border-t border-ui-border pt-4">
+      <button type="button" class="rounded-ui-button border border-ui-border px-3 py-2" onclick="dgCloseModal()">Annuler</button>
+      <button type="submit" class="rounded-ui-button bg-ui-primary px-4 py-2 font-semibold text-ui-on-primary">{% if editing_class %}Enregistrer les modifications{% else %}Créer et activer la classe{% endif %}</button>
+    </div>
+  </form>
+</section>

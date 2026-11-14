@@ -1,73 +1,132 @@
 import secrets
+import logging
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
+from academics.services.enrollment_service import assign_student_academic_enrollment
+from accounts.models import Profile
+from inscriptions.models import Inscription
 from students.models import Student
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def _safe_assign_academic_enrollment(inscription):
+    try:
+        return assign_student_academic_enrollment(inscription)
+    except Exception:
+        logger.exception(
+            "Echec non bloquant de liaison academique pour inscription=%s",
+            getattr(inscription, "pk", None),
+        )
+        return {
+            "status": "error",
+            "enrollment": None,
+            "reason": "unexpected_error",
+        }
+
+
+def ensure_student_role(user):
+    profile, _ = Profile.objects.get_or_create(user=user)
+    changed_fields = []
+
+    if profile.role != "student":
+        profile.role = "student"
+        changed_fields.append("role")
+
+    if changed_fields:
+        profile.save(update_fields=changed_fields + ["updated_at"])
+
+    return profile
 
 
 def create_student_after_first_payment(inscription):
     """
-    Création automatique de l'étudiant après validation du premier paiement.
+    Creation automatique de l'etudiant apres validation du premier paiement.
 
-    RÈGLES MÉTIER :
-
-    - La candidature doit être ACCEPTÉE
-    - L'inscription doit être ACTIVE
-    - Un étudiant ne peut exister qu'une seule fois par inscription
-    - La fonction est idempotente (appel multiple sans duplication)
+    Regles metier :
+    - la candidature doit etre acceptee (ou acceptee sous reserve)
+    - au moins un paiement valide doit exister pour l'inscription
+    - l'inscription partiellement payee reste eligible
+    - la fonction est idempotente
     """
 
-    candidature = inscription.candidature
-
-    # ==================================================
-    # VALIDATIONS MÉTIER
-    # ==================================================
-
-    if candidature.status != "accepted":
-        raise ValidationError(
-            "Impossible de créer un étudiant : candidature non acceptée."
-        )
-
-    if inscription.status != "active":
-        # Sécurité supplémentaire
+    if not inscription:
         return None
 
-    # ==================================================
-    # IDENTIFIANTS
-    # ==================================================
-
-    username = f"etu_esfe{inscription.id}"
-
-    # ==================================================
-    # TRANSACTION SÉCURISÉE
-    # ==================================================
-
     with transaction.atomic():
+        from payments.models import Payment
 
-        # Vérifier si l'étudiant existe déjà
-        existing_student = Student.objects.filter(
-            inscription=inscription
-        ).select_related("user").first()
+        inscription_locked = (
+            Inscription.objects
+            .select_for_update()
+            .select_related("candidature")
+            .get(pk=inscription.pk)
+        )
+        candidature = inscription_locked.candidature
 
-        if existing_student:
+        if candidature.status not in {"accepted", "accepted_with_reserve"}:
             return None
 
-        # ==================================================
-        # CRÉATION / RÉCUPÉRATION USER
-        # ==================================================
+        has_validated_payment = Payment.objects.filter(
+            inscription=inscription_locked,
+            status=Payment.STATUS_VALIDATED,
+        ).exists()
+        if not has_validated_payment:
+            return None
 
+        # A re-enrollment owns a new administrative inscription but must never
+        # create a second Student/User.  The portal workflow keeps the source
+        # identity and activates its annual AcademicEnrollment after payment.
+        from students.models import StudentYearDecision
+
+        reenrollment_decision = (
+            StudentYearDecision.objects.filter(target_inscription=inscription_locked)
+            .select_related("student", "target_enrollment")
+            .first()
+        )
+        if reenrollment_decision is not None:
+            from portal.services.reenrollment_service import activate_reenrollment_from_payment
+
+            activated_decision = activate_reenrollment_from_payment(
+                inscription=inscription_locked,
+            )
+            student = activated_decision.student if activated_decision else reenrollment_decision.student
+            return {
+                "student": student,
+                "password": None,
+                "created": False,
+                "academic_enrollment": {
+                    "status": "reenrollment_activated",
+                    "enrollment": getattr(activated_decision, "target_enrollment", None),
+                },
+            }
+
+        existing_student = (
+            Student.objects
+            .filter(inscription=inscription_locked)
+            .select_related("user")
+            .first()
+        )
+        if existing_student:
+            ensure_student_role(existing_student.user)
+            academic_result = _safe_assign_academic_enrollment(inscription_locked)
+            return {
+                "student": existing_student,
+                "password": None,
+                "created": False,
+                "academic_enrollment": academic_result,
+            }
+
+        username = f"etu_esfe{inscription_locked.id}"
         user = User.objects.filter(username=username).first()
-
         raw_password = None
 
         if not user:
-
             raw_password = secrets.token_urlsafe(10)
-
             user = User.objects.create_user(
                 username=username,
                 email=candidature.email,
@@ -76,31 +135,38 @@ def create_student_after_first_payment(inscription):
                 last_name=candidature.last_name,
             )
 
-        # ==================================================
-        # MATRICULE ÉTUDIANT
-        # ==================================================
+        conflicting_student = Student.objects.filter(user=user).select_related("inscription").first()
+        if conflicting_student:
+            if conflicting_student.inscription_id != inscription_locked.id:
+                raise ValidationError(
+                    "Un compte etudiant existe deja pour cet utilisateur sur une autre inscription."
+                )
+            ensure_student_role(user)
+            academic_result = _safe_assign_academic_enrollment(inscription_locked)
+            return {
+                "student": conflicting_student,
+                "password": None,
+                "created": False,
+                "academic_enrollment": academic_result,
+            }
 
-        matricule = f"ESFE-{inscription.id:05d}"
+        ensure_student_role(user)
 
-        # Vérifier unicité du matricule
+        matricule = f"ESFE-{inscription_locked.id:05d}"
         if Student.objects.filter(matricule=matricule).exists():
-            matricule = f"ESFE-{inscription.id:05d}-{secrets.token_hex(2)}"
-
-        # ==================================================
-        # CRÉATION STUDENT
-        # ==================================================
+            matricule = f"ESFE-{inscription_locked.id:05d}-{secrets.token_hex(2)}"
 
         student = Student.objects.create(
             user=user,
-            inscription=inscription,
-            matricule=matricule
+            inscription=inscription_locked,
+            matricule=matricule,
         )
 
-    # ==================================================
-    # RETOUR RÉSULTAT
-    # ==================================================
+        academic_result = _safe_assign_academic_enrollment(inscription_locked)
 
-    return {
-        "student": student,
-        "password": raw_password,
-    }
+        return {
+            "student": student,
+            "password": raw_password,
+            "created": True,
+            "academic_enrollment": academic_result,
+        }

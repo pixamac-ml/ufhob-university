@@ -1,0 +1,8 @@
+{% load component_tags %}
+{% component "ui_core.panel" title="Candidatures" subtitle="Dossiers du contexte et de l’année universitaire sélectionnés." %}
+  <form hx-get="{{ dg_workspace_urls.admissions }}" hx-target="#executive-workspace" hx-push-url="true" class="mb-4 flex gap-2"><input name="q" value="{{ admission_query }}" aria-label="Rechercher une candidature" placeholder="Nom ou programme" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"><button type="submit" class="rounded-ui-button border border-ui-border px-3">Rechercher</button></form>
+  <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr><th class="p-2">Candidat</th><th class="p-2">École</th><th class="p-2">Programme</th><th class="p-2">Campus</th><th class="p-2">Statut</th></tr></thead><tbody>
+  {% for item in admission_page %}<tr class="border-t border-ui-border"><td class="p-2">{{ item.first_name }} {{ item.last_name }}</td><td class="p-2">{{ item.programme.school.code|default:"Non rattaché" }}</td><td class="p-2">{{ item.programme.title }}</td><td class="p-2">{{ item.branch.name }}</td><td class="p-2">{{ item.get_status_display }}</td></tr>{% empty %}<tr><td colspan="5" class="p-4">Aucune candidature.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include "portal/dg/partials/university_pagination.html" with page=admission_page section_url=dg_workspace_urls.admissions query=admission_query %}
+{% endcomponent %}

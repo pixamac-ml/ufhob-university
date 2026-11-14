@@ -1,92 +1,186 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Communauté{% endblock %}
+
 {% block content %}
-
-<!-- ================= HERO ================= -->
-<section class="relative pt-32 pb-24 bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white overflow-hidden">
-
-    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_20%,white,transparent_40%)]"></div>
-
-    <div class="relative max-w-6xl mx-auto px-4">
-
-        <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wide mb-6">
-            <i class="fa-solid fa-users text-secondary"></i>
-            Espace communautaire
-        </div>
-
-        <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-            Discussions Académiques
-        </h1>
-
-        <p class="text-primary-100 max-w-2xl text-lg">
-            Échange structuré de savoir, validation par les pairs et intelligence collective.
-        </p>
-
-        <div class="mt-8 text-sm text-primary-100 flex items-center gap-6">
-            <span class="flex items-center gap-2">
-                <i class="fa-solid fa-layer-group"></i>
-                {{ topics|length }} sujet{{ topics|length|pluralize }}
-            </span>
-        </div>
-
+<div class="bg-slate-50">
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-4">
+      <a href="{% url 'core:home' %}" class="inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition hover:text-primary-600">
+        <i class="fa-solid fa-arrow-left text-xs"></i>
+        Retour à l'accueil
+      </a>
     </div>
-</section>
+    <section class="overflow-hidden rounded-[28px] border border-primary-100 bg-white shadow-sm">
+      <div class="border-b border-primary-100 bg-gradient-to-r from-primary-50 via-white to-secondary-50 px-6 py-7 sm:px-8">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-2xl">
+            <p class="text-[11px] font-black uppercase tracking-[0.22em] text-primary-500">Communauté</p>
+            <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+              Un espace vivant, lisible et vraiment utile.
+            </h1>
+            <p class="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Sujets mis en avant, tendances, sujets sans réponse, contributeurs actifs et filtres rapides pour
+              retrouver ce qui compte sans perdre le fil.
+            </p>
+          </div>
 
-
-<!-- ================= CONTENU ================= -->
-<section class="bg-soft py-20">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-14">
-
-            <!-- ================= COLONNE LISTE ================= -->
-            <div class="lg:col-span-2">
-
-                {% include "community/partials/topic_list_toolbar.html" %}
-
-                <!-- LOADER HTMX -->
-                <div id="list-loader"
-                     class="hidden text-center text-primary-600 py-6">
-                    <i class="fa-solid fa-spinner fa-spin mr-2"></i>
-                    Chargement des discussions...
-                </div>
-
-                <!-- ZONE SWAP -->
-                <div id="topic-list-container"
-                     class="transition-all duration-300 ease-in-out">
-
-                    {% include "community/partials/topic_list_items.html" %}
-
-                </div>
-
+          <div class="grid grid-cols-2 gap-3 sm:w-[420px]">
+            <div class="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
+              <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                <i class="fa-solid fa-star text-sm"></i>
+              </span>
+              <p class="mt-3 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">À la une</p>
+              <p class="mt-1 text-2xl font-black text-slate-900">{{ featured_topics|length }}</p>
+              <p class="mt-1 text-sm text-slate-500">sujets mis en avant</p>
             </div>
-
-
-            <!-- ================= SIDEBAR ================= -->
-            <aside class="space-y-8">
-
-                {% include "community/partials/topic_list_sidebar.html" %}
-
-            </aside>
-
+            <div class="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
+              <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/10 text-secondary-dark">
+                <i class="fa-solid fa-bolt text-sm"></i>
+              </span>
+              <p class="mt-3 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tendance</p>
+              <p class="mt-1 text-2xl font-black text-slate-900">{{ trending_topics|length }}</p>
+              <p class="mt-1 text-sm text-slate-500">sujets actifs</p>
+            </div>
+            <div class="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
+              <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent-dark">
+                <i class="fa-solid fa-circle-question text-sm"></i>
+              </span>
+              <p class="mt-3 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">À débloquer</p>
+              <p class="mt-1 text-2xl font-black text-slate-900">{{ unanswered_topics|length }}</p>
+              <p class="mt-1 text-sm text-slate-500">sujets sans réponse</p>
+            </div>
+            <div class="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
+              <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <i class="fa-solid fa-users text-sm"></i>
+              </span>
+              <p class="mt-3 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Communauté</p>
+              <p class="mt-1 text-2xl font-black text-slate-900">{{ top_contributors|length }}</p>
+              <p class="mt-1 text-sm text-slate-500">contributeurs visibles</p>
+            </div>
+          </div>
         </div>
-    </div>
-</section>
+      </div>
 
+      {% if top_contributors %}
+        <div class="border-b border-primary-100 bg-gradient-to-r from-amber-50 via-white to-primary-50 px-6 py-4 sm:px-8">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-lg font-black text-white shadow-md">
+                {% if top_contributors.0.profile.avatar %}
+                  <img src="{{ top_contributors.0.profile.avatar.url }}" alt="{{ top_contributors.0.username }}" class="h-full w-full object-cover">
+                {% else %}
+                  {{ top_contributors.0.get_full_name|default:top_contributors.0.username|slice:":1"|upper }}
+                {% endif %}
+              </div>
+              <div class="min-w-0">
+                <p class="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-amber-600">
+                  <i class="fa-solid fa-trophy text-[10px]"></i> Membre du moment
+                </p>
+                <p class="truncate text-base font-extrabold text-slate-950">
+                  {{ top_contributors.0.get_full_name|default:top_contributors.0.username }}
+                </p>
+                {% if top_contributors.0.gamification %}
+                  <p class="flex items-center gap-1.5 text-sm text-slate-500">
+                    <i class="fa-solid fa-{{ top_contributors.0.gamification.get_level_icon_class }} text-amber-500"></i>
+                    {{ top_contributors.0.gamification.get_level_title }}
+                    · {{ top_contributors.0.gamification.total_xp }} XP
+                    {% if top_contributors.0.badge_count %}
+                      · <i class="fa-solid fa-award text-amber-500"></i> {{ top_contributors.0.badge_count }} badge{{ top_contributors.0.badge_count|pluralize }}
+                    {% endif %}
+                  </p>
+                {% endif %}
+              </div>
+            </div>
+            <a href="{% url 'community:leaderboard' %}"
+               class="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-primary-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow">
+              Voir le classement
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </a>
+          </div>
+        </div>
+      {% endif %}
 
-<!-- ================= ANIMATIONS HTMX ================= -->
-<script>
-document.body.addEventListener('htmx:beforeSwap', function(evt) {
-    if (evt.detail.target.id === "topic-list-container") {
-        evt.detail.target.classList.add("opacity-0", "translate-y-2");
-    }
-});
+      <section class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div class="space-y-6">
+          {% if featured_topics %}
+            <div class="rounded-[28px] border border-primary-100 bg-white p-5 shadow-sm">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Sélection éditoriale</p>
+                  <h2 class="mt-1 text-xl font-bold text-slate-950">Sujets à mettre en avant</h2>
+                </div>
+                <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700">
+                  {{ featured_topics|length }} sujets
+                </span>
+              </div>
 
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target.id === "topic-list-container") {
-        setTimeout(() => {
-            evt.detail.target.classList.remove("opacity-0", "translate-y-2");
-        }, 10);
-    }
-});
-</script>
+              <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {% for topic in featured_topics|slice:":3" %}
+                  <a href="{% url 'community:topic_detail' topic.slug %}" class="flex h-full flex-col rounded-3xl border border-primary-100 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:border-primary-200 hover:bg-white hover:shadow-sm">
+                    <div class="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      {% if topic.category %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-1 shadow-sm"
+                              style="background-color: {{ topic.category.color|default:'#1e4f6f' }}1a; color: {{ topic.category.color|default:'#1e4f6f' }};">
+                          {% if topic.category.icon %}<i class="fa-solid fa-{{ topic.category.icon }} text-[10px]"></i>{% endif %}
+                          {{ topic.category.name }}
+                        </span>
+                      {% endif %}
+                      {% if topic.is_pinned %}
+                        <span class="rounded-full bg-amber-50 px-2 py-1 text-amber-700">Épinglé</span>
+                      {% endif %}
+                    </div>
+                    <h3 class="mt-3 text-lg font-bold text-slate-950">{{ topic.title }}</h3>
+                    <p class="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-slate-600">
+                      {{ topic.content|striptags|truncatechars:160 }}
+                    </p>
+                    <div class="mt-4 flex items-center gap-2 border-t border-primary-100/70 pt-3">
+                      <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-600 text-xs font-bold text-white">
+                        {% if topic.author.profile.avatar %}
+                          <img src="{{ topic.author.profile.avatar.url }}" alt="{{ topic.author.username }}" class="h-full w-full object-cover">
+                        {% else %}
+                          {{ topic.author.get_full_name|default:topic.author.username|slice:":1"|upper }}
+                        {% endif %}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="truncate text-xs font-bold text-slate-700">{{ topic.author.get_full_name|default:topic.author.username }}</p>
+                        {% if topic.author.gamification %}
+                          <p class="flex items-center gap-1 text-[11px] text-slate-400">
+                            <i class="fa-solid fa-{{ topic.author.gamification.get_level_icon_class }}"></i>
+                            {{ topic.author.gamification.get_level_title }}
+                          </p>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
 
+          <div class="rounded-[28px] border border-primary-100 bg-white p-5 shadow-sm">
+            {% include "community/partials/topic_list_toolbar.html" %}
+          </div>
+
+          <div class="rounded-[28px] border border-primary-100 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Flux principal</p>
+                <h2 class="mt-1 text-xl font-bold text-slate-950">Dernières discussions</h2>
+              </div>
+              <p id="topics-count" class="text-sm text-slate-500">{{ topics|length }} sujets affichés</p>
+            </div>
+            <div id="topic-list-container" class="transition-opacity duration-150">
+              {% include "community/partials/topic_list_items.html" %}
+            </div>
+          </div>
+        </div>
+
+        <div>
+        {% include "community/partials/topic_list_sidebar.html" %}
+      </div>
+    </section>
+  </div>
+</div>
 {% endblock %}

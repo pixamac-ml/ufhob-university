@@ -1,0 +1,39 @@
+<div class="tunnel-step-shell">
+  <div class="tunnel-scroll">
+    <p class="tunnel-kicker text-ufhob-secondary-dark">Vérification avant envoi</p>
+    <h2 class="mt-3 font-bold text-ufhob-primary">Votre dossier de candidature</h2>
+    <p class="mt-3 text-sm text-ufhob-muted">Vérifiez vos informations. Vous pouvez revenir aux étapes précédentes avant de transmettre votre dossier.</p>
+    <section class="funnel-summary">
+      <h3>Parcours</h3>
+      <dl>
+        <div><dt>École</dt><dd x-text="prettyValue(formData.school_name)"></dd></div>
+        <div><dt>Campus</dt><dd x-text="prettyValue(formData.branch_name)"></dd></div>
+        <div><dt>Cycle / niveau</dt><dd x-text="prettyValue(formData.current_cycle_name)"></dd></div>
+        <div><dt>Programme</dt><dd x-text="prettyValue(formData.formation)"></dd></div>
+      </dl>
+    </section>
+    <section class="funnel-summary">
+      <h3>Identité et coordonnées</h3>
+      <dl>
+        <div><dt>Nom</dt><dd x-text="prettyValue(formData.last_name)"></dd></div>
+        <div><dt>Prénom</dt><dd x-text="prettyValue(formData.first_name)"></dd></div>
+        <div><dt>Naissance</dt><dd x-text="prettyValue(formData.birth_date)"></dd></div>
+        <div><dt>Lieu</dt><dd x-text="prettyValue(formData.birth_place || formData.city)"></dd></div>
+        <div><dt>Ville</dt><dd x-text="prettyValue(formData.city)"></dd></div>
+        <div><dt>Email</dt><dd x-text="prettyValue(formData.email)"></dd></div>
+        <div><dt>Téléphone</dt><dd x-text="prettyValue(formData.phone)"></dd></div>
+      </dl>
+    </section>
+    <section class="funnel-summary">
+      <h3>Pièces justificatives</h3>
+      <p class="text-sm" x-text="requiredDocumentsUploaded() + ' / ' + requiredDocumentsTotal() + ' pièces obligatoires sélectionnées'"></p>
+      <p class="mt-2 text-sm font-semibold text-ufhob-primary" x-text="documentSubmissionStatus()"></p>
+      <p class="mt-2 text-xs text-ufhob-muted" x-text="documentSubmissionNote()"></p>
+    </section>
+    <p class="mt-5 text-xs text-ufhob-muted">La réception de votre candidature ne vaut pas décision d’admission. Votre dossier sera examiné par le service des admissions.</p>
+  </div>
+  <div class="tunnel-nav">
+    <button type="button" class="tunnel-btn-prev" :disabled="submitting" @click="goTo(3)">Retour</button>
+    <button type="submit" class="tunnel-btn-next" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Envoi en cours…' : 'Envoyer ma candidature'">Envoyer ma candidature</button>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% include "portal/staff/director/partials/transfers/_feedback.html" %}
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    {% component "ui_core.stat_card" label="Dossiers" value=transfer_metrics.total|default:0 icon="folders" tone="neutral" %}{% endcomponent %}
+    <a href="{% url 'accounts_portal:portal_dashboard' %}?section=transferts&view=overview&transfer_pending=1" hx-get="{% url 'accounts_portal:director_transfers_subcontent' %}?view=overview&transfer_pending=1" hx-target="#director-transfer-subcontent" hx-swap="innerHTML" hx-indicator="#director-transfer-loading" class="ui-focus-ring rounded-ui-card"><span class="sr-only">Voir les dossiers à traiter</span>{% component "ui_core.stat_card" label="À traiter" value=transfer_metrics.pending|default:0 icon="inbox" tone="warning" %}{% endcomponent %}</a>
+    {% component "ui_core.stat_card" label="Changements internes" value=transfer_metrics.internal|default:0 icon="arrow-right-left" tone="info" %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Entrants" value=transfer_metrics.incoming|default:0 icon="user-round-plus" tone="success" %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Sortants" value=transfer_metrics.outgoing|default:0 icon="school" tone="accent" %}{% endcomponent %}
+  </div>
+  {% if transfer_pending_only %}{% component "ui_core.alert" title="Dossiers nécessitant une action" message="Cette vue affiche les dossiers soumis, en étude, à compléter ou autorisés en attente d’application." tone="warning" %}{% endcomponent %}{% endif %}
+  <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
+    <section class="min-w-0"><div class="mb-3"><h2 class="text-base font-bold text-ui-text">Dossiers récents</h2><p class="mt-1 text-sm text-ui-text-muted">Les mobilités enregistrées dans votre annexe.</p></div>{% include "portal/staff/director/partials/transfers/_list.html" %}</section>
+    <aside class="border-l border-ui-border pl-5"><h2 class="text-sm font-bold text-ui-text">Parcours du dossier</h2><div class="mt-4 space-y-4 text-xs leading-5 text-ui-text-muted"><p><strong class="text-ui-text">1. Créer</strong><br>Choisir le type et compléter les seules informations utiles.</p><p><strong class="text-ui-text">2. Étudier</strong><br>Vérifier le parcours et les documents avant la décision.</p><p><strong class="text-ui-text">3. Autoriser puis appliquer</strong><br>L’opération effective est séparée de la décision et reste tracée.</p></div></aside>
+  </div>
+</div>

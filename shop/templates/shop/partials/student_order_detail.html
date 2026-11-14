@@ -1,0 +1,165 @@
+{% load humanize %}
+<section class="space-y-4">
+  <a href="{% url 'portal_student:dashboard' %}?section=shop"
+    @click="if (document.getElementById('student-drawer-content')) { $event.preventDefault(); window.dispatchEvent(new CustomEvent('ui-overlay-close', { detail: { id: 'student-drawer' } })); }"
+    class="flex items-center gap-2 text-xs font-bold text-slate-500 transition hover:text-primary">
+    <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Retour a la boutique
+  </a>
+  <div class="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+    <p class="text-xs font-bold uppercase tracking-wide text-primary">Commande boutique</p>
+    <h1 class="mt-1 text-2xl font-black text-slate-900">{{ order.reference }}</h1>
+    <p class="mt-1 text-sm text-slate-500">Statut: {{ order.get_status_display }}</p>
+    {% if order_error %}<div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{{ order_error }}</div>{% endif %}
+    {% if order_success %}<div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{{ order_success }}</div>{% endif %}
+    <div class="mt-5 divide-y divide-slate-100">
+      {% for item in order.items.all %}
+      <div class="flex items-center justify-between gap-4 py-3">
+        <div class="flex items-center gap-3">
+          <div class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+            {% if item.product.image %}
+            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="h-full w-full object-cover">
+            {% else %}
+            <i data-lucide="package" style="width:22px;height:22px;" class="text-slate-300"></i>
+            {% endif %}
+          </div>
+          <div>
+          <p class="text-sm font-semibold text-slate-900">{{ item.product.name }}{% if item.variant %} - {{ item.variant.label }}{% endif %}</p>
+          <p class="text-xs text-slate-500">Quantite {{ item.quantity }}</p>
+          </div>
+        </div>
+        <p class="text-sm font-bold text-slate-900">{{ item.line_total|intcomma }} FCFA</p>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-5 rounded-xl bg-slate-50 p-4">
+      <div class="flex justify-between text-sm"><span>Total</span><strong>{{ order.total_amount|intcomma }} FCFA</strong></div>
+      <div class="mt-2 flex justify-between text-sm"><span>Deja paye</span><strong>{{ order.paid_amount|intcomma }} FCFA</strong></div>
+      <div class="mt-2 flex justify-between text-sm"><span>Reste</span><strong class="text-rose-600">{{ order.balance|intcomma }} FCFA</strong></div>
+    </div>
+    {% if has_pending_payment %}
+    <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+      Paiement envoye. La gestionnaire doit le valider avant l'emission du recu.
+    </div>
+    {% elif order.balance > 0 and can_student_request_payment %}
+    <div
+        id="shop-payment-form-block"
+        class="mt-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-slate-50 to-primary/[0.07] p-5 sm:p-6">
+      <div class="mb-6 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg">
+          <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">Payer la commande</h3>
+          <p class="text-sm text-slate-500">Meme logique que votre paiement de scolarite (especes : agent + code + montant).</p>
+        </div>
+      </div>
+
+      <form method="post" action="{% url 'shop:student_order_pay' order.id %}" class="space-y-5">
+        {% csrf_token %}
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-slate-700" for="{{ payment_form.method.id_for_label }}">
+            Methode de paiement <span class="text-red-500">*</span>
+          </label>
+          <select
+              name="{{ payment_form.method.html_name }}"
+              id="{{ payment_form.method.id_for_label }}"
+              required
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">Selectionnez une methode</option>
+            {% for value, label in payment_form.fields.method.choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if payment_form.method.errors %}<p class="mt-1 text-xs font-medium text-rose-600">{{ payment_form.method.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div id="shop-cash-fields" class="hidden space-y-4">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-700" for="{{ payment_form.agent_name.id_for_label }}">
+              Nom de l'agent <span class="text-red-500">*</span>
+            </label>
+            <input type="text"
+                   name="{{ payment_form.agent_name.html_name }}"
+                   id="{{ payment_form.agent_name.id_for_label }}"
+                   value="{{ payment_form.agent_name.value|default_if_none:'' }}"
+                   hx-post="{% url 'shop:student_shop_verify_agent' order.pk %}"
+                   hx-trigger="blur delay:250ms"
+                   hx-target="#shop-agent-result"
+                   hx-swap="outerHTML"
+                   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                   autocomplete="off"
+                   class="{{ payment_form.agent_name.field.widget.attrs.class }}"
+                   placeholder="Ex : Fatoumata Dia" />
+            <p class="mt-1 text-xs text-slate-500">Saisissez le nom puis quittez le champ pour valider l'agent aupres du systeme.</p>
+          </div>
+          <div id="shop-agent-result"></div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-slate-700" for="{{ payment_form.verification_code.id_for_label }}">
+              Code de validation <span class="text-red-500">*</span>
+            </label>
+            {{ payment_form.verification_code }}
+            {% if payment_form.verification_code.help_text %}<p class="mt-1 text-xs text-slate-500">{{ payment_form.verification_code.help_text }}</p>{% endif %}
+            {% if payment_form.verification_code.errors %}<p class="mt-1 text-xs text-rose-600">{{ payment_form.verification_code.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-slate-700" for="{{ payment_form.amount.id_for_label }}">
+            Montant a payer <span class="text-red-500">*</span>
+          </label>
+          <div>{{ payment_form.amount }}</div>
+          {% if payment_form.amount.errors %}
+          <p class="mt-1 text-xs text-rose-600">{{ payment_form.amount.errors.0 }}</p>
+          {% else %}
+          <p class="mt-1 text-xs text-slate-500">Solde maximal : {{ order_balance|intcomma }} FCFA</p>
+          {% endif %}
+        </div>
+
+        {% if payment_form.non_field_errors %}
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {{ payment_form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+
+        <button type="submit" class="w-full min-h-[48px] rounded-xl border-2 border-primary-800 bg-primary-600 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-primary-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300 focus-visible:ring-offset-2">
+          Envoyer la demande de paiement
+        </button>
+      </form>
+      <script>
+      (function(){
+        var sel = document.getElementById("{{ payment_form.method.id_for_label }}");
+        var box = document.getElementById("shop-cash-fields");
+        if (!sel || !box) return;
+        function sync(){ box.classList.toggle("hidden", sel.value !== "cash"); }
+        sel.addEventListener("change", sync);
+        sync();
+      })();
+      </script>
+    </div>
+    {% endif %}
+    {% if order.balance > 0 and not can_student_request_payment %}
+    <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      Commande confirmÃ©e et Ã  encaisser. PrÃ©sentez votre rÃ©fÃ©rence Ã  la gestionnaire de votre annexe ; aucun paiement ni reÃ§u n'est encore enregistrÃ©.
+    </div>
+    {% if can_student_cancel %}
+    <form method="post" hx-post="{% url 'shop:student_order_cancel' order.id %}" hx-target="#student-drawer-content" hx-swap="innerHTML" hx-confirm="Annuler cette commande ? Cette action est possible uniquement avant tout encaissement." class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="inline-flex min-h-10 items-center rounded-xl border border-rose-300 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50">Annuler la commande</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    <div class="mt-5 space-y-2">
+      {% for payment in order.payments.all %}
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm">
+        <span class="break-words">{{ payment.reference|default:"Paiement en attente" }} — {{ payment.get_status_display }} — {{ payment.amount|intcomma }} F — {{ payment.get_method_display }}</span>
+        {% if payment.receipt_pdf %}
+        <a href="{% url 'shop:payment_receipt' payment.id %}" class="shrink-0 font-semibold text-primary">Recu PDF</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

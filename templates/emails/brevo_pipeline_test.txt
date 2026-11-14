@@ -1,0 +1,9 @@
+Test pipeline email UFHOB Core
+
+Bonjour,
+
+Ceci est un test minimal du pipeline email transactionnel UFHOB via Brevo SMTP.
+
+Si vous recevez ce message, la chaine de base fonctionne.
+
+UFHOB Core

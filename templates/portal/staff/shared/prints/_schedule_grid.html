@@ -1,0 +1,30 @@
+<table class="print-schedule-grid">
+  <thead>
+    <tr>
+      <th>Horaires</th>
+      {% for day in schedule.days %}<th>{{ day.label }}<span class="day-date">{{ day.date|date:"d/m" }}</span></th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for slot in schedule.slots %}
+      <tr>
+        <td class="time-cell">{{ slot.label }}{% if slot.end_label %}<span>{{ slot.end_label }}</span>{% endif %}</td>
+        {% for cell in slot.cells %}
+          <td>
+            {% for event in cell.events %}
+              <article class="course-card">
+                <p class="course-title">{{ event.title }}</p>
+                {% if event.ec_code %}<p class="course-ue">UE / EC : {{ event.ec_code }}</p>{% endif %}
+                <p class="course-meta">
+                  {% if show_teacher_context %}<span><strong>Classe :</strong> {{ event.class_name }}</span><span><strong>École / Campus :</strong> {{ event.school_name|default:"—" }} · {{ event.branch_name }}</span>{% else %}<span><strong>Enseignant :</strong> {{ event.teacher_name }}</span>{% endif %}
+                  <span><strong>{% if event.is_online %}Modalité :{% else %}Salle :{% endif %}</strong> {% if event.is_online %}En ligne{% else %}{{ event.location|default:"Non précisée" }}{% endif %}</span>
+                  {% if show_teacher_context %}<span><strong>Programme :</strong> {{ event.programme_name }} · {{ event.academic_year_name }}</span>{% endif %}
+                </p>
+              </article>
+            {% empty %}<div class="free">Libre</div>{% endfor %}
+          </td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

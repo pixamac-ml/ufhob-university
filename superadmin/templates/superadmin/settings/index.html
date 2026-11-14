@@ -1,0 +1,60 @@
+{% extends "superadmin/unified_base.html" %}
+
+{% block page_title %}Université et contenus publics{% endblock %}
+{% block page_subtitle %}Textes, images et coordonnées consommés directement par la vitrine UFHOB{% endblock %}
+
+{% block content_main %}
+<div class="mx-auto max-w-6xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3"><a href="{% url 'superadmin:public_site_dashboard' %}" class="btn btn-outline">← Site public</a><a href="{% url 'core:home' %}" target="_blank" rel="noopener" class="btn btn-primary">Voir la vitrine</a></div>
+  <form method="post" enctype="multipart/form-data" class="space-y-6">{% csrf_token %}
+    <section id="universite" class="card scroll-mt-24"><div class="card-header"><div><h2 class="font-black text-slate-900">Université et accueil</h2><p class="text-sm text-slate-500">Identité, hero et présentation institutionnelle.</p></div></div><div class="card-body grid gap-5 md:grid-cols-2">
+      <label><span class="form-label">Nom complet</span><input class="form-input" name="name" required value="{{ institution.name|default:'' }}"></label>
+      <label><span class="form-label">Nom court</span><input class="form-input" name="short_name" value="{{ institution.short_name|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Titre du hero</span><input class="form-input" name="home_hero_title" value="{{ site_configuration.home_hero_title|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Accroche du hero</span><textarea class="form-input" rows="3" name="home_hero_subtitle">{{ site_configuration.home_hero_subtitle|default:'' }}</textarea></label>
+      <label><span class="form-label">Titre de présentation</span><input class="form-input" name="about_title" value="{{ presentation.about_title|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Présentation</span><textarea class="form-input" rows="7" name="about_text">{{ presentation.about_text|default:'' }}</textarea></label>
+      <label><span class="form-label">Titre vision</span><input class="form-input" name="vision_title" value="{{ presentation.vision_title|default:'' }}"></label>
+      <label><span class="form-label">Titre mission</span><input class="form-input" name="mission_title" value="{{ presentation.mission_title|default:'' }}"></label>
+      <label><span class="form-label">Vision</span><textarea class="form-input" rows="4" name="vision_text">{{ presentation.vision_text|default:'' }}</textarea></label>
+      <label><span class="form-label">Mission</span><textarea class="form-input" rows="4" name="mission_text">{{ presentation.mission_text|default:'' }}</textarea></label>
+      <div class="md:col-span-2 grid gap-4 md:grid-cols-3">
+        {% include "superadmin/public_site/_image_field.html" with field_name="site_logo" label="Logo du site" image=site_configuration.site_logo %}
+        {% include "superadmin/public_site/_image_field.html" with field_name="home_hero_image" label="Image du hero" image=site_configuration.home_hero_image %}
+        {% include "superadmin/public_site/_image_field.html" with field_name="home_about_image" label="Image de présentation" image=site_configuration.home_about_image %}
+      </div>
+    </div></section>
+
+    <section id="gouvernance" class="card scroll-mt-24"><div class="card-header"><div><h2 class="font-black text-slate-900">Gouvernance</h2><p class="text-sm text-slate-500">Contenu du bloc institutionnel de la page d’accueil.</p></div></div><div class="card-body grid gap-5 md:grid-cols-2">
+      <label class="md:col-span-2"><span class="form-label">Titre</span><input class="form-input" name="governance_title" value="{{ site_configuration.governance_title|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Introduction</span><textarea class="form-input" rows="3" name="governance_text">{{ site_configuration.governance_text|default:'' }}</textarea></label>
+      <label><span class="form-label">Titre du pôle administratif</span><input class="form-input" name="governance_admin_title" value="{{ site_configuration.governance_admin_title|default:'' }}"></label>
+      <label><span class="form-label">Titre du pôle académique</span><input class="form-input" name="governance_academic_title" value="{{ site_configuration.governance_academic_title|default:'' }}"></label>
+      <label><span class="form-label">Texte administratif</span><textarea class="form-input" rows="4" name="governance_admin_text">{{ site_configuration.governance_admin_text|default:'' }}</textarea></label>
+      <label><span class="form-label">Texte académique</span><textarea class="form-input" rows="4" name="governance_academic_text">{{ site_configuration.governance_academic_text|default:'' }}</textarea></label>
+    </div></section>
+
+    <section id="vie-universitaire" class="card scroll-mt-24"><div class="card-header"><div><h2 class="font-black text-slate-900">Campus & vie universitaire</h2><p class="text-sm text-slate-500">Présentation générale ; les Campus restent gérés dans Branch.</p></div></div><div class="card-body grid gap-5 md:grid-cols-2">
+      <label class="md:col-span-2"><span class="form-label">Titre</span><input class="form-input" name="campus_life_title" value="{{ site_configuration.campus_life_title|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Présentation</span><textarea class="form-input" rows="5" name="campus_life_text">{{ site_configuration.campus_life_text|default:'' }}</textarea></label>
+      {% include "superadmin/public_site/_image_field.html" with field_name="campus_life_image_1" label="Image vie universitaire 1" image=site_configuration.campus_life_image_1 %}
+      {% include "superadmin/public_site/_image_field.html" with field_name="campus_life_image_2" label="Image vie universitaire 2" image=site_configuration.campus_life_image_2 %}
+    </div></section>
+
+    <section id="recherche" class="card scroll-mt-24"><div class="card-header"><div><h2 class="font-black text-slate-900">Recherche & innovation</h2><p class="text-sm text-slate-500">Présentation générale complétée automatiquement par Mémoires, Événements et Infrastructures.</p></div></div><div class="card-body grid gap-5 md:grid-cols-2">
+      <label class="md:col-span-2"><span class="form-label">Titre</span><input class="form-input" name="research_title" value="{{ site_configuration.research_title|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Présentation</span><textarea class="form-input" rows="5" name="research_text">{{ site_configuration.research_text|default:'' }}</textarea></label>
+      {% include "superadmin/public_site/_image_field.html" with field_name="research_image" label="Image recherche" image=site_configuration.research_image %}
+      <div class="rounded-xl bg-slate-50 p-4"><p class="font-bold text-slate-900">Sources associées</p><div class="mt-3 flex flex-wrap gap-2"><a href="{% url 'superadmin:memoire_list' %}" class="btn btn-outline">Mémoires</a><a href="{% url 'superadmin:event_list' %}" class="btn btn-outline">Événements</a><a href="{% url 'superadmin:public_infrastructure_list' %}" class="btn btn-outline">Infrastructures</a></div></div>
+    </div></section>
+
+    <section id="contact" class="card scroll-mt-24"><div class="card-header"><div><h2 class="font-black text-slate-900">Contact, CTA et réseaux sociaux</h2><p class="text-sm text-slate-500">Coordonnées centralisées utilisées dans les pages et le footer.</p></div></div><div class="card-body grid gap-5 md:grid-cols-2">
+      <label><span class="form-label">Email</span><input type="email" class="form-input" name="email" value="{{ institution.email|default:'' }}"></label><label><span class="form-label">Téléphone</span><input class="form-input" name="phone" value="{{ institution.phone|default:'' }}"></label>
+      <label class="md:col-span-2"><span class="form-label">Adresse</span><input class="form-input" name="address" value="{{ institution.address|default:'' }}"></label><label><span class="form-label">Ville</span><input class="form-input" name="city" value="{{ institution.city|default:'' }}"></label><label><span class="form-label">Pays</span><input class="form-input" name="country" value="{{ institution.country|default:'' }}"></label>
+      <label><span class="form-label">Titre CTA</span><input class="form-input" name="cta_title" value="{{ presentation.cta_title|default:'' }}"></label><label><span class="form-label">Texte du bouton</span><input class="form-input" name="cta_button_text" value="{{ presentation.cta_button_text|default:'' }}"></label><label class="md:col-span-2"><span class="form-label">Texte CTA</span><textarea class="form-input" rows="3" name="cta_subtitle">{{ presentation.cta_subtitle|default:'' }}</textarea></label><label class="md:col-span-2"><span class="form-label">URL du bouton</span><input class="form-input" name="cta_button_url" value="{{ presentation.cta_button_url|default:'/admissions/' }}"></label>
+      <label><span class="form-label">Facebook</span><input type="url" class="form-input" name="facebook_url" value="{{ site_configuration.facebook_url|default:'' }}"></label><label><span class="form-label">Instagram</span><input type="url" class="form-input" name="instagram_url" value="{{ site_configuration.instagram_url|default:'' }}"></label><label><span class="form-label">LinkedIn</span><input type="url" class="form-input" name="linkedin_url" value="{{ site_configuration.linkedin_url|default:'' }}"></label><label><span class="form-label">YouTube</span><input type="url" class="form-input" name="youtube_url" value="{{ site_configuration.youtube_url|default:'' }}"></label><label><span class="form-label">TikTok</span><input type="url" class="form-input" name="tiktok_url" value="{{ site_configuration.tiktok_url|default:'' }}"></label><label><span class="form-label">WhatsApp</span><input type="url" class="form-input" name="whatsapp_url" value="{{ site_configuration.whatsapp_url|default:'' }}"></label>
+    </div></section>
+    <div class="sticky bottom-4 flex justify-end"><button type="submit" class="btn btn-primary shadow-lg">Enregistrer les contenus publics</button></div>
+  </form>
+</div>
+{% endblock %}

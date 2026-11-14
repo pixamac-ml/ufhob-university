@@ -1,0 +1,41 @@
+<style>
+  @page { size: A4; margin: 14mm 16mm 16mm; }
+  :root { --receipt-primary: #1d5761; --receipt-ink: #20262c; --receipt-muted: #56616b; --receipt-rule: #cfd7dc; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 18px; background: #edf1f2; color: var(--receipt-ink); font: 10pt/1.35 Arial, Helvetica, sans-serif; }
+  .receipt-document { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 16mm; background: #fff; }
+  .receipt-letterhead { display: grid; grid-template-columns: 50mm 1fr; gap: 6mm; align-items: start; border-bottom: 1.5px solid var(--receipt-primary); padding-bottom: 4mm; }
+  .receipt-logos { display: flex; align-items: center; gap: 2mm; }
+  .receipt-logo { width: 22mm; max-height: 24mm; object-fit: contain; }
+  .receipt-institution p { margin: 0; }
+  .receipt-university { color: var(--receipt-primary); font-size: 13pt; font-weight: 700; text-transform: uppercase; letter-spacing: .25px; }
+  .receipt-school { margin-top: 1mm !important; font-weight: 700; }
+  .receipt-campus { color: var(--receipt-muted); font-size: 9pt; }
+  .receipt-contact { margin-top: 1.5mm !important; color: var(--receipt-muted); font-size: 8pt; }
+  .receipt-title-row { display: grid; grid-template-columns: 1fr 68mm; gap: 8mm; align-items: end; margin: 8mm 0 6mm; }
+  .receipt-title-row h1 { margin: 0; color: var(--receipt-ink); font-size: 15pt; letter-spacing: .9px; text-align: center; }
+  .receipt-references, .receipt-data-grid, .receipt-operation-meta { margin: 0; }
+  .receipt-references { border-left: 1px solid var(--receipt-rule); padding-left: 4mm; font-size: 8.5pt; }
+  .receipt-references div, .receipt-data-grid div, .receipt-operation-meta div { display: grid; grid-template-columns: max-content 1fr; gap: 3mm; }
+  dt { color: var(--receipt-muted); } dd { margin: 0; font-weight: 600; }
+  .receipt-section { border-top: 1px solid var(--receipt-rule); padding-top: 3mm; margin-top: 5mm; break-inside: avoid; }
+  .receipt-section h2 { margin: 0 0 3mm; color: var(--receipt-primary); font-size: 8.5pt; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+  .receipt-data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm 10mm; }
+  .receipt-data-grid div { grid-template-columns: 35mm 1fr; }
+  .receipt-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  .receipt-table th { padding: 2.5mm 3mm; background: #eef4f4; border-top: 1px solid var(--receipt-primary); border-bottom: 1px solid var(--receipt-primary); color: var(--receipt-ink); font-size: 8.5pt; font-weight: 700; text-align: left; text-transform: uppercase; }
+  .receipt-table td { padding: 3mm; border-bottom: 1px solid var(--receipt-rule); }
+  .receipt-table .amount { text-align: right; white-space: nowrap; }
+  .receipt-operation-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm 8mm; margin-top: 3mm; font-size: 8.5pt; }
+  .receipt-operation-meta div { grid-template-columns: 1fr; gap: .5mm; }
+  .receipt-financial-summary { width: 76mm; margin: 6mm 0 0 auto; border-top: 1.5px solid var(--receipt-primary); padding-top: 2mm; break-inside: avoid; }
+  .receipt-financial-summary p { display: flex; justify-content: space-between; gap: 8mm; margin: 1.5mm 0; }
+  .receipt-financial-summary .balance { border-top: 1px solid var(--receipt-rule); margin-top: 2.5mm; padding-top: 2mm; color: var(--receipt-primary); font-size: 10.5pt; font-weight: 700; text-transform: uppercase; }
+  .receipt-validation { margin-top: 8mm; min-height: 22mm; text-align: right; font-size: 8.5pt; break-inside: avoid; }
+  .receipt-validation p { margin: 1mm 0; }
+  .receipt-footer { margin-top: 8mm; border-top: 1px solid var(--receipt-rule); padding-top: 2.5mm; color: var(--receipt-muted); font-size: 7.8pt; text-align: center; }
+  .receipt-footer p { margin: 1mm 0; }
+  .receipt-footer p:first-child { color: var(--receipt-primary); font-style: italic; }
+  @media (max-width: 760px) { body { padding: 0; background: #fff; } .receipt-document { width: 100%; min-height: auto; padding: 7mm; } .receipt-title-row { grid-template-columns: 1fr; } .receipt-title-row h1 { text-align: left; } .receipt-references { border-left: 0; border-top: 1px solid var(--receipt-rule); padding: 2mm 0 0; } .receipt-data-grid, .receipt-operation-meta { grid-template-columns: 1fr; } }
+  @media print { body { padding: 0; background: #fff; } .receipt-document { width: auto; min-height: 0; margin: 0; padding: 0; } .receipt-section, .receipt-financial-summary, .receipt-validation { break-inside: avoid; } }
+</style>

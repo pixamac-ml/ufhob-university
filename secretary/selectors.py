@@ -1,0 +1,436 @@
+from accounts.scoping import scoped, student_branch_filter
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q, Prefetch
+from django.utils import timezone
+
+from accounts.dashboards.helpers import get_user_branch, is_global_viewer
+from academics.models import AcademicClass, AcademicEnrollment
+from notification_center.selectors import get_user_notifications, get_user_unread_count
+from students.models import Student
+
+from .models import Appointment, DocumentReceipt, RegistryEntry, SecretaryTask, VisitorLog
+
+User = get_user_model()
+
+
+def _apply_common_filters(queryset, filters):
+    filters = filters or {}
+    q = (filters.get("q") or "").strip()
+    status = (filters.get("status") or "").strip()
+    archived = filters.get("archived")
+    active_only = filters.get("active_only")
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    if archived in {True, False}:
+        queryset = queryset.filter(is_archived=archived)
+
+    if active_only in {True, False}:
+        queryset = queryset.filter(is_active=active_only)
+
+    return queryset, q
+
+
+def _resolve_scope(*, user=None, branch=None):
+    resolved_branch = branch or (get_user_branch(user) if user else None)
+    global_viewer = bool(user and is_global_viewer(user))
+    institutional = getattr(user, "institutional_profile", None)
+    if institutional is not None and institutional.scope == "SCHOOL":
+        global_viewer = True  # Querysets still enforce School below.
+    return resolved_branch, global_viewer
+
+
+def _apply_branch_scope(queryset, *, user=None, branch=None, branch_filter=None):
+    from accounts.scoping import resolve_context
+
+    context = resolve_context(user=user)
+    if context is not None and not context.is_valid:
+        return queryset.none()
+    field_names = {field.name for field in queryset.model._meta.fields}
+    if getattr(context, "school", None):
+        owner = "received_by" if queryset.model is DocumentReceipt else "created_by"
+        owner_filter = {f"{owner}__institutional_profile__school_id": context.school.pk}
+        if context.branch:
+            owner_filter[f"{owner}__institutional_profile__branch_id"] = context.branch.pk
+        school_filter = Q(related_student__in=scoped(Student, context=context))
+        fallback = Q(related_student__isnull=True, **owner_filter)
+        if "related_staff" in field_names:
+            school_filter |= Q(related_student__isnull=True, related_staff__in=scoped(User, context=context))
+            fallback &= Q(related_staff__isnull=True)
+        queryset = queryset.filter(school_filter | fallback)
+    resolved_branch, global_viewer = _resolve_scope(user=user, branch=branch)
+    if global_viewer:
+        return queryset
+    if resolved_branch is None:
+        return queryset.none()
+    # A recorded campus or linked person takes precedence over the creator's
+    # present HR posting; otherwise old records can leak after a staff transfer.
+    if "branch" in field_names:
+        queryset = queryset.filter(Q(branch=resolved_branch) | Q(branch__isnull=True))
+    queryset = queryset.filter(
+        Q(related_student__isnull=True)
+        | Q(related_student__in=Student.objects.filter(student_branch_filter(resolved_branch)))
+    )
+    if "related_staff" in field_names:
+        queryset = queryset.filter(
+            Q(related_staff__isnull=True) | Q(related_staff__institutional_profile__branch=resolved_branch)
+            | Q(related_staff__institutional_profile__isnull=True, related_staff__profile__branch=resolved_branch)
+        )
+    if branch_filter is None:
+        return queryset.filter(branch=resolved_branch)
+    return queryset.filter(branch_filter(resolved_branch))
+
+
+def get_registry_queryset(filters=None, *, user=None, branch=None):
+    queryset = RegistryEntry.objects.select_related(
+        "created_by",
+        "related_student__user",
+        "related_staff",
+    )
+    queryset, q = _apply_common_filters(queryset, filters)
+    queryset = _apply_branch_scope(
+        queryset,
+        user=user,
+        branch=branch,
+        branch_filter=lambda resolved_branch: (
+            Q(branch=resolved_branch)
+            | Q(related_student__inscription__candidature__branch=resolved_branch)
+            | Q(created_by__profile__branch=resolved_branch)
+            | Q(related_staff__profile__branch=resolved_branch)
+        ),
+    )
+    priority = ((filters or {}).get("priority") or "").strip()
+    if priority:
+        queryset = queryset.filter(priority=priority)
+    target_service = ((filters or {}).get("target_service") or "").strip()
+    if target_service:
+        queryset = queryset.filter(target_service=target_service)
+    if q:
+        queryset = queryset.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(entry_type__icontains=q)
+            | Q(registry_number__icontains=q)
+            | Q(visitor_name__icontains=q)
+            | Q(visitor_phone__icontains=q)
+            | Q(visitor_email__icontains=q)
+            | Q(motive__icontains=q)
+            | Q(target_service__icontains=q)
+            | Q(related_student__matricule__icontains=q)
+            | Q(related_student__user__username__icontains=q)
+        )
+    return queryset.distinct()
+
+
+def get_appointments_queryset(filters=None, *, user=None, branch=None):
+    queryset = Appointment.objects.select_related(
+        "created_by",
+        "assigned_to",
+        "related_student__user",
+        "related_staff",
+    )
+    queryset, q = _apply_common_filters(queryset, filters)
+    queryset = _apply_branch_scope(
+        queryset,
+        user=user,
+        branch=branch,
+        branch_filter=lambda resolved_branch: (
+            Q(related_student__inscription__candidature__branch=resolved_branch)
+            | Q(created_by__profile__branch=resolved_branch)
+            | Q(assigned_to__profile__branch=resolved_branch)
+            | Q(related_staff__profile__branch=resolved_branch)
+        ),
+    )
+    if q:
+        queryset = queryset.filter(
+            Q(title__icontains=q)
+            | Q(person_name__icontains=q)
+            | Q(phone__icontains=q)
+            | Q(email__icontains=q)
+            | Q(reason__icontains=q)
+            | Q(related_student__matricule__icontains=q)
+        )
+
+    date_from = filters.get("date_from") if filters else None
+    if date_from:
+        queryset = queryset.filter(scheduled_at__date__gte=date_from)
+
+    date_to = filters.get("date_to") if filters else None
+    if date_to:
+        queryset = queryset.filter(scheduled_at__date__lte=date_to)
+
+    return queryset.distinct()
+
+
+def get_visits_queryset(filters=None, *, user=None, branch=None):
+    queryset = VisitorLog.objects.select_related(
+        "created_by",
+        "related_student__user",
+        "related_staff",
+    )
+    queryset, q = _apply_common_filters(queryset, filters)
+    queryset = _apply_branch_scope(
+        queryset,
+        user=user,
+        branch=branch,
+        branch_filter=lambda resolved_branch: (
+            Q(related_student__inscription__candidature__branch=resolved_branch)
+            | Q(created_by__profile__branch=resolved_branch)
+            | Q(related_staff__profile__branch=resolved_branch)
+        ),
+    )
+    if q:
+        queryset = queryset.filter(
+            Q(full_name__icontains=q)
+            | Q(phone__icontains=q)
+            | Q(reason__icontains=q)
+            | Q(related_student__matricule__icontains=q)
+        )
+    return queryset.distinct()
+
+
+def get_documents_queryset(filters=None, *, user=None, branch=None):
+    queryset = DocumentReceipt.objects.select_related(
+        "received_by",
+        "related_student__user",
+        "related_registry",
+    )
+    queryset, q = _apply_common_filters(queryset, filters)
+    queryset = _apply_branch_scope(
+        queryset,
+        user=user,
+        branch=branch,
+        branch_filter=lambda resolved_branch: (
+            Q(related_student__inscription__candidature__branch=resolved_branch)
+            | Q(received_by__profile__branch=resolved_branch)
+            | Q(related_registry__related_student__inscription__candidature__branch=resolved_branch)
+        ),
+    )
+    if q:
+        queryset = queryset.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(submitted_by_name__icontains=q)
+            | Q(related_student__matricule__icontains=q)
+            | Q(related_registry__title__icontains=q)
+        )
+    return queryset.distinct()
+
+
+def get_tasks_queryset(filters=None, *, user=None, branch=None):
+    queryset = SecretaryTask.objects.select_related(
+        "assigned_to",
+        "created_by",
+        "related_student__user",
+    )
+    queryset, q = _apply_common_filters(queryset, filters)
+    queryset = _apply_branch_scope(
+        queryset,
+        user=user,
+        branch=branch,
+        branch_filter=lambda resolved_branch: (
+            Q(related_student__inscription__candidature__branch=resolved_branch)
+            | Q(created_by__profile__branch=resolved_branch)
+            | Q(assigned_to__profile__branch=resolved_branch)
+        ),
+    )
+    if q:
+        queryset = queryset.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(priority__icontains=q)
+            | Q(related_student__matricule__icontains=q)
+            | Q(assigned_to__username__icontains=q)
+        )
+    return queryset.distinct()
+
+
+def get_active_students(*, user=None, branch=None):
+    queryset = scoped(Student, user=user).select_related(
+        "user",
+        "inscription__candidature__programme",
+        "inscription__candidature__branch",
+    ).filter(is_active=True)
+    resolved_branch, global_viewer = _resolve_scope(user=user, branch=branch)
+    if not global_viewer:
+        if resolved_branch is None:
+            return queryset.none()
+        queryset = queryset.filter(student_branch_filter(resolved_branch))
+    return queryset
+
+
+def get_students_by_class(academic_class, *, user=None, branch=None):
+    queryset = scoped(Student, user=user).select_related(
+        "user",
+        "inscription__candidature__programme",
+    ).filter(
+        user__academic_enrollments__academic_class=academic_class,
+        user__academic_enrollments__is_active=True,
+    )
+    resolved_branch, global_viewer = _resolve_scope(user=user, branch=branch)
+    if not global_viewer:
+        if resolved_branch is None:
+            return queryset.none()
+        queryset = queryset.filter(student_branch_filter(resolved_branch))
+    return queryset.distinct()
+
+
+def search_students(query, *, user=None, branch=None):
+    queryset = get_active_students(user=user, branch=branch)
+    if not query:
+        return queryset.none()
+    return queryset.filter(
+        Q(matricule__icontains=query)
+        | Q(user__username__icontains=query)
+        | Q(inscription__candidature__first_name__icontains=query)
+        | Q(inscription__candidature__last_name__icontains=query)
+        | Q(inscription__candidature__email__icontains=query)
+        | Q(inscription__candidature__phone__icontains=query)
+    )
+
+
+def search_classes(query, *, user=None, branch=None):
+    queryset = get_classes_queryset(user=user, branch=branch)
+    if not query:
+        return queryset
+    return queryset.filter(
+        Q(name__icontains=query)
+        | Q(level__icontains=query)
+        | Q(programme__title__icontains=query)
+        | Q(branch__name__icontains=query)
+        | Q(academic_year__name__icontains=query)
+    )
+
+
+def get_classes_queryset(*, user=None, branch=None):
+    queryset = scoped(AcademicClass, user=user).select_related(
+        "programme",
+        "branch",
+        "academic_year",
+    ).annotate(
+        active_student_count=Count(
+            "enrollments",
+            filter=Q(enrollments__is_active=True, enrollments__is_archived=False),
+            distinct=True,
+        )
+    ).filter(is_active=True, is_archived=False)
+    resolved_branch, global_viewer = _resolve_scope(user=user, branch=branch)
+    if not global_viewer:
+        if resolved_branch is None:
+            return queryset.none()
+        queryset = queryset.filter(branch=resolved_branch)
+    return queryset.order_by("programme__title", "level", "name")
+
+
+def get_class_students_queryset(academic_class_id, *, user=None, branch=None):
+    class_queryset = get_classes_queryset(user=user, branch=branch).filter(id=academic_class_id)
+    academic_class = class_queryset.first()
+    if academic_class is None:
+        return None, scoped(Student, user=user).none()
+    queryset = scoped(Student, user=user).select_related(
+        "user",
+        "inscription__candidature__programme",
+        "inscription__candidature__branch",
+    ).filter(
+        user__academic_enrollments__academic_class=academic_class,
+        user__academic_enrollments__is_active=True,
+        user__academic_enrollments__is_archived=False,
+        is_active=True,
+    ).order_by("inscription__candidature__last_name", "inscription__candidature__first_name").distinct()
+    return academic_class, queryset
+
+
+def get_student_snapshot_queryset(student_id, *, user=None, branch=None):
+    queryset = scoped(Student, user=user).select_related(
+        "user",
+        "inscription__candidature__programme",
+        "inscription__candidature__branch",
+    ).prefetch_related(
+        Prefetch("registry_entries", queryset=get_registry_queryset(user=user, branch=branch)),
+        Prefetch("appointments", queryset=get_appointments_queryset(user=user, branch=branch)),
+        Prefetch("visitor_logs", queryset=get_visits_queryset(user=user, branch=branch)),
+        Prefetch("document_receipts", queryset=get_documents_queryset(user=user, branch=branch)),
+        Prefetch("secretary_tasks", queryset=get_tasks_queryset(user=user, branch=branch)),
+        Prefetch("user__academic_enrollments", queryset=scoped(AcademicEnrollment, user=user).select_related("academic_class__academic_year", "programme__school", "branch")),
+    ).filter(id=student_id)
+    resolved_branch, global_viewer = _resolve_scope(user=user, branch=branch)
+    if not global_viewer:
+        if resolved_branch is None:
+            return queryset.none()
+        queryset = queryset.filter(student_branch_filter(resolved_branch))
+    return queryset
+
+
+def get_recent_registry_entries(limit=5, *, user=None, branch=None):
+    return get_registry_queryset({"archived": False}, user=user, branch=branch)[:limit]
+
+
+def get_pending_tasks(limit=None, *, user=None, branch=None):
+    queryset = get_tasks_queryset(
+        {
+            "status": SecretaryTask.STATUS_PENDING,
+            "archived": False,
+            "active_only": True,
+        },
+        user=user,
+        branch=branch,
+    )
+    if limit:
+        return queryset[:limit]
+    return queryset
+
+
+def get_secretary_notifications(user, limit=10):
+    return get_user_notifications(user, limit=limit)
+
+
+def get_user_messages(user, limit=20):
+    return get_user_notifications(user, limit=limit)
+
+
+def get_unread_messages_count(user):
+    return get_user_unread_count(user)
+
+
+def get_today_appointments_queryset(*, user=None, branch=None):
+    return get_appointments_queryset(
+        {"date_from": timezone.localdate(), "date_to": timezone.localdate()},
+        user=user,
+        branch=branch,
+    )
+
+
+def get_today_visits_queryset(*, user=None, branch=None):
+    today = timezone.localdate()
+    return get_visits_queryset({}, user=user, branch=branch).filter(arrived_at__date=today)
+
+
+def get_active_visits_queryset(*, user=None, branch=None):
+    return get_visits_queryset(
+        {
+            "status": VisitorLog.STATUS_IN_PROGRESS,
+            "archived": False,
+            "active_only": True,
+        },
+        user=user,
+        branch=branch,
+    )
+
+
+def get_recent_documents_queryset(limit=5, *, user=None, branch=None):
+    return get_documents_queryset({"archived": False}, user=user, branch=branch)[:limit]
+
+
+def get_student_active_enrollment(student):
+    return (
+        scoped(AcademicEnrollment).select_related(
+            "academic_class",
+            "academic_year",
+            "programme",
+            "branch",
+        )
+        .filter(student=student.user, is_active=True)
+        .order_by("-created_at")
+        .first()
+    )

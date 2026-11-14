@@ -1,0 +1,24 @@
+{% load component_tags %}
+<section class="space-y-5">
+  <header>
+    <h2 class="text-lg font-bold text-ui-text">Remplacer l’enseignant</h2>
+    <p class="mt-1 text-sm text-ui-text-muted">{{ event.ec.title }} · {{ event.academic_class.display_name }} · {{ event.start_datetime|date:"d/m/Y H:i" }}–{{ event.end_datetime|date:"H:i" }}</p>
+    <p class="mt-1 text-sm text-ui-text">Intervenant prévu : {{ event.teacher.get_full_name|default:event.teacher.username }}</p>
+  </header>
+  <form hx-get="{% url 'accounts_portal:director_timetable_replacement' event.id %}" hx-target="#director-drawer-content" hx-swap="innerHTML" class="space-y-2">
+    <input type="hidden" name="week_start" value="{{ timetable_week_start|date:'Y-m-d' }}">
+    <label for="replacement-search" class="text-sm font-semibold text-ui-text">Rechercher par nom, spécialité ou contact</label>
+    <input id="replacement-search" name="q" value="{{ query }}" class="h-11 w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text">
+    <button type="submit" class="h-ui-control rounded-ui-button border border-ui-border px-4 text-sm font-semibold">Rechercher</button>
+    <p class="text-xs text-ui-text-muted">20 résultats maximum. Affinez la recherche si nécessaire. La compétence pour cette matière est confirmée par la direction des études.</p>
+  </form>
+  <form method="post" hx-post="{% url 'accounts_portal:director_timetable_replacement' event.id %}" hx-target="#director-drawer-content" hx-swap="innerHTML" hx-disabled-elt="button[type=submit]" class="space-y-4">
+    {% csrf_token %}
+    <input type="hidden" name="week_start" value="{{ timetable_week_start|date:'Y-m-d' }}">
+    {% if form.non_field_errors %}{% component "ui_core.alert" title="Remplacement non enregistré" message=form.non_field_errors.0 tone="danger" %}{% endcomponent %}{% endif %}
+    {% component "ui_core.django_form_field" field=form.monitor %}{% endcomponent %}
+    {% component "ui_core.django_form_field" field=form.reason %}{% endcomponent %}
+    <p class="text-sm text-ui-text-muted">Ce remplacement fait partie du service salarié. Il ne génère aucun honoraire.</p>
+    <button type="submit" class="h-ui-control rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Confirmer le remplacement</button>
+  </form>
+</section>

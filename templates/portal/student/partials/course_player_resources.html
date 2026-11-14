@@ -1,0 +1,16 @@
+{% load component_tags %}
+<section class="mx-auto w-full max-w-5xl">
+  <header class="border-b border-ui-border pb-5"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">Ressources du cours</p><h2 class="mt-1 text-xl font-bold text-ui-text sm:text-2xl">Documents complémentaires</h2><p class="mt-2 text-sm text-ui-text-muted">Uniquement les ressources publiées dans {{ ec.title }}.</p></header>
+  {% if course_resources %}
+    <div class="mt-6 divide-y divide-ui-border rounded-ui-card border border-ui-border">
+      {% for resource in course_resources %}
+        <article class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0"><p class="text-ui-micro font-bold uppercase tracking-ui-label text-ui-primary">{{ resource.chapter_title }}</p><strong class="mt-1 block truncate text-sm text-ui-text">{{ resource.lesson_title }}</strong><p class="mt-1 text-sm text-ui-text-muted">{{ resource.resource_type_label }} · {{ resource.title }}{% if resource.size_label %} · {{ resource.size_label }}{% endif %}</p></div>
+          <div class="flex shrink-0 flex-wrap gap-2">{% if resource.resource_type == "pdf" or resource.is_pdf %}<a href="{{ resource.preview_url }}{% if selected_academic_year_id %}?academic_year_id={{ selected_academic_year_id }}{% endif %}" target="_blank" rel="noopener" class="ui-focus-ring inline-flex min-h-10 items-center rounded-ui-button border border-ui-border px-3 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">Consulter</a>{% endif %}<a href="{{ resource.download_url }}{% if selected_academic_year_id %}?academic_year_id={{ selected_academic_year_id }}{% endif %}" class="ui-focus-ring inline-flex min-h-10 items-center rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong">Télécharger</a></div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% component "ui_core.empty_state" title="Aucune ressource publiée" message="Les documents complémentaires de cette matière apparaîtront ici après publication." icon="folder-open" %}{% endcomponent %}
+  {% endif %}
+</section>

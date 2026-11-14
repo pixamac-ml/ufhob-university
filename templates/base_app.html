@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{# Couche applicative commune : assets, HTMX, Alpine, Lucide et moteur optimiste #}
+{% block public_navbar %}{% endblock %}
+{% block public_floating_widget %}{% endblock %}
+{% block public_footer %}{% endblock %}
+{% block public_cookie_consent %}{% endblock %}
+{% load static %}
+{% block main_stylesheet %}<link rel="stylesheet" href="{% static 'app/css/main.css' %}">{% endblock %}
+{% block extra_head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/app/tokens.css' %}">
+{% endblock %}

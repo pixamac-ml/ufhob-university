@@ -11,8 +11,12 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import transaction
 
+from notifier.models import NotificationMessage
+from notifier.services import NotificationBus
+from notifier.services.policy import resolve_channel_policy
+from notifier.services.audience import resolve_candidate_user_by_email, restrict_candidate_channels
 from .models import Inscription, StatusHistory
-from core.models import Notification
+from students.services import create_student_after_first_payment
 
 
 # ==========================================================
@@ -110,15 +114,51 @@ def create_inscription_notification(inscription, previous_status, new_status):
         f"Votre statut d'inscription est maintenant : {new_status}"
     )
 
-    return Notification.objects.create(
-        recipient_email=recipient_email,
-        recipient_name=recipient_name,
-        notification_type=notification_type,
-        title=title,
-        message=message,
-        related_inscription=inscription,
-        related_candidature=candidature,
+    recipient_user = resolve_candidate_user_by_email(recipient_email)
+    default_channels = [NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL]
+    if recipient_user:
+        default_channels = [
+            NotificationMessage.CHANNEL_IN_APP,
+            NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL,
+        ]
+    policy = resolve_channel_policy(
+        notification_type,
+        default_channels=default_channels,
+        default_priority=NotificationMessage.PRIORITY_NORMAL,
+        metadata={
+            "recipient_email": recipient_email,
+            "recipient_name": recipient_name,
+            "candidate_name": candidature.full_name,
+            "first_name": candidature.first_name,
+            "candidate_reference": getattr(candidature, "reference", ""),
+            "academic_year": getattr(candidature, "academic_year", ""),
+            "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
+            "url": "/inscriptions/",
+            "context": {
+                "recipient_name": recipient_name,
+                "message": message,
+                "dashboard_url": "/inscriptions/",
+                "reference": getattr(inscription, "reference", ""),
+                "candidate_name": candidature.full_name,
+                "first_name": candidature.first_name,
+                "academic_year": getattr(candidature, "academic_year", ""),
+                "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
+            },
+        },
     )
+    policy["channels"] = restrict_candidate_channels(recipient_user, policy["channels"])
+    event, _created_notifications = NotificationBus.notify(
+        recipient=recipient_user,
+        actor=None,
+        event_type=notification_type,
+        title=title,
+        body=message,
+        source_app="inscriptions",
+        channels=policy["channels"],
+        priority=policy["priority"],
+        metadata=policy["metadata"],
+    )
+    return event
 
 
 # ==========================================================
@@ -184,6 +224,10 @@ def inscription_saved(sender, instance, created, **kwargs):
                 new_status=new_status,
                 comment=f"Statut changé de '{previous_status}' vers '{new_status}'"
             )
+
+            # Créer l'étudiant si statut devient actif
+            if new_status == "active":
+                create_student_after_first_payment(instance)
 
             # ne pas notifier si inscription archivée
             if not instance.is_archived:

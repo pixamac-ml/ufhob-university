@@ -1,128 +1,191 @@
-<div class="p-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-900">Détail Candidature</h2>
-        <button onclick="closeModal()" class="p-2 hover:bg-gray-100 rounded-lg">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-        </button>
+{% load component_tags %}
+<div class="space-y-0">
+<div class="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">Detail candidature</h2>
+                <p class="text-sm text-slate-500">{{ candidature.full_name }}</p>
+            </div>
+            <button type="button" onclick="window.dispatchEvent(new CustomEvent('ui-overlay-close',{detail:{id:'manager-modal'}}))" class="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-500 transition">
+                {% component "icon" name="x" %}{% endcomponent %}
+            </button>
     </div>
 
-    <!-- Status Badge -->
-    <div class="mb-6">
-        <span class="px-3 py-1.5 text-sm font-semibold rounded-full
-            {% if candidature.status == 'submitted' %}bg-blue-100 text-blue-700
-            {% elif candidature.status == 'under_review' %}bg-purple-100 text-purple-700
-            {% elif candidature.status == 'to_complete' %}bg-orange-100 text-orange-700
-            {% elif candidature.status == 'accepted' or candidature.status == 'accepted_with_reserve' %}bg-green-100 text-green-700
-            {% elif candidature.status == 'rejected' %}bg-red-100 text-red-700
-            {% else %}bg-gray-100 text-gray-700{% endif %}">
-            {{ candidature.get_status_display }}
-        </span>
-    </div>
+    <div class="p-6 space-y-6">
+            <div>
+                <span class="px-3 py-1.5 text-sm font-semibold rounded-full {% if candidature.status == 'submitted' %}bg-blue-100 text-blue-700{% elif candidature.status == 'under_review' %}bg-purple-100 text-purple-700{% elif candidature.status == 'to_complete' %}bg-orange-100 text-orange-700{% elif candidature.status == 'accepted' or candidature.status == 'accepted_with_reserve' %}bg-green-100 text-green-700{% elif candidature.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-slate-100 text-slate-700{% endif %}">
+                    {{ candidature.get_status_display }}
+                </span>
+            </div>
 
-    <!-- Info Grid -->
-    <div class="grid grid-cols-2 gap-6 mb-6">
-        <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">Informations personnelles</h3>
-            <dl class="space-y-2">
-                <div>
-                    <dt class="text-xs text-gray-400">Nom complet</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ candidature.last_name|upper }} {{ candidature.first_name }}</dd>
+            {% if manager_capabilities.can_manage_admissions and candidature.status == 'submitted' or manager_capabilities.can_manage_admissions and candidature.status == 'under_review' or manager_capabilities.can_manage_admissions and candidature.status == 'to_complete' %}
+            <div class="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-400">Decision</p>
+                        <h3 class="text-lg font-semibold text-slate-900 mt-1">Traiter ce dossier</h3>
+                        <p class="text-sm text-slate-500 mt-1">Vous pouvez accepter ce dossier même si des pièces manquent. Elles pourront être ajoutées lors de l’inscription ou après.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        {% if candidature.status == 'submitted' or candidature.status == 'to_complete' %}
+                        <button
+                            hx-post="{% url 'accounts:htmx_candidature_under_review' candidature.pk %}"
+                            hx-target="#candidature-{{ candidature.pk }}"
+                            hx-swap="outerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-confirm="Passer cette candidature en analyse ?"
+                            hx-on::after-request="if(event.detail.successful){window.dispatchEvent(new CustomEvent('ui-overlay-close',{detail:{id:'manager-modal'}}))}"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                            {% component "icon" name="magnifying-glass" %}{% endcomponent %}
+                            Analyser
+                        </button>
+                        {% endif %}
+                        <button
+                            hx-post="{% url 'accounts:htmx_candidature_accept' candidature.pk %}"
+                            hx-target="#candidature-{{ candidature.pk }}"
+                            hx-swap="outerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-confirm="Accepter cette candidature ?"
+                            hx-on::after-request="if(event.detail.successful){window.dispatchEvent(new CustomEvent('ui-overlay-close',{detail:{id:'manager-modal'}}))}"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
+                            {% component "icon" name="check" %}{% endcomponent %}
+                            Accepter
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <dt class="text-xs text-gray-400">Date de naissance</dt>
-                    <dd class="text-sm text-gray-900">{{ candidature.birth_date|date:"d/m/Y" }} à {{ candidature.birth_place }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-gray-400">Genre</dt>
-                    <dd class="text-sm text-gray-900">{{ candidature.get_gender_display }}</dd>
-                </div>
-            </dl>
-        </div>
-        <div>
-            <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">Contact</h3>
-            <dl class="space-y-2">
-                <div>
-                    <dt class="text-xs text-gray-400">Email</dt>
-                    <dd class="text-sm text-gray-900">{{ candidature.email }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-gray-400">Téléphone</dt>
-                    <dd class="text-sm text-gray-900">{{ candidature.phone }}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-gray-400">Adresse</dt>
-                    <dd class="text-sm text-gray-900">{{ candidature.address|default:"-" }}, {{ candidature.city|default:"-" }}</dd>
-                </div>
-            </dl>
-        </div>
-    </div>
 
-    <!-- Programme -->
-    <div class="bg-gray-50 rounded-xl p-4 mb-6">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">Programme choisi</h3>
-        <p class="text-lg font-medium text-gray-900">{{ candidature.programme.title }}</p>
-        <p class="text-sm text-gray-500">{{ candidature.programme.cycle.name }} – Année {{ candidature.entry_year }} – {{ candidature.academic_year }}</p>
-    </div>
+                <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <form
+                        hx-post="{% url 'accounts:htmx_candidature_to_complete' candidature.pk %}"
+                        hx-target="#candidature-{{ candidature.pk }}"
+                        hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        hx-on::after-request="if(event.detail.successful){window.dispatchEvent(new CustomEvent('ui-overlay-close',{detail:{id:'manager-modal'}}))}"
+                        class="rounded-2xl bg-white border border-amber-100 p-4 space-y-3">
+                        <p class="text-sm font-semibold text-slate-900">Demander des complements</p>
+                        <textarea
+                            name="message"
+                            rows="3"
+                            placeholder="Ex: Merci d'ajouter la copie de la piece d'identite et le dernier releve..."
+                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-amber-100 focus:border-amber-400"
+                            required></textarea>
+                        <button
+                            type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition">
+                            {% component "icon" name="circle-exclamation" %}{% endcomponent %}
+                            Marquer a completer
+                        </button>
+                    </form>
 
-    <!-- Documents -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold text-gray-500 uppercase mb-3">Documents ({{ documents.count }})</h3>
-        <div class="space-y-2">
-            {% for doc in documents %}
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <span class="text-sm text-gray-900">{{ doc.document_type.name }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    {% if doc.is_valid %}
-                    <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Validé</span>
-                    {% else %}
-                    <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">En attente</span>
-                    {% endif %}
-                    <a href="{{ doc.file.url }}" target="_blank" class="text-blue-600 hover:text-blue-800">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                    </a>
+                    <form
+                        hx-post="{% url 'accounts:htmx_candidature_reject' candidature.pk %}"
+                        hx-target="#candidature-{{ candidature.pk }}"
+                        hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        hx-on::after-request="if(event.detail.successful){window.dispatchEvent(new CustomEvent('ui-overlay-close',{detail:{id:'manager-modal'}}))}"
+                        class="rounded-2xl bg-white border border-rose-100 p-4 space-y-3">
+                        <p class="text-sm font-semibold text-slate-900">Refuser avec motif</p>
+                        <textarea
+                            name="reason"
+                            rows="3"
+                            placeholder="Ex: Dossier incomplet malgre relances / conditions non remplies..."
+                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-rose-100 focus:border-rose-400"
+                            required></textarea>
+                        <button
+                            type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition">
+                            {% component "icon" name="x" %}{% endcomponent %}
+                            Refuser
+                        </button>
+                    </form>
                 </div>
             </div>
-            {% empty %}
-            <p class="text-sm text-gray-500 text-center py-4">Aucun document soumis</p>
-            {% endfor %}
-        </div>
-    </div>
+            {% endif %}
 
-    <!-- Actions -->
-    {% if candidature.status in 'submitted,under_review' %}
-    <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
-        <button hx-post="{% url 'accounts:htmx_candidature_to_complete' candidature.pk %}"
-                hx-target="#candidature-{{ candidature.pk }}"
-                hx-swap="outerHTML"
-                onclick="closeModal()"
-                class="px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium">
-            Demander complétion
-        </button>
-        <button hx-post="{% url 'accounts:htmx_candidature_reject' candidature.pk %}"
-                hx-target="#candidature-{{ candidature.pk }}"
-                hx-swap="outerHTML"
-                hx-confirm="Refuser cette candidature ?"
-                onclick="closeModal()"
-                class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium">
-            Refuser
-        </button>
-        <button hx-post="{% url 'accounts:htmx_candidature_accept' candidature.pk %}"
-                hx-target="#candidature-{{ candidature.pk }}"
-                hx-swap="outerHTML"
-                hx-confirm="Accepter cette candidature ?"
-                onclick="closeModal()"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-            Accepter
-        </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="rounded-2xl bg-slate-50 border border-slate-100 p-5 space-y-3">
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Informations personnelles</h3>
+                    <div>
+                        <p class="text-xs text-slate-400">Nom complet</p>
+                        <p class="text-sm font-medium text-slate-900">{{ candidature.last_name|upper }} {{ candidature.first_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Naissance</p>
+                        <p class="text-sm text-slate-900">{{ candidature.birth_date|date:"d/m/Y" }} a {{ candidature.birth_place }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Genre</p>
+                        <p class="text-sm text-slate-900">{{ candidature.get_gender_display }}</p>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl bg-slate-50 border border-slate-100 p-5 space-y-3">
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Contact</h3>
+                    <div>
+                        <p class="text-xs text-slate-400">Email</p>
+                        <p class="text-sm text-slate-900">{{ candidature.email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Telephone</p>
+                        <p class="text-sm text-slate-900">{{ candidature.phone }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Adresse</p>
+                        <p class="text-sm text-slate-900">{{ candidature.address|default:"-" }}, {{ candidature.city|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl bg-blue-50 border border-blue-100 p-5">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-blue-800 mb-3">Programme choisi</h3>
+                <p class="text-lg font-semibold text-slate-900">{{ candidature.programme.title }}</p>
+                <p class="text-sm text-slate-600">{{ candidature.programme.cycle.name }} - Annee {{ candidature.entry_year }} - {{ candidature.academic_year }}</p>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Documents ({{ documents.count }})</h3>
+                {% if missing_documents %}
+                <div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+                    <p class="font-semibold">Documents manquants</p>
+                    <ul>{% for document_type in missing_documents %}<li>{{ document_type.name }}</li>{% endfor %}</ul>
+                    <p>La décision d’accepter la candidature reste à la gestionnaire.</p>
+                </div>
+                {% endif %}
+                {% if manager_capabilities.can_manage_admissions and missing_documents %}
+                <form hx-post="{% url 'accounts:htmx_candidature_document_add' candidature.pk %}"
+                      hx-target="#manager-modal-content" hx-swap="innerHTML"
+                      hx-encoding="multipart/form-data" enctype="multipart/form-data" method="post"
+                      class="rounded-2xl border border-slate-200 p-4 space-y-3">
+                    {% csrf_token %}
+                    <h4 class="font-semibold">Compléter les documents</h4>
+                    {{ document_form.as_p }}
+                    <button type="submit" class="rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Ajouter le document</button>
+                </form>
+                {% endif %}
+                {% for doc in documents %}
+                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div>
+                        <p class="text-sm font-medium text-slate-900">{{ doc.document_type.name }}</p>
+                        <p class="text-xs text-slate-500">{{ doc.uploaded_at|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if doc.is_valid %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                            {% if doc.is_valid %}Valide{% else %}En attente{% endif %}
+                        </span>
+                        {% if manager_capabilities.can_manage_admissions and not doc.is_valid %}
+                        <button hx-post="{% url 'accounts:htmx_candidature_document_validate' doc.pk %}"
+                                hx-target="#manager-modal-content" hx-swap="innerHTML"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                class="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">Valider la pièce</button>
+                        {% endif %}
+                        <a href="{% url 'accounts:manager_candidature_document_download' doc.id %}" hx-boost="false" class="text-primary hover:text-primary-light transition" title="Télécharger le document">
+                            {% component "icon" name="download" %}{% endcomponent %}
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-sm text-slate-400 text-center">Aucun document soumis.</div>
+                {% endfor %}
+            </div>
     </div>
-    {% endif %}
+</div>
 </div>

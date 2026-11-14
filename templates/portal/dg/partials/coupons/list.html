@@ -1,0 +1,57 @@
+{% load component_tags humanize %}
+<section class="space-y-5" data-dashboard-section="coupons" data-executive-section="coupons">
+  {% component "ui_core.page_header" eyebrow="Finance" title="Coupons de réduction" subtitle="Le DG définit le périmètre ; la gestionnaire applique ensuite le coupon sur l’inscription autorisée." %}
+    {% fill "actions" %}
+      <button type="button" class="inline-flex h-ui-control items-center gap-2 rounded-ui-button bg-ui-primary px-3 text-sm font-semibold text-ui-on-primary hover:bg-ui-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus" onclick="dgOpenModal('{% url 'accounts_portal:dg_modal' %}?modal=coupon')">
+        <i data-lucide="ticket-plus" class="h-4 w-4" aria-hidden="true"></i> Nouveau coupon
+      </button>
+    {% endfill %}
+  {% endcomponent %}
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% component "ui_core.stat_card" label="Créés" value=coupon_stats.total|intcomma icon="ticket" tone="primary" description="Coupons du périmètre actif" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Disponibles" value=coupon_stats.available|intcomma icon="circle-check" tone="success" description="Utilisables actuellement" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Utilisations" value=coupon_stats.uses|intcomma icon="badge-check" tone="info" description="Remises déjà appliquées" compact=True %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Remises accordées" value=coupon_stats.discount_total|intcomma unit="FCFA" icon="wallet-cards" tone="accent" description="Historique des coupons" compact=True %}{% endcomponent %}
+  </div>
+
+  {% component "ui_core.data_table" id="dg-coupons-table" caption="Coupons du périmètre" headers=coupon_table_headers rows=coupon_table_rows result_count=coupon_table_rows|length density="compact" empty_title="Aucun coupon disponible" empty_message="Créez un coupon uniquement lorsqu’une réduction institutionnelle est approuvée." %}{% endcomponent %}
+  <section id="financial-corrections" class="rounded-2xl border border-violet-200 bg-violet-50/50 p-5 space-y-4" aria-labelledby="financial-corrections-title">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Autorisations sensibles</p>
+        <h2 id="financial-corrections-title" class="mt-1 text-lg font-bold text-ui-text">Corrections financières</h2>
+        <p class="mt-1 text-sm text-ui-text-muted">{{ pending_financial_corrections }} demande{{ pending_financial_corrections|pluralize }} en attente dans le périmètre sélectionné.</p>
+      </div>
+      <span class="inline-flex w-fit rounded-full bg-violet-100 px-3 py-1 text-sm font-semibold text-violet-800">{{ financial_corrections|length }} demande{{ financial_corrections|length|pluralize }}</span>
+    </div>
+    <div class="space-y-4">
+      {% for correction in financial_corrections %}
+      <article class="rounded-xl border {% if correction.selected %}border-violet-500 ring-2 ring-violet-200{% else %}border-violet-200{% endif %} bg-ui-surface p-4" data-financial-correction-id="{{ correction.request.pk }}">
+        <div class="flex flex-col gap-2 border-b border-ui-border pb-3 sm:flex-row sm:items-start sm:justify-between">
+          <div><h3 class="font-semibold text-ui-text">Demande de correction financière</h3><p class="text-xs text-ui-text-muted">Référence de la demande : {{ correction.request.pk }}</p></div>
+          <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold {% if correction.request.status == 'pending' %}bg-amber-100 text-amber-800{% elif correction.request.status == 'approved' %}bg-emerald-100 text-emerald-800{% else %}bg-ui-surface-soft text-ui-text-muted{% endif %}">{{ correction.request.get_status_display }}</span>
+        </div>
+        <dl class="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+          <div><dt class="text-ui-text-muted">Gestionnaire</dt><dd class="font-medium text-ui-text">{{ correction.request.requested_by.get_full_name|default:correction.request.requested_by.username }}</dd></div>
+          <div><dt class="text-ui-text-muted">Annexe / Campus</dt><dd class="font-medium text-ui-text">{{ correction.request.branch }}</dd></div>
+          <div><dt class="text-ui-text-muted">École</dt><dd class="font-medium text-ui-text">{{ correction.school.display_name|default:"Non renseignée" }}</dd></div>
+          <div><dt class="text-ui-text-muted">Programme</dt><dd class="font-medium text-ui-text">{{ correction.programme.title }}</dd></div>
+          <div><dt class="text-ui-text-muted">Année académique</dt><dd class="font-medium text-ui-text">{{ correction.academic_year }}</dd></div>
+          <div><dt class="text-ui-text-muted">Étudiant</dt><dd class="font-medium text-ui-text">{{ correction.payment.inscription.candidature.full_name }}</dd></div>
+          <div><dt class="text-ui-text-muted">Paiement</dt><dd class="font-mono font-medium text-ui-text">{{ correction.payment.reference }}</dd></div>
+          <div><dt class="text-ui-text-muted">Ancien montant</dt><dd class="font-medium text-ui-text">{{ correction.old_amount|floatformat:0 }} FCFA</dd></div>
+          <div><dt class="text-ui-text-muted">Nouveau montant</dt><dd class="font-medium text-ui-text">{{ correction.new_amount|floatformat:0 }} FCFA</dd></div>
+          <div><dt class="text-ui-text-muted">Delta</dt><dd class="font-semibold {% if correction.delta < 0 %}text-rose-700{% else %}text-emerald-700{% endif %}">{{ correction.delta|floatformat:0 }} FCFA</dd></div>
+          <div><dt class="text-ui-text-muted">Motif</dt><dd class="font-medium text-ui-text">{{ correction.request.reason }}</dd></div>
+          <div><dt class="text-ui-text-muted">Date</dt><dd class="font-medium text-ui-text">{{ correction.request.created_at|date:"d/m/Y H:i" }}</dd></div>
+          <div><dt class="text-ui-text-muted">Expiration</dt><dd class="font-medium text-ui-text">{{ correction.request.expires_at|date:"d/m/Y H:i" }}</dd></div>
+          {% if correction.request.status == 'pending' %}<div><dt class="text-ui-text-muted">Code</dt><dd class="font-mono text-lg font-bold tracking-widest text-violet-800">{{ correction.request.otp_display_code }}</dd></div>{% endif %}
+        </dl>
+      </article>
+      {% empty %}
+      <p class="rounded-xl border border-dashed border-violet-200 bg-ui-surface px-4 py-5 text-sm text-ui-text-muted">Aucune correction financière dans le périmètre École / Campus / Année sélectionné.</p>
+      {% endfor %}
+    </div>
+  </section>
+</section>

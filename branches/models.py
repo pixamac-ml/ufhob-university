@@ -33,6 +33,23 @@ class Branch(models.Model):
 
     email = models.EmailField(blank=True)
 
+    image = models.ImageField(
+        upload_to="branches/",
+        blank=True,
+        null=True,
+        verbose_name="Image de l'annexe"
+    )
+
+    public_description = models.TextField(
+        blank=True,
+        verbose_name="Présentation publique",
+    )
+
+    access_information = models.TextField(
+        blank=True,
+        verbose_name="Informations d'accès",
+    )
+
     manager = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -44,6 +61,18 @@ class Branch(models.Model):
     is_active = models.BooleanField(default=True)
 
     accepts_online_registration = models.BooleanField(default=True)
+
+    cash_reserve_target = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Fonds de roulement cible",
+        help_text=(
+            "Montant a conserver en caisse a chaque cloture mensuelle pour couvrir "
+            "les depenses imprevues du mois suivant. Le versement bancaire suggere "
+            "est calcule en consequence."
+        ),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

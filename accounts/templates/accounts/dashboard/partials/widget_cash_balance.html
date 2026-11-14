@@ -1,0 +1,8 @@
+{% load component_tags %}
+{% load humanize %}
+<div id="widget-cash-balance"
+     hx-get="{% url 'accounts:widget_cash_balance' %}"
+     hx-trigger="every 30s, cashBalanceUpdated from:body"
+     hx-swap="outerHTML">
+  {% component "ui_core.stat_card" label=stat_card.label value=stat_card.value unit=stat_card.unit icon=stat_card.icon tone=stat_card.tone description=stat_card.description %}{% endcomponent %}
+</div>

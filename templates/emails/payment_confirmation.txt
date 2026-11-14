@@ -1,6 +1,6 @@
-Confirmation de paiement – ESFE 💳
+Confirmation de paiement – UFHOB 💳
 
-Bonjour {{ student.user.first_name }},
+Bonjour {{ recipient_first_name }},
 
 Votre paiement a été validé avec succès.
 
@@ -17,4 +17,4 @@ Solde restant : {{ balance }} FCFA
 Consultez votre dossier :
 {{ public_link }}
 
-Administration ESFE
+Administration UFHOB

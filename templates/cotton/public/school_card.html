@@ -1,0 +1,13 @@
+{% load static %}
+<article id="school-{{ school.code|slugify }}" class="public-editorial-card group flex h-full flex-col overflow-hidden border border-ufhob-border bg-white">
+  {% if school.hero_image %}<img src="{{ school.hero_image.url }}" alt="{{ school.short_name }}" class="h-36 w-full object-cover" loading="lazy">{% endif %}
+  <div class="flex h-full flex-col p-6">
+  <div class="flex items-start justify-between gap-4">
+    {% if school.logo %}<img src="{{ school.logo.url }}" alt="Logo {{ school.short_name }}" class="h-14 w-14 rounded-ufhob-md bg-white object-contain">{% endif %}
+    {% if school.public_programmes %}<span class="border-l-2 border-ufhob-accent bg-ufhob-ivory px-3 py-1 text-xs font-bold text-ufhob-primary">{{ school.public_programmes|length }} programme{{ school.public_programmes|length|pluralize }}</span>{% endif %}
+  </div>
+  <h3 class="mt-6 text-xl font-bold text-ufhob-primary">{{ school.display_name }}</h3>
+  {% if school.description %}<p class="mt-3 line-clamp-3 text-sm leading-6 text-ufhob-muted">{{ school.description|striptags|truncatewords:28 }}</p>{% endif %}
+  <a href="{% url 'core:school_detail' code=school.code|lower %}" class="public-text-link mt-auto pt-6 text-sm text-ufhob-primary">Découvrir l’école <span aria-hidden="true">→</span></a>
+  </div>
+</article>

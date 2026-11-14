@@ -1,0 +1,28 @@
+{% if not school %}
+<div class='rounded-ufhob-md border border-dashed border-ufhob-border bg-ufhob-ivory p-4 text-sm text-ufhob-muted' role='status'>
+  Sélectionnez une école pour charger les campus compatibles.
+</div>
+{% else %}
+<div class='mb-3 flex items-center justify-between'>
+  <p class='text-sm font-semibold text-ufhob-primary'>Campus proposés pour {{ school.short_name }}</p>
+  <p class='text-xs text-ufhob-muted'>{{ campuses|length }} résultat{{ campuses|length|pluralize }}</p>
+</div>
+{% if campuses %}
+<div class='grid gap-3 lg:grid-cols-2'>
+  {% for campus in campuses %}
+  <button type='button'
+          data-branch-id="{{ campus.id }}"
+          class='rounded-ufhob-md border px-4 py-4 text-left transition'
+          :class="String(formData.branch_id) === '{{ campus.id }}' ? 'border-ufhob-secondary bg-ufhob-primary-soft ring-1 ring-ufhob-secondary/30' : (errors.branch_id ? 'border-red-400' : 'border-ufhob-border hover:border-ufhob-secondary')"
+          @click="selectCampus('{{ campus.id }}', '{{ campus.name|escapejs }}', '{{ campus.city|default:''|escapejs }}', '{{ campus.image_url|escapejs }}')" :aria-pressed="String(formData.branch_id) === '{{ campus.id }}'">
+    <strong class='block text-ufhob-primary'>{{ campus.name }}</strong>
+    <span class='mt-1 block text-xs text-ufhob-muted'>{{ campus.city|default:'Campus UFHOB' }}</span>
+  </button>
+  {% endfor %}
+</div>
+{% else %}
+<div class='rounded-ufhob-md border border-dashed border-ufhob-border bg-ufhob-ivory p-4 text-sm text-ufhob-muted' role='status'>
+  Aucun campus n’est actuellement ouvert à la candidature pour cette école.
+</div>
+{% endif %}
+{% endif %}

@@ -1,0 +1,67 @@
+{% load component_tags %}
+<section class="space-y-4" data-university-structure data-structure-view="{{ structure_view }}" :data-structure-view="tab" x-data="{ tab: '{{ structure_view }}' }">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div><h2 class="text-xl font-bold text-ui-text">Structure universitaire</h2><p class="mt-1 text-xs text-ui-text-muted">{{ dashboard_scope_label }}</p></div>
+    <button type="button" class="text-sm font-semibold text-ui-primary" onclick="dgOpenUniversityScope('', '')">Vue universitaire</button>
+  </header>
+  {% include "portal/dg/partials/university_indicators.html" %}
+  <nav class="flex flex-wrap gap-1 border-b border-ui-border pb-2" aria-label="Structure universitaire">
+    <button type="button" @click="tab = 'schools'" :aria-pressed="tab === 'schools'" :class="tab === 'schools' ? 'bg-ui-primary-soft text-ui-primary' : 'text-ui-text-muted'" class="rounded-ui-button px-3 py-2 text-sm font-semibold">Écoles</button>
+    <button type="button" @click="tab = 'campuses'" :aria-pressed="tab === 'campuses'" :class="tab === 'campuses' ? 'bg-ui-primary-soft text-ui-primary' : 'text-ui-text-muted'" class="rounded-ui-button px-3 py-2 text-sm font-semibold">Campus</button>
+    <button type="button" @click="tab = 'implantations'" :aria-pressed="tab === 'implantations'" :class="tab === 'implantations' ? 'bg-ui-primary-soft text-ui-primary' : 'text-ui-text-muted'" class="rounded-ui-button px-3 py-2 text-sm font-semibold">Implantations</button>
+    <button type="button" @click="tab = 'programmes'" :aria-pressed="tab === 'programmes'" :class="tab === 'programmes' ? 'bg-ui-primary-soft text-ui-primary' : 'text-ui-text-muted'" class="rounded-ui-button px-3 py-2 text-sm font-semibold">Programmes</button>
+  </nav>
+  <section x-show="tab === 'schools'" x-cloak class="space-y-3">
+    <div class="flex items-center justify-between"><h3 class="text-sm font-semibold">Écoles</h3><button class="rounded-ui-button bg-ui-primary px-3 py-2 text-sm font-semibold text-ui-on-primary" onclick="dgOpenModal('{% url 'accounts_portal:dg_school_editor' %}')">+ Créer une école</button></div>
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {% for school in structure_schools %}
+      <article class="rounded-ui-card border border-ui-border bg-ui-surface p-4">
+        <div class="flex items-start justify-between gap-2"><div><h4 class="font-semibold">{{ school.short_name }}</h4><p class="text-xs text-ui-text-muted">{{ school.code }}</p></div><span class="text-xs {% if school.is_active %}text-ui-success{% else %}text-ui-text-muted{% endif %}">{% if school.is_active %}Active{% else %}Inactive{% endif %}</span></div>
+        <p class="my-3 text-xs text-ui-text-muted">{{ school.programme_count }} programme{{ school.programme_count|pluralize }} · {{ school.dg_implantations|length }} implantation{{ school.dg_implantations|length|pluralize }}</p>
+        <div class="flex flex-wrap gap-x-3 gap-y-2 text-xs font-semibold text-ui-primary">
+          {% if school.is_active %}<button onclick="dgOpenUniversityScope('{{ school.pk }}', '', 'overview')">Ouvrir</button>{% endif %}
+          <button onclick="dgOpenModal('{% url 'accounts_portal:dg_school_editor' %}?school_id={{ school.pk }}')">Modifier</button>
+          {% if school.is_active %}<button onclick="dgOpenUniversityScope('{{ school.pk }}', '', 'formations')">Programmes</button><button onclick="dgOpenUniversityScope('{{ school.pk }}', '', 'university', 'implantations')">Implantations</button>{% endif %}
+        </div>
+      </article>
+      {% empty %}<p class="text-sm text-ui-text-muted">Aucune école dans ce périmètre.</p>{% endfor %}
+    </div>
+  </section>
+  <section x-show="tab === 'campuses'" x-cloak class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-sm font-semibold">{% if selected_school %}Campus de {{ selected_school.code }}{% else %}Campus physiques{% endif %}</h3><button class="rounded-ui-button bg-ui-primary px-3 py-2 text-sm font-semibold text-ui-on-primary" onclick="dgOpenModal('{% url 'accounts_portal:dg_modal' %}?modal=branch_admin')">+ Créer un campus</button></div>
+    <div class="overflow-x-auto rounded-ui-card border border-ui-border"><table class="w-full text-left text-sm">
+      <thead class="bg-ui-surface-muted text-xs text-ui-text-muted"><tr><th class="p-3">Campus</th><th class="p-3">Écoles présentes</th><th class="p-3">Statut</th><th class="p-3">Actions</th></tr></thead>
+      <tbody>{% for campus in structure_campuses %}<tr class="border-t border-ui-border">
+        <td class="p-3 font-semibold">{{ campus.name }}<p class="text-xs font-normal text-ui-text-muted">{{ campus.code }} · {{ campus.city }}</p></td>
+        <td class="p-3"><span class="text-xs text-ui-text-muted">{{ campus.dg_schools|length }} rattachement{{ campus.dg_schools|length|pluralize }}</span><p>{% for link in campus.dg_schools %}{{ link.school.code }}{% if not link.is_active or not link.school.is_active %} (inactive){% endif %}{% if not forloop.last %} · {% endif %}{% empty %}Aucune école rattachée{% endfor %}</p></td>
+        <td class="p-3">{% if campus.is_active %}Actif{% else %}Inactif{% endif %}</td>
+        <td class="p-3 text-xs font-semibold text-ui-primary"><button onclick="dgOpenModal('{% url 'accounts_portal:dg_modal' %}?modal=branch_admin&branch_id={{ campus.pk }}')">Modifier</button>{% if campus.is_active %}<button class="ml-3" onclick="dgOpenUniversityScope('', '{{ campus.pk }}', 'overview')">Ouvrir</button>{% endif %}</td>
+      </tr>{% empty %}<tr><td colspan="4" class="p-4 text-ui-text-muted">Aucun campus dans ce périmètre.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  <section x-show="tab === 'implantations'" x-cloak class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h3 class="text-sm font-semibold">Implantations{% if selected_school %} de {{ selected_school.code }}{% endif %}</h3><p class="text-xs text-ui-text-muted">Rattachements entre les écoles et les campus.</p></div>
+      <div class="flex flex-wrap gap-2"><button class="rounded-ui-button border border-ui-border px-3 py-2 text-sm font-semibold" onclick="dgOpenModal('{% url 'accounts_portal:dg_implantation_editor' %}{% if selected_school %}?school_id={{ selected_school.pk }}{% endif %}')">+ Rattacher un campus</button><button class="rounded-ui-button bg-ui-primary px-3 py-2 text-sm font-semibold text-ui-on-primary" onclick="dgOpenModal('{% url 'accounts_portal:dg_modal' %}?modal=branch_admin')">+ Nouveau campus</button></div>
+    </div>
+    <div class="overflow-x-auto rounded-ui-card border border-ui-border"><table class="w-full text-left text-sm">
+      <thead class="bg-ui-surface-muted text-xs text-ui-text-muted"><tr><th class="p-3">École</th><th class="p-3">Campus</th><th class="p-3">Ville</th><th class="p-3">Statut</th><th class="p-3">Actions</th></tr></thead>
+      <tbody>{% for link in structure_implantations %}<tr class="border-t border-ui-border">
+        <td class="p-3 font-semibold"><button class="text-ui-primary" onclick="dgOpenUniversityScope('{{ link.school.pk }}', '', 'university', 'implantations')">{{ link.school.code }}</button></td><td class="p-3"><button class="text-ui-primary" onclick="dgOpenUniversityScope('', '{{ link.branch.pk }}', 'university', 'campuses')">{{ link.branch.name }}</button>{% if link.local_code %}<span class="ml-2 text-xs text-ui-text-muted">{{ link.local_code }}</span>{% endif %}</td>
+        <td class="p-3 text-ui-text-muted">{{ link.branch.city }}</td>
+        <td class="p-3">{% if link.is_active and link.school.is_active and link.branch.is_active %}Active{% else %}Inactive{% endif %}</td>
+        <td class="p-3 text-xs font-semibold text-ui-primary"><button onclick="dgOpenModal('{% url 'accounts_portal:dg_implantation_editor' %}?school_id={{ link.school.pk }}&link_id={{ link.pk }}')">Modifier</button>{% if link.is_active and link.school.is_active and link.branch.is_active %}<button class="ml-3" onclick="dgOpenUniversityScope('{{ link.school.pk }}', '{{ link.branch.pk }}', 'overview')">Ouvrir le périmètre</button>{% endif %}</td>
+      </tr>{% empty %}<tr><td colspan="5" class="p-4 text-ui-text-muted">Aucune implantation enregistrée.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  <section x-show="tab === 'programmes'" x-cloak class="space-y-3">
+    <div class="flex items-center justify-between"><h3 class="text-sm font-semibold">Programmes</h3><button class="text-sm font-semibold text-ui-primary" onclick="dgShowSection('formations')">Gérer le catalogue</button></div>
+    <form hx-get="{{ dg_workspace_urls.university }}" hx-target="#executive-workspace" hx-push-url="true" class="flex gap-2">
+      <input type="hidden" name="structure_view" value="programmes"><input name="q" value="{{ structure_query }}" aria-label="Rechercher un programme" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2 text-sm" placeholder="Programme ou école"><button class="rounded-ui-button border border-ui-border px-3 text-sm">Rechercher</button>
+    </form>
+    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="text-xs text-ui-text-muted"><tr><th class="p-2">Programme</th><th class="p-2">École</th><th class="p-2">Campus éligibles</th></tr></thead><tbody>
+      {% for programme in structure_programmes %}<tr class="border-t border-ui-border"><td class="p-2">{{ programme.title }}</td><td class="p-2">{{ programme.school.code|default:"Non rattaché" }}</td><td class="p-2">{% if programme.school and programme.school.is_active %}{% for link in programme.school.dg_offerings %}{{ link.branch.name }}{% if not forloop.last %}, {% endif %}{% empty %}Aucune implantation active{% endfor %}{% else %}Rattachement à régulariser{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="p-4">Aucun programme.</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% include "portal/dg/partials/university_pagination.html" with page=structure_programmes section_url=dg_workspace_urls.university query=structure_query %}
+  </section>
+  {% if unassigned_programmes or inconsistent_classes %}<details class="rounded-ui-card border border-ui-border px-3 py-2 text-xs text-ui-text-muted"><summary class="cursor-pointer font-semibold">Points à régulariser</summary><p class="mt-2">{{ unassigned_programmes|default:0 }} programme(s) sans école · {{ inconsistent_classes }} classe(s) liée(s) à une implantation inactive. Historique conservé.</p></details>{% endif %}
+</section>

@@ -1,17 +1,197 @@
-{% extends "base.html" %}
-{% load component_tags %}
+{% extends "public/base.html" %}
+{% load static %}
 
-{% block title %}Actualités{% endblock %}
+{% block title %}Actualités & événements | UFHOB{% endblock %}
 
 {% block content %}
+{% if featured_news %}
+<section id="news-editorial-hero"
+         class="news-editorial-hero"
+         x-data="newsEditorialHero({{ featured_news|length }})"
+         @mouseenter="hold()"
+         @mouseleave="release()"
+         @focusin="hold()"
+         @focusout="if (!$event.currentTarget.contains($event.relatedTarget)) release()"
+         @keydown.left.prevent="previous()"
+         @keydown.right.prevent="next()">
+  <div class="news-editorial-hero__grain" aria-hidden="true"></div>
 
-{% component "news_hero"
-    title="Actualités & Communiqués Institutionnels"
-    subtitle="Informations académiques, partenariats internationaux, décisions administratives." %}
-{% endcomponent %}
+  {% for item in featured_news %}
+  <article x-show="activeSlide === {{ forloop.counter0 }}"
+           x-transition:enter="transition-opacity duration-700 ease-out"
+           x-transition:enter-start="opacity-0"
+           x-transition:enter-end="opacity-100"
+           x-transition:leave="transition-opacity duration-500 ease-in"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"
+           {% if not forloop.first %}x-cloak{% endif %}
+           class="news-editorial-hero__slide">
+    <div class="news-editorial-hero__media" aria-hidden="true">
+      {% if item.image %}
+        <img src="{{ item.image.url }}" alt="" {% if not forloop.first %}loading="lazy"{% endif %}>
+      {% else %}
+        <div class="news-editorial-hero__fallback"></div>
+      {% endif %}
+    </div>
+    <div class="news-editorial-hero__veil" aria-hidden="true"></div>
 
-<section class="py-16 bg-gray-50">
-    {% include "news/fragments/news_content_fragment.html" %}
+    <div class="relative z-10 mx-auto flex min-h-[34rem] max-w-ufhob-container items-end px-4 pb-20 pt-28 sm:min-h-[38rem] sm:px-6 sm:pb-24 lg:px-8">
+      <div class="max-w-3xl text-white">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+          <span class="news-editorial-hero__eyebrow-mark" aria-hidden="true"></span>
+          <span>À la une</span>
+          <span class="text-white/40">·</span>
+          <span>{{ item.categorie.nom }}</span>
+          <time datetime="{{ item.published_at|date:'c' }}" class="text-white/60">{{ item.published_at|date:'d M Y' }}</time>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2">
+          {% if item.is_urgent %}<span class="news-status-badge news-status-badge--urgent">Urgent</span>{% endif %}
+          {% if item.is_important %}<span class="news-status-badge news-status-badge--important">Communication importante</span>{% endif %}
+        </div>
+
+        <h1 class="mt-5 max-w-3xl text-3xl font-bold leading-[1.08] tracking-[-0.03em] text-white sm:text-5xl lg:text-6xl">{{ item.titre }}</h1>
+        <p class="mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
+          {% if item.resume %}{{ item.resume|striptags|truncatewords:32 }}{% else %}Les informations et communications qui rythment la vie de l’université.{% endif %}
+        </p>
+        <a href="{{ item.get_absolute_url }}" class="news-editorial-hero__cta mt-8">
+          Lire l’actualité
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+
+  {% if featured_news|length > 1 %}
+  <div class="absolute inset-x-0 bottom-0 z-20">
+    <div class="mx-auto flex max-w-ufhob-container items-center justify-between gap-6 px-4 pb-7 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-2" role="tablist" aria-label="Actualités à la une">
+        {% for item in featured_news %}
+        <button type="button"
+                role="tab"
+                :aria-selected="activeSlide === {{ forloop.counter0 }}"
+                :class="activeSlide === {{ forloop.counter0 }} ? 'is-active' : ''"
+                @click="goTo({{ forloop.counter0 }})"
+                class="news-editorial-hero__dot"
+                aria-label="Afficher : {{ item.titre }}">
+          <span></span>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" class="news-editorial-hero__control" @click="previous()" aria-label="Actualité précédente">←</button>
+        <button type="button" class="news-editorial-hero__control" @click="next()" aria-label="Actualité suivante">→</button>
+        <button type="button"
+                class="news-editorial-hero__pause"
+                @click="togglePause()"
+                :aria-pressed="userPaused"
+                :aria-label="userPaused ? 'Reprendre la rotation' : 'Mettre la rotation en pause'">
+          <span x-text="userPaused ? 'Reprendre' : 'Pause'"></span>
+        </button>
+      </div>
+    </div>
+    <div class="news-editorial-hero__progress" aria-hidden="true"><span :style="`width: ${progress}%`"></span></div>
+  </div>
+  {% endif %}
 </section>
+{% else %}
+<section id="news-editorial-hero" class="news-editorial-hero news-editorial-hero--empty">
+  <div class="news-editorial-hero__grain" aria-hidden="true"></div>
+  <div class="relative z-10 mx-auto flex min-h-[30rem] max-w-ufhob-container items-end px-4 pb-16 pt-28 sm:min-h-[34rem] sm:px-6 sm:pb-20 lg:px-8">
+    <div class="max-w-3xl text-white">
+      <p class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary"><span class="news-editorial-hero__eyebrow-mark" aria-hidden="true"></span>UFHOB · Actualités & événements</p>
+      <h1 class="mt-5 text-4xl font-bold leading-tight tracking-[-0.03em] text-white sm:text-6xl">La vie de l’université, au fil des publications.</h1>
+      <p class="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">Retrouvez ici les communications, les rendez-vous et les temps forts qui font vivre la communauté UFHOB.</p>
+      <p class="mt-8 border-l border-ufhob-secondary/70 pl-4 text-sm font-medium text-white/65">Les prochaines actualités seront publiées dans cet espace éditorial.</p>
+    </div>
+  </div>
+</section>
+{% endif %}
 
+<div id="news-content"
+     x-data="{ modalOpen: false, selectedNews: null, syncLatest(detail) { if (!detail || !detail.latest) return; const input = document.getElementById('news-poll-since'); if (input) input.value = detail.latest; }, openModal(payload) { this.selectedNews = payload; this.modalOpen = true; document.body.classList.add('overflow-hidden'); }, closeModal() { this.modalOpen = false; document.body.classList.remove('overflow-hidden'); } }"
+     @open-news-modal.window="openModal($event.detail)"
+     @news:refresh.window="syncLatest($event.detail)">
+  <input type="hidden" id="news-poll-since" value="{% if latest_news_timestamp %}{{ latest_news_timestamp|date:'c' }}{% endif %}">
+  <div id="news-poller"
+       class="hidden"
+       hx-get="{% url 'news:poll' %}?{{ active_querystring }}"
+       hx-trigger="every 30s"
+       hx-include="#news-poll-since"
+       hx-swap="none"></div>
+
+  <section class="bg-ufhob-ivory py-12 sm:py-16 lg:py-20" aria-labelledby="news-list-heading">
+    <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col gap-7 border-b border-ufhob-border pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Publications récentes</p>
+          <h2 id="news-list-heading" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">L’actualité de l’UFHOB</h2>
+          <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Une sélection de communications et d’informations publiées par l’université.</p>
+        </div>
+        <p class="text-sm font-medium text-ufhob-muted"><span class="font-bold text-ufhob-primary">{{ page_obj.paginator.count }}</span> publication{{ page_obj.paginator.count|pluralize }}</p>
+      </div>
+
+      <form method="get" action="{% url 'news:list' %}" class="news-filter-panel mt-8">
+        <div class="min-w-0 flex-1">
+          <label for="news-search" class="news-filter-panel__label">Rechercher dans les publications</label>
+          <div class="news-filter-panel__input-wrap">
+            <span aria-hidden="true" class="news-filter-panel__icon">⌕</span>
+            <input id="news-search" type="search" name="q" value="{{ current_search }}" placeholder="Titre ou mot-clé" autocomplete="off">
+          </div>
+        </div>
+        <div class="min-w-0 lg:w-72">
+          <label for="news-category" class="news-filter-panel__label">Filtrer par catégorie</label>
+          <select id="news-category" name="category" class="news-filter-panel__select">
+            <option value="">Toutes les catégories</option>
+            {% for category in categories %}<option value="{{ category.slug }}" {% if current_category == category.slug %}selected{% endif %}>{{ category.nom }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 lg:pb-0.5">
+          <button type="submit" class="news-filter-panel__submit">Appliquer</button>
+          {% if current_search or current_category %}<a href="{% url 'news:list' %}" class="news-filter-panel__reset">Réinitialiser</a>{% endif %}
+        </div>
+      </form>
+
+      <div class="mt-10" id="news-results">
+        {% include "news/fragments/news_list_fragment.html" %}
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="agenda-heading">
+    <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col gap-5 border-b border-ufhob-border pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Agenda universitaire</p>
+          <h2 id="agenda-heading" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">Les temps forts de l’université</h2>
+          <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Rencontres, activités et événements publiés dans l’agenda UFHOB.</p>
+        </div>
+        <a href="{% url 'news:event_list' %}?mode=events" class="news-text-link">Voir tout l’agenda <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {% for event in public_events %}<c-public.event_card :event="event" />{% empty %}
+          <div class="md:col-span-2 lg:col-span-3"><c-public.empty_state title="Aucun événement publié" text="L’agenda sera mis à jour dès qu’un événement public sera disponible." /></div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div x-show="modalOpen" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center bg-ufhob-primary/70 px-4 py-8" @click.self="closeModal()" @keydown.escape.window="closeModal()">
+    <div class="w-full max-w-2xl border border-ufhob-border bg-white shadow-float" role="dialog" aria-modal="true" aria-labelledby="news-preview-title">
+      <div class="flex items-start justify-between gap-5 border-b border-ufhob-border p-5 sm:p-7">
+        <div class="min-w-0">
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary-dark" x-text="selectedNews?.category"></p>
+          <h2 id="news-preview-title" class="mt-2 text-2xl font-bold leading-tight text-ufhob-primary" x-text="selectedNews?.title"></h2>
+          <p class="mt-2 text-xs text-ufhob-muted" x-text="selectedNews?.date"></p>
+        </div>
+        <button type="button" class="grid h-9 w-9 shrink-0 place-items-center border border-ufhob-border text-ufhob-muted hover:bg-ufhob-primary-soft hover:text-ufhob-primary" @click="closeModal()" aria-label="Fermer l’aperçu">×</button>
+      </div>
+      <div class="p-5 sm:p-7"><p class="text-sm leading-7 text-ufhob-muted" x-text="selectedNews?.summary"></p></div>
+      <div class="flex flex-wrap items-center justify-between gap-4 border-t border-ufhob-border p-5 sm:p-7"><a :href="selectedNews?.url" class="news-text-link">Lire l’article complet <span aria-hidden="true">→</span></a><button type="button" class="text-xs font-bold uppercase tracking-[0.12em] text-ufhob-muted hover:text-ufhob-primary" @click="closeModal()">Fermer</button></div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'src/js/public/news_editorial.js' %}"></script>{% endblock %}

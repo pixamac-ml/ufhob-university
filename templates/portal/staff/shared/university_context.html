@@ -1,0 +1,31 @@
+{% if dashboard_shell.key != "executive" %}
+<div class="mb-3 flex flex-wrap items-center gap-2 text-xs text-ui-text-muted" data-university-context>
+  <span class="font-semibold">UFHOB</span>
+  {% if dashboard_shell.role == "student" or university_student_context %}
+    <span data-context-school>{{ academic_school.code|default:"École à rattacher" }}</span>
+    <span data-context-branch>{{ academic_branch.name|default:"Campus à rattacher" }}</span>
+    {% if academic_programme %}<span data-context-programme>{{ academic_programme.title }}</span>{% endif %}
+    {% if academic_class %}<span data-context-class>{{ academic_class.display_name }}</span>{% endif %}
+    <span data-context-year>{{ academic_year.name|default:"Parcours en cours d’affectation" }}</span>
+  {% elif dashboard_shell.role == "teacher" or request.access_context.position == "moniteur" or request.access_context.position == "teacher" %}
+    <span data-context-school>{% for code in teaching_school_codes %}{{ code }}{% if not forloop.last %} · {% endif %}{% empty %}Écoles selon vos affectations{% endfor %}</span>
+    <label>Campus
+      <select name="teaching_branch_id" data-teaching-campus class="rounded-ui-input border border-ui-border bg-ui-surface px-2 py-1" onchange="teacherChangeCampus(this.value)">
+        {% for campus in teaching_branch_choices %}<option value="{{ campus.pk }}" {% if campus.pk == teaching_selected_branch_id %}selected{% endif %}>{{ campus.name }}</option>{% empty %}<option value="">Aucune affectation</option>{% endfor %}
+      </select>
+    </label>
+    <span>Année indiquée sur chaque classe</span>
+  {% else %}
+    {% if request.operational_campuses %}
+    <label>Campus
+      <select name="context_branch_id" data-operational-campus class="rounded-ui-input border border-ui-border bg-ui-surface px-2 py-1">
+        {% for campus in request.operational_campuses %}<option value="{{ campus.pk }}" {% if campus.pk == request.access_context.branch.pk %}selected{% endif %}>{{ campus.name }}</option>{% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <span data-context-school>{% if request.access_context.school %}{{ request.access_context.school.code }}{% elif request.access_context.scope == "GLOBAL" %}Toutes les écoles{% else %}Écoles du campus autorisé{% endif %}</span>
+    <span data-context-branch>{% if request.access_context.branch %}{{ request.access_context.branch.name }}{% elif request.access_context.scope == "SCHOOL" %}Campus autorisés de l’école{% elif request.access_context.scope == "GLOBAL" %}Tous les campus{% else %}Campus à affecter{% endif %}</span>
+    <span data-context-year>{% firstof director_active_academic_year.name selected_academic_year.name active_academic_year.name academic_year.name "Année précisée dans le module" %}</span>
+  {% endif %}
+</div>
+{% endif %}

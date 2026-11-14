@@ -1,0 +1,1537 @@
+from __future__ import annotations
+
+from accounts.scoping import scoped
+
+from collections import defaultdict
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from functools import lru_cache
+
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
+
+from academics.models import (
+    AcademicClass,
+    AcademicScheduleChangeLog,
+    AcademicScheduleEvent,
+    AcademicScheduleExecutionLog,
+    WeeklyScheduleSlot,
+)
+from portal.student.widgets.academics import get_student_academic_snapshot
+
+
+DEFAULT_TIME_SLOTS = [
+    time(8, 0),
+    time(10, 0),
+    time(14, 0),
+    time(16, 0),
+]
+
+
+@lru_cache(maxsize=256)
+def _cached_school_logo_url(storage, name):
+    try:
+        return storage.url(name) if storage.exists(name) else ""
+    except (AttributeError, NotImplementedError, OSError, ValueError):
+        return ""
+
+
+def _school_logo_url(school):
+    logo = getattr(school, "logo", None)
+    if not logo or not getattr(logo, "name", ""):
+        return ""
+    return _cached_school_logo_url(logo.storage, logo.name)
+ACTIVE_EVENT_STATUSES = {
+    AcademicScheduleEvent.STATUS_DRAFT,
+    AcademicScheduleEvent.STATUS_PLANNED,
+    AcademicScheduleEvent.STATUS_ONGOING,
+    AcademicScheduleEvent.STATUS_POSTPONED,
+}
+STANDARD_SLOT_WINDOWS = [
+    (time(8, 0), time(10, 0)),
+    (time(10, 0), time(12, 0)),
+    (time(14, 0), time(16, 0)),
+    (time(16, 0), time(18, 0)),
+]
+STANDARD_SLOT_END_BY_START = {start.strftime("%H:%M"): end.strftime("%H:%M") for start, end in STANDARD_SLOT_WINDOWS}
+
+
+def _normalize_week_start(week_start: date | datetime | None) -> date:
+    if week_start is None:
+        week_start = timezone.localdate()
+    if isinstance(week_start, datetime):
+        week_start = timezone.localtime(week_start).date()
+    return week_start - timedelta(days=week_start.weekday())
+
+
+def _week_bounds(week_start: date | datetime | None) -> tuple[datetime, datetime, date]:
+    normalized = _normalize_week_start(week_start)
+    start = timezone.make_aware(datetime.combine(normalized, time.min))
+    end = start + timedelta(days=7)
+    return start, end, normalized
+
+
+def _base_conflict_queryset(*, exclude_event_id: int | None = None):
+    queryset = AcademicScheduleEvent.objects.filter(is_active=True).exclude(
+        status__in=[AcademicScheduleEvent.STATUS_CANCELLED]
+    )
+    if exclude_event_id:
+        queryset = queryset.exclude(pk=exclude_event_id)
+    return queryset
+
+
+def _overlap_filter(start_datetime: datetime, end_datetime: datetime):
+    return Q(start_datetime__lt=end_datetime) & Q(end_datetime__gt=start_datetime)
+
+
+def _conflict_item(conflict_type: str, message: str, event) -> dict:
+    return {
+        "type": conflict_type,
+        "message": message,
+        "event_id": event.id if event is not None else None,
+        "event": event,
+    }
+
+
+def _format_event_conflict_label(event: AcademicScheduleEvent) -> str:
+    local_start = timezone.localtime(event.start_datetime)
+    local_end = timezone.localtime(event.end_datetime)
+    return (
+        f"{event.academic_class.display_name} | "
+        f"{local_start.strftime('%d/%m %H:%M')}-{local_end.strftime('%H:%M')} | "
+        f"{event.location or 'Salle non precisee'}"
+    )
+
+
+def _get_assignment_guardrails(*, branch, academic_class, teacher, ec):
+    from portal.models import DirectorTeacherAssignment
+
+    assignments_qs = DirectorTeacherAssignment.objects.filter(
+        teacher=teacher,
+        academic_class=academic_class,
+        is_active=True,
+    )
+    if branch is not None:
+        assignments_qs = assignments_qs.filter(branch=branch)
+    assignments = list(assignments_qs.select_related("ec", "ue", "semester"))
+    if not assignments:
+        return {"assignments": [], "matched": None}
+
+    exact_match = next((assignment for assignment in assignments if assignment.ec_id == getattr(ec, "id", None)), None)
+    ue_match = next((assignment for assignment in assignments if assignment.ue_id == getattr(ec, "ue_id", None)), None)
+    semester_match = next((assignment for assignment in assignments if assignment.semester_id == getattr(getattr(ec, "ue", None), "semester_id", None)), None)
+    generic_match = next((assignment for assignment in assignments if assignment.ec_id is None and assignment.ue_id is None and assignment.semester_id is None), None)
+    matched = exact_match or ue_match or semester_match or generic_match
+    return {"assignments": assignments, "matched": matched}
+
+
+def _validate_assignment_guardrails(*, academic_class, teacher, branch, academic_year, ec, start_datetime, end_datetime, exclude_event=None):
+    if teacher is None or academic_class is None or ec is None:
+        return
+
+    guardrails = _get_assignment_guardrails(
+        branch=branch,
+        academic_class=academic_class,
+        teacher=teacher,
+        ec=ec,
+    )
+    assignments = guardrails["assignments"]
+    matched = guardrails["matched"]
+    if not assignments:
+        raise ValidationError("L'enseignant doit d'abord être affecté à cette classe avant de planifier une séance.")
+    if matched is None:
+        ec_labels = ", ".join(
+            sorted({assignment.ec.title for assignment in assignments if assignment.ec_id})
+        ) or "affectation de classe"
+        raise ValidationError(
+            [f"L'enseignant n'est pas affecte a cet EC pour cette classe. Affectations autorisees: {ec_labels}."]
+        )
+
+    event_date = timezone.localtime(start_datetime).date()
+    if (
+        (matched.starts_on and event_date < matched.starts_on)
+        or (matched.ends_on and event_date > matched.ends_on)
+    ):
+        raise ValidationError("La séance est hors de la période de validité de l'affectation de l'enseignant.")
+
+    if matched.planned_hours is None:
+        return
+
+    scheduled_minutes_qs = _base_conflict_queryset(exclude_event_id=getattr(exclude_event, "id", None)).filter(
+        academic_class=academic_class,
+        teacher=teacher,
+        branch=branch,
+        academic_year=academic_year,
+    )
+    if matched.ec_id:
+        scheduled_minutes_qs = scheduled_minutes_qs.filter(ec=matched.ec)
+    scheduled_minutes = Decimal("0")
+    for existing in scheduled_minutes_qs:
+        scheduled_minutes += Decimal(existing.duration_minutes)
+
+    incoming_minutes = Decimal(int((end_datetime - start_datetime).total_seconds() // 60))
+    total_hours = (scheduled_minutes + incoming_minutes) / Decimal("60")
+    if total_hours > matched.planned_hours:
+        scope_label = matched.ec.title if matched.ec_id else academic_class.display_name
+        raise ValidationError(
+            [f"Heures depassees pour l'affectation '{scope_label}' : {total_hours:.2f} h planifiees pour {matched.planned_hours:.2f} h prevues."]
+        )
+
+
+def _serialize_event(event: AcademicScheduleEvent, *, highlight_today: date | None = None) -> dict:
+    today = timezone.localdate()
+    event_day = timezone.localtime(event.start_datetime).date()
+    school = getattr(event.academic_class.programme, "school", None)
+    school_logo_url = _school_logo_url(school)
+    local_start = timezone.localtime(event.start_datetime)
+    local_end = timezone.localtime(event.end_datetime)
+    display_title = event.ec.title if event.ec_id else event.title
+    slot_time = local_start.time().replace(second=0, microsecond=0)
+    is_standard_slot = slot_time in DEFAULT_TIME_SLOTS
+    status_labels = {
+        AcademicScheduleEvent.STATUS_PLANNED: "Planifie",
+        AcademicScheduleEvent.STATUS_ONGOING: "En cours",
+        AcademicScheduleEvent.STATUS_POSTPONED: "Reporte",
+        AcademicScheduleEvent.STATUS_CANCELLED: "Annule",
+        AcademicScheduleEvent.STATUS_COMPLETED: "Termine",
+        AcademicScheduleEvent.STATUS_DRAFT: "Brouillon",
+    }
+    status_theme = {
+        AcademicScheduleEvent.STATUS_PLANNED: "sky",
+        AcademicScheduleEvent.STATUS_ONGOING: "emerald",
+        AcademicScheduleEvent.STATUS_POSTPONED: "amber",
+        AcademicScheduleEvent.STATUS_CANCELLED: "rose",
+        AcademicScheduleEvent.STATUS_COMPLETED: "slate",
+        AcademicScheduleEvent.STATUS_DRAFT: "slate",
+    }
+    return {
+        "id": event.id,
+        "title": f"{display_title} · Remplacement" if event.original_teacher_id else display_title,
+        "is_replacement": bool(event.original_teacher_id),
+        "original_teacher_id": event.original_teacher_id,
+        "event_title": event.title,
+        "description": event.description,
+        "status": event.status,
+        "status_label": status_labels.get(event.status, "Planifie"),
+        "status_theme": status_theme.get(event.status, "sky"),
+        "event_type": event.event_type,
+        "academic_class_id": event.academic_class_id,
+        "ec_id": event.ec_id,
+        "teacher_id": event.teacher_id,
+        "start_datetime": event.start_datetime,
+        "end_datetime": event.end_datetime,
+        "start_time": local_start.strftime("%H:%M"),
+        "end_time": local_end.strftime("%H:%M"),
+        "time_range": f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')}",
+        "weekday_index": event_day.weekday(),
+        "weekday_label": event_day.strftime("%A"),
+        "teacher_name": (event.teacher.get_full_name() or event.teacher.username) if event.teacher_id else "Enseignant non defini",
+        "location": event.location or ("En ligne" if event.is_online else "Salle non precisee"),
+        "branch_name": event.branch.name,
+        "school_name": getattr(getattr(event.academic_class.programme, "school", None), "display_name", "") or "",
+        "school_logo_url": school_logo_url,
+        "programme_name": event.academic_class.programme.title,
+        "cycle_name": getattr(getattr(event.academic_class.programme, "cycle", None), "name", "") or "",
+        "academic_year_name": event.academic_class.academic_year.name,
+        "class_name": event.academic_class.display_name,
+        "ec_code": event.ec.ue.code if event.ec_id else "",
+        "is_online": event.is_online,
+        "meeting_link": event.meeting_link,
+        "meeting_status": event.meeting_status,
+        "online_provider": event.online_provider,
+        "slot_label": slot_time.strftime("%H:%M"),
+        "is_standard_slot": is_standard_slot,
+        "duration_minutes": event.duration_minutes,
+        "is_today": event_day == (highlight_today or today),
+        "is_postponed": event.status == AcademicScheduleEvent.STATUS_POSTPONED,
+        "is_cancelled": event.status == AcademicScheduleEvent.STATUS_CANCELLED,
+        "is_completed": event.status == AcademicScheduleEvent.STATUS_COMPLETED,
+    }
+
+
+def _serialize_weekly_slot(slot: WeeklyScheduleSlot, week_start: date, *, highlight_today: date | None = None) -> dict:
+    today = timezone.localdate()
+    event_day = week_start + timedelta(days=int(slot.weekday))
+    start_dt = timezone.make_aware(datetime.combine(event_day, slot.start_time))
+    end_dt = timezone.make_aware(datetime.combine(event_day, slot.end_time))
+    slot_label = slot.start_time.strftime("%H:%M")
+    school = getattr(slot.academic_class.programme, "school", None)
+    school_logo_url = _school_logo_url(school)
+    return {
+        "id": f"weekly-{slot.id}",
+        "title": slot.ec.title,
+        "event_title": f"{slot.ec.title} - {slot.academic_class.display_name}",
+        "description": "Creneau hebdomadaire officiel",
+        "status": AcademicScheduleEvent.STATUS_PLANNED,
+        "status_label": "Planifie",
+        "status_theme": "sky",
+        "event_type": AcademicScheduleEvent.EVENT_TYPE_COURSE,
+        "academic_class_id": slot.academic_class_id,
+        "ec_id": slot.ec_id,
+        "teacher_id": slot.teacher_id,
+        "start_datetime": start_dt,
+        "end_datetime": end_dt,
+        "start_time": slot.start_time.strftime("%H:%M"),
+        "end_time": slot.end_time.strftime("%H:%M"),
+        "time_range": f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}",
+        "weekday_index": int(slot.weekday),
+        "weekday_label": slot.get_weekday_display(),
+        "teacher_name": (slot.teacher.get_full_name() or slot.teacher.username) if slot.teacher_id else "Enseignant non defini",
+        "location": slot.room or "Salle non precisee",
+        "branch_name": slot.branch.name,
+        "school_name": getattr(getattr(slot.academic_class.programme, "school", None), "display_name", "") or "",
+        "school_logo_url": school_logo_url,
+        "programme_name": slot.academic_class.programme.title,
+        "cycle_name": getattr(getattr(slot.academic_class.programme, "cycle", None), "name", "") or "",
+        "academic_year_name": slot.academic_class.academic_year.name,
+        "class_name": slot.academic_class.display_name,
+        "ec_code": slot.ec.ue.code if slot.ec_id else "",
+        "is_online": False,
+        "slot_label": slot_label,
+        "is_standard_slot": slot.start_time.replace(second=0, microsecond=0) in DEFAULT_TIME_SLOTS,
+        "duration_minutes": int((datetime.combine(event_day, slot.end_time) - datetime.combine(event_day, slot.start_time)).total_seconds() // 60),
+        "is_today": event_day == (highlight_today or today),
+        "is_postponed": False,
+        "is_cancelled": False,
+        "is_completed": False,
+        "source": "weekly_slot",
+    }
+
+
+def _build_week_grid_from_serialized(serialized_events, week_start: date):
+    days = []
+    day_labels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    # Sunday is an explicit WeeklyScheduleSlot choice. A dated event must
+    # never disappear merely because the current week has no other Sunday
+    # course, so all consumers receive the canonical Monday–Sunday week.
+    day_count = 7
+    today = timezone.localdate()
+    for offset in range(day_count):
+        current_day = week_start + timedelta(days=offset)
+        days.append(
+            {
+                "date": current_day,
+                "label": day_labels[offset],
+                "day_number": current_day.day,
+                "is_today": current_day == today,
+            }
+        )
+
+    standard_slot_labels = [slot.strftime("%H:%M") for slot in DEFAULT_TIME_SLOTS]
+    actual_slot_labels = {
+        event["slot_label"]
+        for event in serialized_events
+        if 0 <= event["weekday_index"] <= 6
+    }
+    all_slot_labels = sorted(
+        set(standard_slot_labels) | actual_slot_labels,
+        key=lambda value: datetime.strptime(value, "%H:%M").time(),
+    )
+
+    slots = []
+    for slot_label in all_slot_labels:
+        is_standard = slot_label in standard_slot_labels
+        row = {
+            "label": slot_label,
+            "end_label": STANDARD_SLOT_END_BY_START.get(slot_label, ""),
+            "time_range": f"{slot_label} - {STANDARD_SLOT_END_BY_START.get(slot_label, '')}".strip(" -"),
+            "is_standard": is_standard,
+            "cells": [],
+        }
+        for offset, current_day in enumerate(days):
+            day_date = current_day["date"]
+            cell_events = []
+            for event in serialized_events:
+                if event["weekday_index"] != offset:
+                    continue
+                if event["slot_label"] == slot_label:
+                    cell_events.append(event)
+            row["cells"].append({"day_index": offset, "day_date": day_date, "events": cell_events})
+        slots.append(row)
+
+    day_event_counts = []
+    for offset, current_day in enumerate(days):
+        day_events = [event for event in serialized_events if event["weekday_index"] == offset]
+        day_event_counts.append(
+            {
+                "day_index": offset,
+                "date": current_day["date"],
+                "count": len(day_events),
+                "has_events": bool(day_events),
+            }
+        )
+
+    extra_slots = [slot for slot in slots if not slot["is_standard"]]
+
+    return {
+        "week_start": week_start,
+        "days": days,
+        "slots": slots,
+        "extra_slots": extra_slots,
+        "has_extra_slots": bool(extra_slots),
+        "events": serialized_events,
+        "empty_days": [item for item in day_event_counts if not item["has_events"]],
+        "day_event_counts": day_event_counts,
+        "summary": {
+            "planned": sum(1 for event in serialized_events if event["status"] == AcademicScheduleEvent.STATUS_PLANNED),
+            "ongoing": sum(1 for event in serialized_events if event["status"] == AcademicScheduleEvent.STATUS_ONGOING),
+            "postponed": sum(1 for event in serialized_events if event["status"] == AcademicScheduleEvent.STATUS_POSTPONED),
+            "cancelled": sum(1 for event in serialized_events if event["status"] == AcademicScheduleEvent.STATUS_CANCELLED),
+            "completed": sum(1 for event in serialized_events if event["status"] == AcademicScheduleEvent.STATUS_COMPLETED),
+        },
+    }
+
+
+def _build_week_grid(events, week_start: date):
+    today = timezone.localdate()
+    serialized_events = [_serialize_event(event, highlight_today=today) for event in events]
+    return _build_week_grid_from_serialized(serialized_events, week_start)
+
+
+def _build_week_grid_from_weekly_slots(slots, week_start: date):
+    today = timezone.localdate()
+    serialized_events = [_serialize_weekly_slot(slot, week_start, highlight_today=today) for slot in slots]
+    grid = _build_week_grid_from_serialized(serialized_events, week_start)
+    grid["is_weekly_template"] = True
+    return grid
+
+
+def _merge_weekly_slots_into_grid(schedule: dict, weekly_slots, week_start: date):
+    """Show official weekly slots that have not yet been materialized as dated events."""
+    serialized_events = list(schedule.get("events") or [])
+    existing_keys = {
+        (
+            event.get("weekday_index"),
+            event.get("start_time"),
+            event.get("end_time"),
+            event.get("ec_id"),
+            event.get("original_teacher_id") or event.get("teacher_id"),
+        )
+        for event in serialized_events
+    }
+    added = 0
+    today = timezone.localdate()
+    for slot in weekly_slots:
+        key = (
+            int(slot.weekday),
+            slot.start_time.strftime("%H:%M"),
+            slot.end_time.strftime("%H:%M"),
+            slot.ec_id,
+            slot.teacher_id,
+        )
+        if key in existing_keys:
+            continue
+        serialized_events.append(_serialize_weekly_slot(slot, week_start, highlight_today=today))
+        existing_keys.add(key)
+        added += 1
+
+    if not added:
+        return schedule
+
+    grid = _build_week_grid_from_serialized(serialized_events, week_start)
+    grid["has_weekly_template_fallback"] = True
+    grid["weekly_template_added_count"] = added
+    grid["is_weekly_template"] = not bool(schedule.get("events"))
+    return grid
+
+
+def get_schedule_conflicts(*, academic_class=None, teacher=None, branch=None, academic_year=None, ec=None, location="", start_datetime=None, end_datetime=None, exclude_event=None):
+    queryset = _base_conflict_queryset(exclude_event_id=getattr(exclude_event, "id", None))
+    if start_datetime and end_datetime:
+        queryset = queryset.filter(_overlap_filter(start_datetime, end_datetime))
+
+    class_conflicts = []
+    teacher_conflicts = []
+    location_conflicts = []
+    ec_conflicts = []
+    conflicts = []
+
+    filtered_queryset = queryset
+    if branch is not None:
+        filtered_queryset = filtered_queryset.filter(branch=branch)
+
+    if academic_class is not None:
+        class_conflicts = list(filtered_queryset.filter(academic_class=academic_class))
+        conflicts.extend(
+            _conflict_item(
+                "class_conflict",
+                f"Classe occupee : {_format_event_conflict_label(event)}.",
+                event,
+            )
+            for event in class_conflicts
+        )
+    if teacher is not None:
+        teacher_conflicts = list(filtered_queryset.filter(teacher=teacher))
+        conflicts.extend(
+            _conflict_item(
+                "teacher_conflict",
+                f"Enseignant deja programme : {_format_event_conflict_label(event)}.",
+                event,
+            )
+            for event in teacher_conflicts
+        )
+    if location:
+        location_conflicts = list(filtered_queryset.filter(location=location))
+        conflicts.extend(
+            _conflict_item(
+                "location_conflict",
+                f"Salle occupee : {_format_event_conflict_label(event)}.",
+                event,
+            )
+            for event in location_conflicts
+        )
+    if ec is not None:
+        ec_conflicts = list(filtered_queryset.filter(ec=ec))
+        conflicts.extend(
+            _conflict_item(
+                "ec_conflict",
+                "Cet EC est deja planifie sur le meme creneau.",
+                event,
+            )
+            for event in ec_conflicts
+        )
+    if academic_class is not None and branch is not None and academic_class.branch_id != branch.id:
+        conflicts.append(
+            _conflict_item(
+                "branch_conflict",
+                "L'annexe selectionnee est incoherente avec la classe academique.",
+                exclude_event,
+            )
+        )
+    if academic_class is not None and academic_year is not None and academic_class.academic_year_id != academic_year.id:
+        conflicts.append(
+            _conflict_item(
+                "academic_year_conflict",
+                "L'annee academique selectionnee est incoherente avec la classe academique.",
+                exclude_event,
+            )
+        )
+
+    return {
+        "has_conflict": bool(conflicts),
+        "conflicts": conflicts,
+        "class_conflicts": class_conflicts,
+        "teacher_conflicts": teacher_conflicts,
+        "location_conflicts": location_conflicts,
+        "ec_conflicts": ec_conflicts,
+    }
+
+
+def _ensure_no_conflicts(*, event, exclude_event=None):
+    profile = getattr(event.teacher, "profile", None)
+    if profile and profile.position == "moniteur" and (
+        profile.branch_id != event.branch_id or not event.teacher.is_active or profile.employment_status != "active"
+    ):
+        raise ValidationError("Le moniteur doit être actif et rattaché à l'annexe de la séance.")
+    if event.evaluation_campaign_id:
+        from academics.services.evaluation_campaign_service import assert_event_in_campaign_window
+
+        assert_event_in_campaign_window(
+            campaign=event.evaluation_campaign,
+            start_datetime=event.start_datetime,
+            end_datetime=event.end_datetime,
+        )
+    _validate_assignment_guardrails(
+        academic_class=event.academic_class,
+        teacher=event.original_teacher if event.original_teacher_id else event.teacher,
+        branch=event.branch,
+        academic_year=event.academic_year,
+        ec=event.ec,
+        start_datetime=event.start_datetime,
+        end_datetime=event.end_datetime,
+        exclude_event=exclude_event,
+    )
+    conflicts = get_schedule_conflicts(
+        academic_class=event.academic_class,
+        teacher=event.teacher,
+        branch=event.branch,
+        academic_year=event.academic_year,
+        ec=event.ec,
+        location=event.location,
+        start_datetime=event.start_datetime,
+        end_datetime=event.end_datetime,
+        exclude_event=exclude_event,
+    )
+    if conflicts["has_conflict"]:
+        messages = []
+        for item in conflicts["conflicts"]:
+            if item["message"] not in messages:
+                messages.append(item["message"])
+        raise ValidationError(messages)
+
+
+def _log_change(*, event, action_type, user, old_start_datetime=None, old_end_datetime=None, new_start_datetime=None, new_end_datetime=None, old_status="", new_status="", reason=""):
+    return AcademicScheduleChangeLog.objects.create(
+        event=event,
+        action_type=action_type,
+        old_start_datetime=old_start_datetime,
+        old_end_datetime=old_end_datetime,
+        new_start_datetime=new_start_datetime,
+        new_end_datetime=new_end_datetime,
+        old_status=old_status or "",
+        new_status=new_status or "",
+        reason=reason or "",
+        changed_by=user,
+    )
+
+
+def notify_monitor_assignment(*, actor, event=None, assignment=None):
+    """Deliver through notifier after the academic transaction has committed."""
+    import logging
+    from django.urls import reverse
+    from notifier.services import NotificationBus
+
+    item = event or assignment
+    if getattr(getattr(item.teacher, "profile", None), "position", "") != "moniteur":
+        return
+    replacement = bool(event and event.original_teacher_id)
+    kind = "Remplacement" if replacement else "Enseignement régulier"
+    subject = item.ec.title if item.ec_id else item.academic_class.display_name
+    body = f"{kind} · {subject} · {item.academic_class.display_name}"
+    if event:
+        body += f" · {timezone.localtime(event.start_datetime):%d/%m/%Y %H:%M}–{timezone.localtime(event.end_datetime):%H:%M}"
+    else:
+        body += " · Consultez le planning pour les séances programmées."
+
+    def deliver():
+        try:
+            NotificationBus.notify(
+                recipient=item.teacher, actor=actor, event_type="monitor_teaching_assignment",
+                title=kind, body=body, source_app="academics",
+                metadata={"branch_id": item.branch_id, "academic_class_id": item.academic_class_id,
+                          "url": reverse("accounts_portal:portal_teacher") + "?section=schedule"},
+                legacy_source="academics.schedule_event" if event else "portal.teacher_assignment",
+                legacy_object_id=str(item.pk),
+            )
+        except Exception:
+            logging.getLogger(__name__).exception("Échec de notification pédagogique pour l'affectation %s", item.pk)
+
+    transaction.on_commit(deliver, robust=True)
+
+
+@transaction.atomic
+def replace_schedule_teacher(*, user, event, monitor, reason):
+    """Replace one occurrence without changing the regular assignment or its history."""
+    from django.contrib.auth import get_user_model
+    from accounts.access import can_access, get_user_scope
+    from academics.models import LessonLog
+    from students.models import TeacherAttendance
+
+    scope = get_user_scope(user)
+    if not can_access(user, "view_dashboard", "director_studies") or scope["branch"] != event.branch:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Seule la direction des études de cette annexe peut affecter un remplacement.")
+    event = AcademicScheduleEvent.objects.select_for_update().select_related("academic_class", "ec", "teacher").get(pk=event.pk, branch=scope["branch"])
+    # Serialize simultaneous replacement requests for this intervenant as well.
+    monitor = get_user_model().objects.select_for_update(of=("self",)).select_related("profile").get(pk=monitor.pk)
+    profile = getattr(monitor, "profile", None)
+    if not monitor.is_active or profile is None or profile.position != "moniteur" or profile.branch_id != event.branch_id or profile.employment_status != "active":
+        raise ValidationError("Sélectionnez un moniteur actif de cette annexe.")
+    if not (reason or "").strip():
+        raise ValidationError("Le motif du remplacement est obligatoire.")
+    if not event.is_active or event.event_type not in {event.EVENT_TYPE_COURSE, event.EVENT_TYPE_PRACTICAL, event.EVENT_TYPE_SEMINAR} or event.status not in {event.STATUS_PLANNED, event.STATUS_POSTPONED}:
+        raise ValidationError("Seule une séance planifiée ou reportée peut être remplacée.")
+    if event.teacher_id == monitor.pk:
+        return event
+    if event.execution_logs.exists() or LessonLog.objects.filter(schedule_event=event).exclude(status=LessonLog.STATUS_ABSENT_TEACHER).exists() or TeacherAttendance.objects.filter(schedule_event=event).exclude(status=TeacherAttendance.STATUS_ABSENT).exists():
+        raise ValidationError("Un service déjà déclaré ou constaté ne peut plus changer d'intervenant.")
+    previous_teacher = event.teacher
+    event.original_teacher_id = event.original_teacher_id or event.teacher_id
+    event.teacher = monitor
+    event.updated_by = user
+    event.full_clean()
+    _ensure_no_conflicts(event=event, exclude_event=event)
+    event.save(update_fields=["original_teacher", "teacher", "updated_by", "updated_at"])
+    AcademicScheduleChangeLog.objects.create(
+        event=event, action_type=AcademicScheduleChangeLog.ACTION_REPLACED,
+        old_teacher=previous_teacher, new_teacher=monitor, changed_by=user,
+        reason=reason.strip(), old_status=event.status, new_status=event.status,
+        old_start_datetime=event.start_datetime, new_start_datetime=event.start_datetime,
+        old_end_datetime=event.end_datetime, new_end_datetime=event.end_datetime,
+    )
+    notify_monitor_assignment(event=event, actor=user)
+    return event
+
+
+@transaction.atomic
+def create_schedule_event(*, user, **data):
+    event = AcademicScheduleEvent(created_by=user, updated_by=user, **data)
+    event.full_clean()
+    if event.event_type == AcademicScheduleEvent.EVENT_TYPE_COURSE:
+        from academics.services.calendar_service import assert_course_not_blocked
+
+        assert_course_not_blocked(
+            branch=event.branch,
+            academic_year=event.academic_year,
+            academic_class=event.academic_class,
+            start_datetime=event.start_datetime,
+            end_datetime=event.end_datetime,
+        )
+    _ensure_no_conflicts(event=event)
+    event.save()
+    notify_monitor_assignment(event=event, actor=user)
+    _log_change(
+        event=event,
+        action_type=AcademicScheduleChangeLog.ACTION_CREATED,
+        user=user,
+        new_start_datetime=event.start_datetime,
+        new_end_datetime=event.end_datetime,
+        new_status=event.status,
+    )
+    if event.is_online:
+        from academics.services.online_class_service import notify_online_mode_change
+
+        notify_online_mode_change(event=event, actor=user)
+    return event
+
+
+@transaction.atomic
+def update_schedule_event(event, *, user, **changes):
+    AcademicScheduleEvent.objects.select_for_update().get(pk=event.pk)
+    event.refresh_from_db()
+    next_teacher = changes.get("teacher")
+    if next_teacher is None and "teacher_id" in changes:
+        from django.contrib.auth import get_user_model
+        next_teacher = get_user_model().objects.select_related("profile").get(pk=changes["teacher_id"])
+    if next_teacher is not None and next_teacher.pk != event.teacher_id and getattr(getattr(next_teacher, "profile", None), "position", "") == "moniteur":
+        raise ValidationError("Utilisez « Remplacer l’enseignant » pour affecter cette séance à un moniteur.")
+    if event.original_teacher_id:
+        protected = ("teacher", "original_teacher", "academic_class", "academic_year", "branch", "ec")
+        for field in protected:
+            current_id = getattr(event, f"{field}_id")
+            value = getattr(changes.get(field, getattr(event, field)), "pk", None)
+            if value != current_id or changes.get(f"{field}_id", current_id) != current_id:
+                raise ValidationError("Utilisez le remplacement pour changer l'intervenant ; le contexte historique est conservé.")
+    old_start = event.start_datetime
+    old_end = event.end_datetime
+    old_status = event.status
+    old_is_online = event.is_online
+    for field, value in changes.items():
+        setattr(event, field, value)
+    event.updated_by = user
+    event.full_clean()
+    _ensure_no_conflicts(event=event, exclude_event=event)
+    event.save()
+    _log_change(
+        event=event,
+        action_type=AcademicScheduleChangeLog.ACTION_UPDATED,
+        user=user,
+        old_start_datetime=old_start,
+        old_end_datetime=old_end,
+        new_start_datetime=event.start_datetime,
+        new_end_datetime=event.end_datetime,
+        old_status=old_status,
+        new_status=event.status,
+    )
+    if event.is_online and not old_is_online:
+        from academics.services.online_class_service import notify_online_mode_change
+
+        notify_online_mode_change(event=event, actor=user)
+    return event
+
+
+@transaction.atomic
+def postpone_schedule_event(event, new_start, new_end, reason, user):
+    if not reason or not reason.strip():
+        raise ValidationError("Le motif du report est obligatoire.")
+    old_start = event.start_datetime
+    old_end = event.end_datetime
+    old_status = event.status
+    event.start_datetime = new_start
+    event.end_datetime = new_end
+    event.status = AcademicScheduleEvent.STATUS_POSTPONED
+    event.updated_by = user
+    event.full_clean()
+    _ensure_no_conflicts(event=event, exclude_event=event)
+    event.save()
+    _log_change(
+        event=event,
+        action_type=AcademicScheduleChangeLog.ACTION_POSTPONED,
+        user=user,
+        old_start_datetime=old_start,
+        old_end_datetime=old_end,
+        new_start_datetime=new_start,
+        new_end_datetime=new_end,
+        old_status=old_status,
+        new_status=AcademicScheduleEvent.STATUS_POSTPONED,
+        reason=reason,
+    )
+    return event
+
+
+@transaction.atomic
+def cancel_schedule_event(event, reason, user):
+    if not reason or not reason.strip():
+        raise ValidationError("Le motif d'annulation est obligatoire.")
+    old_status = event.status
+    event.status = AcademicScheduleEvent.STATUS_CANCELLED
+    event.updated_by = user
+    event.save(update_fields=["status", "updated_by", "updated_at"])
+    _log_change(
+        event=event,
+        action_type=AcademicScheduleChangeLog.ACTION_CANCELLED,
+        user=user,
+        old_start_datetime=event.start_datetime,
+        old_end_datetime=event.end_datetime,
+        new_start_datetime=event.start_datetime,
+        new_end_datetime=event.end_datetime,
+        old_status=old_status,
+        new_status=event.status,
+        reason=reason,
+    )
+    return event
+
+
+@transaction.atomic
+def start_schedule_event(event, user, notes=""):
+    AcademicScheduleEvent.objects.select_for_update().get(pk=event.pk)
+    event.refresh_from_db()
+    execution_log = event.execution_logs.filter(is_completed=False).order_by("-created_at").first()
+    if execution_log is None:
+        execution_log = AcademicScheduleExecutionLog.objects.create(
+            event=event,
+            started_at=timezone.now(),
+            actual_teacher=event.teacher,
+            notes=notes,
+            completed_by=None,
+        )
+    else:
+        if execution_log.started_at is None:
+            execution_log.started_at = timezone.now()
+        execution_log.actual_teacher = event.teacher
+        execution_log.notes = notes or execution_log.notes
+        execution_log.save()
+    if event.status != AcademicScheduleEvent.STATUS_ONGOING:
+        update_schedule_event(event, user=user, status=AcademicScheduleEvent.STATUS_ONGOING)
+    return execution_log
+
+
+@transaction.atomic
+def complete_schedule_event(event, user, notes="", started_at=None, ended_at=None):
+    AcademicScheduleEvent.objects.select_for_update().get(pk=event.pk)
+    event.refresh_from_db()
+    execution_log = event.execution_logs.order_by("-created_at").first()
+    started_at = started_at or timezone.now()
+    ended_at = ended_at or timezone.now()
+    if execution_log is None:
+        execution_log = AcademicScheduleExecutionLog.objects.create(
+            event=event,
+            started_at=started_at,
+            actual_teacher=event.teacher,
+            notes=notes,
+            ended_at=ended_at,
+            is_completed=True,
+            completed_by=user,
+        )
+    else:
+        execution_log.started_at = execution_log.started_at or started_at
+        execution_log.ended_at = ended_at
+        execution_log.actual_teacher = execution_log.actual_teacher or user
+        execution_log.notes = notes or execution_log.notes
+        execution_log.is_completed = True
+        execution_log.completed_by = user
+        execution_log.full_clean()
+        execution_log.save()
+
+    old_status = event.status
+    event.status = AcademicScheduleEvent.STATUS_COMPLETED
+    event.updated_by = user
+    event.save(update_fields=["status", "updated_by", "updated_at"])
+    _log_change(
+        event=event,
+        action_type=AcademicScheduleChangeLog.ACTION_COMPLETED,
+        user=user,
+        old_start_datetime=event.start_datetime,
+        old_end_datetime=event.end_datetime,
+        new_start_datetime=event.start_datetime,
+        new_end_datetime=event.end_datetime,
+        old_status=old_status,
+        new_status=event.status,
+        reason=notes,
+    )
+    return execution_log
+
+
+def _week_queryset(queryset, week_start):
+    start, end, normalized = _week_bounds(week_start)
+    queryset = queryset.filter(
+        is_active=True,
+        start_datetime__gte=start,
+        start_datetime__lt=end,
+    ).select_related(
+        "academic_class__programme__school",
+        "academic_class__programme__cycle",
+        "academic_class__academic_year",
+        "teacher",
+        "branch",
+        "ec",
+        "ec__ue",
+        "academic_year",
+    ).order_by("start_datetime", "id")
+    return queryset, normalized
+
+
+def suggest_available_slots(*, academic_class, teacher, branch, academic_year, duration_minutes, week_start):
+    normalized = _normalize_week_start(week_start)
+    suggestions = []
+    duration = timedelta(minutes=duration_minutes)
+    for day_offset in range(5):
+        current_day = normalized + timedelta(days=day_offset)
+        existing_class_events = list(
+            _base_conflict_queryset().filter(
+                academic_class=academic_class,
+                start_datetime__date=current_day,
+            )
+        )
+        existing_teacher_events = list(
+            _base_conflict_queryset().filter(
+                teacher=teacher,
+                start_datetime__date=current_day,
+            )
+        )
+        for window_start, window_end in STANDARD_SLOT_WINDOWS:
+            slot_start = timezone.make_aware(datetime.combine(current_day, window_start))
+            slot_end = slot_start + duration
+            latest_end = timezone.make_aware(datetime.combine(current_day, window_end))
+            if slot_end > latest_end:
+                continue
+            conflicts = get_schedule_conflicts(
+                academic_class=academic_class,
+                teacher=teacher,
+                branch=branch,
+                academic_year=academic_year,
+                start_datetime=slot_start,
+                end_datetime=slot_end,
+            )
+            if conflicts["has_conflict"]:
+                continue
+            class_events_same_day = sum(1 for event in existing_class_events if event.status in ACTIVE_EVENT_STATUSES)
+            teacher_events_same_day = sum(1 for event in existing_teacher_events if event.status in ACTIVE_EVENT_STATUSES)
+            score = 100 - (class_events_same_day * 8) - (teacher_events_same_day * 6)
+            if window_start >= time(16, 0):
+                score -= 5
+            suggestions.append(
+                {
+                    "start": slot_start,
+                    "end": slot_end,
+                    "score": max(score, 40),
+                    "reason": "Classe et enseignant disponibles sur un creneau standard.",
+                }
+            )
+    return sorted(suggestions, key=lambda item: (-item["score"], item["start"]))
+
+
+def get_class_week_schedule(academic_class: AcademicClass, week_start):
+    queryset, normalized = _week_queryset(
+        AcademicScheduleEvent.objects.filter(academic_class=academic_class),
+        week_start,
+    )
+    events = list(queryset)
+    return _build_week_grid(events, normalized)
+
+
+def get_published_class_week_schedule(academic_class: AcademicClass, week_start):
+    """Return only dated sessions visible outside the academic planning workflow."""
+
+    queryset, normalized = _week_queryset(
+        AcademicScheduleEvent.objects.filter(academic_class=academic_class),
+        week_start,
+    )
+    queryset = queryset.exclude(
+        status__in={
+            AcademicScheduleEvent.STATUS_DRAFT,
+            AcademicScheduleEvent.STATUS_CANCELLED,
+        }
+    )
+    return _build_week_grid(list(queryset), normalized)
+
+
+def get_class_week_schedule_with_weekly_slots(academic_class: AcademicClass, week_start):
+    schedule = get_class_week_schedule(academic_class, week_start)
+    weekly_slots = list_weekly_slots_for_class(academic_class, active_only=True)
+    if weekly_slots:
+        normalized = schedule.get("week_start") or _normalize_week_start(week_start)
+        return _merge_weekly_slots_into_grid(schedule, weekly_slots, normalized)
+    return schedule
+
+
+def _nearest_available_schedule_week(academic_class: AcademicClass, requested_week_start: date):
+    base_queryset = (
+        AcademicScheduleEvent.objects.filter(
+            academic_class=academic_class,
+            is_active=True,
+        )
+        .exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+        .order_by("start_datetime", "id")
+    )
+    current_week_start = timezone.make_aware(datetime.combine(requested_week_start, time.min))
+    upcoming_event = base_queryset.filter(start_datetime__gte=current_week_start).first()
+    if upcoming_event is not None:
+        return _normalize_week_start(upcoming_event.start_datetime)
+
+    previous_event = base_queryset.order_by("-start_datetime", "-id").first()
+    if previous_event is not None:
+        return _normalize_week_start(previous_event.start_datetime)
+    return None
+
+
+def get_student_week_schedule(student, week_start, *, academic_year_id=None):
+    from portal.models import DirectorTeacherAssignment
+
+    user = getattr(student, "user", student)
+    snapshot = get_student_academic_snapshot(user, academic_year_id=academic_year_id)
+    academic_class = snapshot["academic_class"]
+    if academic_class is None:
+        normalized = _normalize_week_start(week_start)
+        return _build_week_grid([], normalized)
+    schedule = get_class_week_schedule_with_weekly_slots(academic_class, week_start)
+    if week_start is None and not schedule.get("events"):
+        requested_week_start = schedule.get("week_start") or _normalize_week_start(None)
+        nearest_week_start = _nearest_available_schedule_week(academic_class, requested_week_start)
+        if nearest_week_start and nearest_week_start != requested_week_start:
+            fallback_schedule = get_class_week_schedule(academic_class, nearest_week_start)
+            fallback_schedule["is_nearest_available_week"] = True
+            fallback_schedule["requested_week_start"] = requested_week_start
+            fallback_schedule["week_notice"] = "Aucun cours sur la semaine courante. Affichage de la semaine planifiee la plus proche."
+            return fallback_schedule
+    if not schedule.get("events"):
+        assignments = list(
+            DirectorTeacherAssignment.objects.select_related("teacher", "ec", "ec__ue")
+            .filter(academic_class=academic_class, is_active=True)
+            .order_by("ec__ue__semester__number", "ec__title", "teacher__last_name", "teacher__first_name")
+        )
+        if assignments:
+            schedule["has_unplanned_assignments"] = True
+            schedule["unplanned_assignments"] = [
+                {
+                    "title": assignment.ec.title if assignment.ec_id else "Matiere non precisee",
+                    "code": assignment.ec.ue.code if assignment.ec_id else "",
+                    "teacher_name": assignment.teacher.get_full_name() or assignment.teacher.username,
+                    "room": assignment.room_label or "Salle non precisee",
+                    "planned_hours": assignment.planned_hours,
+                }
+                for assignment in assignments
+            ]
+            schedule["week_notice"] = "Des enseignants sont affectes aux matieres, mais aucun creneau horaire n'est encore publie pour cette semaine."
+    return schedule
+
+
+def get_teacher_week_schedule(user, week_start, *, branch=None):
+    teacher_user = getattr(user, "user", user)
+    teacher_events = AcademicScheduleEvent.objects.filter(teacher=teacher_user).exclude(
+        status__in=[
+            AcademicScheduleEvent.STATUS_DRAFT,
+            AcademicScheduleEvent.STATUS_CANCELLED,
+        ]
+    )
+    if branch is not None:
+        teacher_events = teacher_events.filter(branch=branch)
+    queryset, normalized = _week_queryset(
+        teacher_events,
+        week_start,
+    )
+    events = list(queryset)
+    return _build_week_grid(events, normalized)
+
+
+def get_branch_week_schedule(branch, week_start):
+    queryset, normalized = _week_queryset(
+        scoped(AcademicScheduleEvent).filter(branch=branch),
+        week_start,
+    )
+    events = list(queryset)
+    return _build_week_grid(events, normalized)
+
+
+def _weekly_schedule_stats_from_events(events):
+    hours_by_status = defaultdict(Decimal)
+    teacher_load = defaultdict(lambda: {"count": 0, "hours": Decimal("0")})
+    class_load = defaultdict(lambda: {"count": 0, "hours": Decimal("0")})
+    for event in events:
+        duration_hours = Decimal(event.duration_minutes) / Decimal(60)
+        hours_by_status[event.status] += duration_hours
+        teacher_key = event.teacher.get_full_name() or event.teacher.username if event.teacher_id else "Non assigne"
+        class_key = event.academic_class.display_name
+        teacher_load[teacher_key]["count"] += 1
+        teacher_load[teacher_key]["hours"] += duration_hours
+        class_load[class_key]["count"] += 1
+        class_load[class_key]["hours"] += duration_hours
+    total_events = len(events)
+    completed_count = sum(1 for event in events if event.status == AcademicScheduleEvent.STATUS_COMPLETED)
+    cancelled_count = sum(1 for event in events if event.status == AcademicScheduleEvent.STATUS_CANCELLED)
+    return {
+        "total_events": total_events,
+        "planned_count": sum(1 for event in events if event.status == AcademicScheduleEvent.STATUS_PLANNED),
+        "completed_count": completed_count,
+        "cancelled_count": cancelled_count,
+        "postponed_count": sum(1 for event in events if event.status == AcademicScheduleEvent.STATUS_POSTPONED),
+        "ongoing_count": sum(1 for event in events if event.status == AcademicScheduleEvent.STATUS_ONGOING),
+        "completion_rate": round((completed_count / total_events) * 100, 2) if total_events else 0,
+        "cancellation_rate": round((cancelled_count / total_events) * 100, 2) if total_events else 0,
+        "teacher_load": dict(teacher_load),
+        "class_load": dict(class_load),
+        "hours_by_status": hours_by_status,
+    }
+
+
+def get_weekly_schedule_stats(branch, week_start):
+    queryset, _ = _week_queryset(
+        scoped(AcademicScheduleEvent).filter(branch=branch),
+        week_start,
+    )
+    return _weekly_schedule_stats_from_events(list(queryset))
+
+
+def _schedule_alerts_from_events(events, stats, branch, normalized):
+    alerts = []
+    teacher_hours = defaultdict(Decimal)
+
+    postponed_ids = [e.id for e in events if e.status == AcademicScheduleEvent.STATUS_POSTPONED]
+    postponed_logs = {}
+    if postponed_ids:
+        for log in (
+            AcademicScheduleChangeLog.objects
+            .filter(event_id__in=postponed_ids, action_type=AcademicScheduleChangeLog.ACTION_POSTPONED)
+            .order_by("event_id", "-changed_at")
+        ):
+            if log.event_id not in postponed_logs:
+                postponed_logs[log.event_id] = log
+
+    for event in events:
+        if event.teacher_id:
+            teacher_key = event.teacher.get_full_name() or event.teacher.username
+            teacher_hours[teacher_key] += Decimal(event.duration_minutes) / Decimal(60)
+        else:
+            alerts.append({"level": "warning", "type": "missing_teacher",
+                           "message": f"L'evenement '{event.title}' n'a pas d'enseignant assigne.", "target": event.id})
+        if not event.location and not event.is_online:
+            alerts.append({"level": "warning", "type": "missing_location",
+                           "message": f"L'evenement '{event.title}' n'a pas de salle renseignee.", "target": event.id})
+        if event.status == AcademicScheduleEvent.STATUS_POSTPONED:
+            latest_log = postponed_logs.get(event.id)
+            if latest_log and latest_log.new_start_datetime and latest_log.new_start_datetime == latest_log.old_start_datetime:
+                alerts.append({"level": "warning", "type": "postponed_not_rescheduled",
+                               "message": f"L'evenement '{event.title}' est reporte sans vraie reprogrammation.", "target": event.id})
+
+    for teacher_key, hours in teacher_hours.items():
+        if hours > Decimal("12"):
+            alerts.append({"level": "warning", "type": "teacher_overload",
+                           "message": f"{teacher_key} depasse 12h de charge sur la semaine.", "target": teacher_key})
+
+    if stats["cancellation_rate"] >= 25:
+        alerts.append({"level": "warning", "type": "high_cancellation_rate",
+                       "message": "Le taux d'annulation depasse le seuil de 25% sur la semaine.", "target": branch.id})
+
+    class_ids_with_events = {event.academic_class_id for event in events}
+    for academic_class in scoped(AcademicClass).filter(
+        branch=branch,
+        academic_year__start_date__lte=normalized + timedelta(days=6),
+        academic_year__end_date__gte=normalized,
+    ):
+        if academic_class.id not in class_ids_with_events:
+            alerts.append({"level": "info", "type": "class_without_events",
+                           "message": f"La classe {academic_class.display_name} n'a aucun cours programme cette semaine.",
+                           "target": academic_class.id})
+
+    by_class = defaultdict(list)
+    by_teacher = defaultdict(list)
+    by_location = defaultdict(list)
+    for event in events:
+        by_class[event.academic_class_id].append(event)
+        if event.teacher_id:
+            by_teacher[event.teacher_id].append(event)
+        if event.location:
+            by_location[event.location].append(event)
+
+    def _overlaps(a, b):
+        return a.start_datetime < b.end_datetime and b.start_datetime < a.end_datetime
+
+    conflict_event_ids = set()
+    for group in list(by_class.values()) + list(by_teacher.values()) + list(by_location.values()):
+        for i, a in enumerate(group):
+            for b in group[i + 1:]:
+                if a.id != b.id and _overlaps(a, b):
+                    conflict_event_ids.add(a.id)
+                    conflict_event_ids.add(b.id)
+
+    for event in events:
+        if event.id in conflict_event_ids:
+            alerts.append({"level": "warning", "type": "unresolved_conflict",
+                           "message": f"L'evenement '{event.title}' conserve un conflit non resolu.", "target": event.id})
+
+    return alerts
+
+
+def get_schedule_alerts(branch, week_start):
+    queryset, normalized = _week_queryset(
+        scoped(AcademicScheduleEvent).filter(branch=branch),
+        week_start,
+    )
+    events = list(queryset)
+    stats = _weekly_schedule_stats_from_events(events)
+    return _schedule_alerts_from_events(events, stats, branch, normalized)
+
+
+def _schedule_quality_from_events(events, stats, alerts):
+    warnings = [alert["message"] for alert in alerts]
+    score = 100
+    score -= stats["cancelled_count"] * 8
+    score -= stats["postponed_count"] * 5
+    score -= sum(1 for alert in alerts if alert["type"] == "unresolved_conflict") * 12
+    if stats["total_events"]:
+        score += min(stats["completed_count"] * 2, 10)
+
+    events_by_day = defaultdict(list)
+    for event in events:
+        local_start = timezone.localtime(event.start_datetime)
+        events_by_day[local_start.date()].append(event)
+    for day_events in events_by_day.values():
+        ordered = sorted(day_events, key=lambda e: e.start_datetime)
+        for previous, current in zip(ordered, ordered[1:]):
+            gap_minutes = int((current.start_datetime - previous.end_datetime).total_seconds() // 60)
+            if gap_minutes >= 180:
+                score -= 3
+                warnings.append("Des trous importants existent dans certaines journees.")
+                break
+
+    score = max(min(score, 100), 0)
+    if score >= 85:
+        status = "excellent"
+    elif score >= 70:
+        status = "good"
+    elif score >= 50:
+        status = "medium"
+    else:
+        status = "critical"
+    return {"score": score, "status": status, "warnings": list(dict.fromkeys(warnings))}
+
+
+def get_schedule_quality_score(branch, week_start):
+    queryset, normalized = _week_queryset(
+        scoped(AcademicScheduleEvent).filter(branch=branch),
+        week_start,
+    )
+    events = list(queryset)
+    stats = _weekly_schedule_stats_from_events(events)
+    alerts = _schedule_alerts_from_events(events, stats, branch, normalized)
+    return _schedule_quality_from_events(events, stats, alerts)
+
+
+def get_director_schedule_overview(branch, week_start):
+    normalized = _normalize_week_start(week_start)
+    queryset, _ = _week_queryset(
+        scoped(AcademicScheduleEvent).filter(branch=branch),
+        week_start,
+    )
+    events = list(queryset)
+    stats = _weekly_schedule_stats_from_events(events)
+    alerts = _schedule_alerts_from_events(events, stats, branch, normalized)
+    quality = _schedule_quality_from_events(events, stats, alerts)
+    timetable = _build_week_grid(events, normalized)
+    return {
+        "week_start": normalized,
+        "stats": stats,
+        "quality": quality,
+        "alerts": alerts,
+        "timetable": timetable,
+    }
+
+
+def get_class_schedule_overview(academic_class, week_start):
+    normalized = _normalize_week_start(week_start)
+    return {
+        "week_start": normalized,
+        "academic_class": academic_class,
+        "timetable": get_class_week_schedule(academic_class, normalized),
+    }
+
+
+def get_teacher_today_schedule(user):
+    teacher_user = getattr(user, "user", user)
+    start = timezone.make_aware(datetime.combine(timezone.localdate(), time.min))
+    end = start + timedelta(days=1)
+    queryset = AcademicScheduleEvent.objects.filter(
+        teacher=teacher_user,
+        is_active=True,
+        start_datetime__gte=start,
+        start_datetime__lt=end,
+    ).select_related("academic_class", "teacher", "branch", "ec", "ec__ue", "academic_year").order_by("start_datetime", "id")
+    events = list(queryset)
+    return {
+        "date": timezone.localdate(),
+        "events": [_serialize_event(event) for event in events],
+    }
+
+
+def get_teacher_next_events(user, limit=5, *, branch=None):
+    teacher_user = getattr(user, "user", user)
+    now = timezone.now()
+    queryset = AcademicScheduleEvent.objects.filter(
+        teacher=teacher_user,
+        is_active=True,
+        start_datetime__gte=now,
+    )
+    if branch is not None:
+        queryset = queryset.filter(branch=branch)
+    queryset = queryset.exclude(
+        status__in=[
+            AcademicScheduleEvent.STATUS_DRAFT,
+            AcademicScheduleEvent.STATUS_CANCELLED,
+        ],
+    ).select_related("academic_class", "teacher", "branch", "ec", "ec__ue", "academic_year").order_by("start_datetime", "id")[:limit]
+    return [_serialize_event(event) for event in queryset]
+
+
+def get_branch_activity_summary(branch, week_start):
+    normalized = _normalize_week_start(week_start)
+    stats = get_weekly_schedule_stats(branch, normalized)
+    quality = get_schedule_quality_score(branch, normalized)
+    alerts = get_schedule_alerts(branch, normalized)
+    return {
+        "week_start": normalized,
+        "stats": stats,
+        "quality": quality,
+        "alert_count": len(alerts),
+        "alerts": alerts,
+    }
+
+
+def _weekly_times_overlap(start_a: time, end_a: time, start_b: time, end_b: time) -> bool:
+    return start_a < end_b and end_a > start_b
+
+
+def serialize_weekly_slot_for_ui(slot: WeeklyScheduleSlot) -> dict:
+    """Representation dict pour formulaires / tableau surveillant (pas de logique template)."""
+    return {
+        "id": slot.id,
+        "weekday": slot.weekday,
+        "weekday_label": slot.get_weekday_display(),
+        "start_time": slot.start_time.strftime("%H:%M"),
+        "end_time": slot.end_time.strftime("%H:%M"),
+        "ec_id": slot.ec_id,
+        "ec_title": slot.ec.title,
+        "teacher_id": slot.teacher_id,
+        "teacher_name": slot.teacher.get_full_name() or slot.teacher.username,
+        "room": slot.room or "",
+        "is_active": slot.is_active,
+    }
+
+
+def list_weekly_slots_for_class(academic_class: AcademicClass, *, active_only: bool = True):
+    qs = WeeklyScheduleSlot.objects.select_related(
+        "ec", "teacher", "branch", "academic_year",
+        "academic_class__programme__school", "academic_class__programme__cycle",
+        "academic_class__academic_year",
+    ).filter(
+        academic_class=academic_class,
+        branch_id=academic_class.branch_id,
+    )
+    if active_only:
+        qs = qs.filter(is_active=True)
+    return list(qs.order_by("weekday", "start_time", "id"))
+
+
+@transaction.atomic
+def deactivate_weekly_schedule_slot(slot: WeeklyScheduleSlot):
+    slot.is_active = False
+    slot.save(update_fields=["is_active", "updated_at"])
+    return slot
+
+
+def detect_weekly_schedule_conflicts(
+    *,
+    academic_class,
+    teacher,
+    branch,
+    academic_year,
+    room,
+    weekday: int,
+    start_time: time,
+    end_time: time,
+    exclude_slot_id: int | None = None,
+):
+    qs = WeeklyScheduleSlot.objects.filter(
+        weekday=weekday,
+        branch=branch,
+        academic_year=academic_year,
+        is_active=True,
+    )
+    if exclude_slot_id:
+        qs = qs.exclude(pk=exclude_slot_id)
+    conflicts = []
+    for other in qs:
+        if _weekly_times_overlap(start_time, end_time, other.start_time, other.end_time):
+            if other.academic_class_id == academic_class.id:
+                conflicts.append(
+                    {
+                        "type": "weekly_slot_overlap",
+                        "message": f"Classe deja occupee sur la grille officielle ({other.get_weekday_display()} {other.start_time.strftime('%H:%M')}-{other.end_time.strftime('%H:%M')}).",
+                        "slot_id": other.id,
+                    }
+                )
+            if teacher is not None and other.teacher_id == getattr(teacher, "id", None):
+                conflicts.append(
+                    {
+                        "type": "weekly_teacher_overlap",
+                        "message": f"Enseignant deja positionne sur un autre creneau officiel ({other.academic_class.display_name}, {other.start_time.strftime('%H:%M')}-{other.end_time.strftime('%H:%M')}).",
+                        "slot_id": other.id,
+                    }
+                )
+            if room and other.room and other.room.strip().lower() == room.strip().lower():
+                conflicts.append(
+                    {
+                        "type": "weekly_room_overlap",
+                        "message": f"Salle deja utilisee sur la grille officielle ({other.academic_class.display_name}, {other.start_time.strftime('%H:%M')}-{other.end_time.strftime('%H:%M')}).",
+                        "slot_id": other.id,
+                    }
+                )
+    return {"has_conflict": bool(conflicts), "conflicts": conflicts}
+
+
+@transaction.atomic
+def create_weekly_schedule_slot(*, user=None, **fields):
+    existing_slot = WeeklyScheduleSlot.objects.filter(
+        academic_class=fields.get("academic_class"),
+        weekday=fields.get("weekday"),
+        start_time=fields.get("start_time"),
+    ).first()
+    if existing_slot is not None:
+        weekday_label = existing_slot.get_weekday_display()
+        state = "actif" if existing_slot.is_active else "désactivé"
+        raise ValidationError(
+            f"Ce créneau existe déjà le {weekday_label} à "
+            f"{existing_slot.start_time.strftime('%H:%M')} ({state}). "
+            "Modifiez ou réactivez le créneau existant au lieu d'en créer un autre."
+        )
+    slot = WeeklyScheduleSlot(**fields)
+    if user is not None:
+        slot.created_by = user
+    slot.full_clean()
+    overlap = detect_weekly_schedule_conflicts(
+        academic_class=slot.academic_class,
+        teacher=slot.teacher,
+        branch=slot.branch,
+        academic_year=slot.academic_year,
+        room=slot.room,
+        weekday=slot.weekday,
+        start_time=slot.start_time,
+        end_time=slot.end_time,
+    )
+    if overlap["has_conflict"]:
+        raise ValidationError([item["message"] for item in overlap["conflicts"]])
+    slot.save()
+    return slot
+
+
+@transaction.atomic
+def update_weekly_schedule_slot(slot: WeeklyScheduleSlot, **changes):
+    for key, value in changes.items():
+        setattr(slot, key, value)
+    slot.full_clean()
+    overlap = detect_weekly_schedule_conflicts(
+        academic_class=slot.academic_class,
+        teacher=slot.teacher,
+        branch=slot.branch,
+        academic_year=slot.academic_year,
+        room=slot.room,
+        weekday=slot.weekday,
+        start_time=slot.start_time,
+        end_time=slot.end_time,
+        exclude_slot_id=slot.id,
+    )
+    if overlap["has_conflict"]:
+        raise ValidationError([item["message"] for item in overlap["conflicts"]])
+    slot.save()
+    return slot
+
+
+def materialize_week_events_from_weekly_slots(*, user, academic_class: AcademicClass, week_start):
+    """
+    Génère les cours datés de la semaine (AcademicScheduleEvent) à partir des
+    créneaux hebdomadaires (WeeklyScheduleSlot) de la classe.
+
+    Objectif: permettre au Surveillant Général de construire une semaine "proprement"
+    et garantir que l'emploi du temps étudiant (basé sur AcademicScheduleEvent)
+    affiche bien les cours.
+    """
+    normalized_week_start = _normalize_week_start(week_start)
+    branch = academic_class.branch
+    slots = list_weekly_slots_for_class(academic_class, active_only=True)
+    if not slots:
+        return {"created": 0, "skipped_existing": 0, "week_start": normalized_week_start}
+
+    week_start_dt = timezone.make_aware(datetime.combine(normalized_week_start, time.min))
+    week_end_dt = week_start_dt + timedelta(days=7)
+    existing_events = list(
+        AcademicScheduleEvent.objects.filter(
+            academic_class=academic_class,
+            branch=branch,
+            start_datetime__gte=week_start_dt,
+            start_datetime__lt=week_end_dt,
+            is_active=True,
+        ).exclude(status=AcademicScheduleEvent.STATUS_CANCELLED)
+    )
+    existing_keys = {
+        (
+            timezone.localtime(ev.start_datetime).date().isoformat(),
+            timezone.localtime(ev.start_datetime).time().strftime("%H:%M"),
+            timezone.localtime(ev.end_datetime).time().strftime("%H:%M"),
+            ev.ec_id,
+            ev.teacher_id,
+        )
+        for ev in existing_events
+    }
+
+    created = 0
+    skipped = 0
+    for slot in slots:
+        slot_date = normalized_week_start + timedelta(days=int(slot.weekday))
+        start_dt = timezone.make_aware(datetime.combine(slot_date, slot.start_time))
+        end_dt = timezone.make_aware(datetime.combine(slot_date, slot.end_time))
+        key = (
+            slot_date.isoformat(),
+            slot.start_time.strftime("%H:%M"),
+            slot.end_time.strftime("%H:%M"),
+            slot.ec_id,
+            slot.teacher_id,
+        )
+        if key in existing_keys:
+            skipped += 1
+            continue
+        title = f"{slot.ec.title} - {academic_class.display_name}"
+        create_schedule_event(
+            user=user,
+            event_type=AcademicScheduleEvent.EVENT_TYPE_COURSE,
+            status=AcademicScheduleEvent.STATUS_PLANNED,
+            academic_class=academic_class,
+            academic_year=academic_class.academic_year,
+            branch=branch,
+            ec=slot.ec,
+            teacher=slot.teacher,
+            title=title,
+            description="",
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+            location=slot.room or "",
+            is_online=False,
+            is_active=True,
+        )
+        existing_keys.add(key)
+        created += 1
+
+    return {"created": created, "skipped_existing": skipped, "week_start": normalized_week_start}
+
+
+def create_schedule(*, user, **data):
+    """Alias fonctionnel de create_schedule_event (planification datee)."""
+    return create_schedule_event(user=user, **data)
+
+
+def update_schedule(event, *, user, **changes):
+    """Alias fonctionnel de update_schedule_event."""
+    return update_schedule_event(event, user=user, **changes)
+
+
+detect_conflicts = get_schedule_conflicts

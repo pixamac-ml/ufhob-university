@@ -1,0 +1,28 @@
+{% url 'core:cookie_consent' as cookie_consent_url %}
+<div id="cookie-consent-root"
+     data-endpoint="{{ cookie_consent_url }}"
+     data-csrf-token="{{ csrf_token }}"
+     data-consent-version="{{ cookie_consent_version }}"
+     data-consent-max-age="{{ cookie_consent_max_age }}"
+     class="pointer-events-none fixed inset-x-0 bottom-0 z-[95] p-3 sm:p-5">
+  <section id="cookie-banner"
+           class="pointer-events-auto mx-auto hidden max-w-4xl rounded-ufhob-lg border border-ufhob-border bg-white p-4 shadow-premium sm:p-5"
+           aria-labelledby="cookie-consent-title"
+           aria-describedby="cookie-consent-description">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex min-w-0 items-start gap-3">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ufhob-primary-soft text-ufhob-primary" aria-hidden="true">
+          <i class="fa-solid fa-shield-halved"></i>
+        </span>
+        <div class="min-w-0">
+          <h2 id="cookie-consent-title" class="text-base font-bold text-ufhob-primary">Vos préférences cookies</h2>
+          <p id="cookie-consent-description" class="mt-1 text-sm leading-5 text-ufhob-muted">UFHOB utilise uniquement les cookies nécessaires à la sécurité, à la connexion et au fonctionnement du site.</p>
+        </div>
+      </div>
+      <div class="grid shrink-0 grid-cols-2 gap-2">
+        <button id="cookie-reject-all" type="button" class="rounded-ufhob-sm border border-ufhob-border px-4 py-2.5 text-sm font-semibold text-ufhob-primary hover:bg-ufhob-ivory">Refuser</button>
+        <button id="cookie-accept-all" type="button" class="rounded-ufhob-sm bg-ufhob-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-ufhob-primary-hover">Accepter</button>
+      </div>
+    </div>
+  </section>
+</div>

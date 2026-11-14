@@ -1,135 +1,66 @@
-"""
-Gestion centralisée des permissions pour les dashboards staff.
+"""Wrappers de compatibilite vers la couche centrale d'acces."""
 
-Objectifs :
-- sécuriser les accès
-- éviter les erreurs si profile absent
-- centraliser la logique métier
-"""
+from django.contrib.auth.models import AbstractBaseUser
 
-from .helpers import user_has_group
+from accounts.access import (
+    can_access,
+    get_user_profile_role,
+    get_user_scope,
+)
 
 
 # ==========================================================
 # OUTILS
 # ==========================================================
 
-def get_user_role(user):
+def get_user_role(user: AbstractBaseUser) -> str | None:
     """
-    Retourne le rôle du profil utilisateur si disponible.
+    Retourne le role du profil utilisateur si disponible.
     """
-
-    if hasattr(user, "profile"):
-        return getattr(user.profile, "role", None)
-
-    return None
+    return get_user_profile_role(user)
 
 
 # ==========================================================
 # GLOBAL VIEWER
 # ==========================================================
 
-def is_global_viewer(user):
+def is_global_viewer(user: AbstractBaseUser) -> bool:
     """
     Utilisateurs pouvant voir toutes les annexes.
     """
-
-    if not user.is_authenticated:
+    if not user or not user.is_authenticated:
         return False
-
-    if user.is_superuser:
-        return True
-
-    role = get_user_role(user)
-
-    if role == "executive":
-        return True
-
-    if user_has_group(user, "executive_director"):
-        return True
-
-    return False
+    return bool(get_user_scope(user)["is_global"])
 
 
 # ==========================================================
 # DASHBOARD ADMISSIONS
 # ==========================================================
 
-def check_admissions_access(user):
+def check_admissions_access(user: AbstractBaseUser) -> bool:
     """
-    Vérifie accès dashboard admissions.
+    Verifie acces dashboard admissions.
     """
-
-    if not user.is_authenticated:
-        return False
-
-    if user.is_superuser:
-        return True
-
-    role = get_user_role(user)
-
-    if role == "admissions":
-        return True
-
-    if user_has_group(user, "admissions_managers"):
-        return True
-
-    if is_global_viewer(user):
-        return True
-
-    return False
+    return can_access(user, "view_dashboard", "admissions")
 
 
 # ==========================================================
 # DASHBOARD FINANCE
 # ==========================================================
 
-def check_finance_access(user):
+def check_finance_access(user: AbstractBaseUser) -> bool:
     """
-    Vérifie accès dashboard finance.
+    Verifie acces dashboard finance.
     """
-
-    if not user.is_authenticated:
-        return False
-
-    if user.is_superuser:
-        return True
-
-    role = get_user_role(user)
-
-    if role == "finance":
-        return True
-
-    if user_has_group(user, "finance_agents"):
-        return True
-
-    if is_global_viewer(user):
-        return True
-
-    return False
+    return can_access(user, "view_dashboard", "finance")
 
 
 # ==========================================================
 # DASHBOARD EXECUTIVE
 # ==========================================================
 
-def check_executive_access(user):
+def check_executive_access(user: AbstractBaseUser) -> bool:
     """
-    Vérifie accès dashboard direction.
+    Verifie acces dashboard direction.
     """
-
-    if not user.is_authenticated:
-        return False
-
-    if user.is_superuser:
-        return True
-
-    role = get_user_role(user)
-
-    if role == "executive":
-        return True
-
-    if user_has_group(user, "executive_director"):
-        return True
-
-    return False
+    return can_access(user, "view_dashboard", "executive")

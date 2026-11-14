@@ -1,0 +1,108 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% if director_fragment_response %}
+    <span id="director-validation-count" hx-swap-oob="innerHTML">{{ ready_to_validate_count }}</span>
+    <span id="director-publication-count" hx-swap-oob="innerHTML">{{ ready_to_publish|length }}</span>
+  {% endif %}
+  {% if toast %}
+    {% if toast.level == "success" %}
+      {% component "ui_core.alert" title="Workflow des résultats" message=toast.message tone="success" %}{% endcomponent %}
+    {% else %}
+      {% component "ui_core.alert" title="Action non effectuée" message=toast.message tone="danger" %}{% endcomponent %}
+    {% endif %}
+  {% endif %}
+
+  <form method="get"
+        hx-get="{% url 'accounts_portal:director_evaluations_subcontent' %}"
+        hx-target="#director-results-validation-list"
+        hx-select="#director-results-validation-list"
+        hx-swap="outerHTML"
+        hx-trigger="submit"
+        hx-indicator="#director-results-loading"
+        hx-sync="#director-results-subcontent:replace"
+        class="grid min-w-0 gap-3 border-y border-ui-border py-4 sm:grid-cols-[minmax(12rem,1fr)_14rem_auto]">
+    <input type="hidden" name="view" value="{{ eval_subview }}">
+    <label class="min-w-0">
+      <span class="sr-only">Rechercher une classe</span>
+      <input type="search" name="validation_q" value="{{ validation_q }}" placeholder="Rechercher une classe ou une filière" class="h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus">
+    </label>
+    <label>
+      <span class="sr-only">Filtrer les classes</span>
+      <select name="validation_scope" class="h-ui-control w-full rounded-ui-input border border-ui-border bg-ui-surface px-3 text-sm text-ui-text focus:border-ui-focus focus:ring-ui-focus">
+        <option value="actionable" {% if validation_scope == "actionable" %}selected{% endif %}>Actions requises</option>
+        <option value="ready" {% if validation_scope == "ready" %}selected{% endif %}>À valider ou publier</option>
+        <option value="rejected" {% if validation_scope == "rejected" %}selected{% endif %}>Renvoyées en correction</option>
+        <option value="all" {% if validation_scope == "all" %}selected{% endif %}>Toutes les classes</option>
+      </select>
+    </label>
+    <button type="submit" class="ui-focus-ring inline-flex h-ui-control items-center justify-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-4 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">
+      <i data-lucide="search" class="h-4 w-4" aria-hidden="true"></i>Rechercher
+    </button>
+  </form>
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h3 class="text-base font-bold text-ui-text">Classes et semestres</h3>
+      <p class="mt-1 text-xs text-ui-text-muted">{{ validation_filtered_count }} classe(s) correspondent au filtre · {{ validation_actionable_count }} avec une action requise</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <span class="text-xs font-semibold text-ui-text-muted">À valider</span>
+      {% component "ui_core.status_badge" label=ready_to_validate_count tone="warning" %}{% endcomponent %}
+      <span class="text-xs font-semibold text-ui-text-muted">À publier</span>
+      {% component "ui_core.status_badge" label=ready_to_publish|length tone="primary" %}{% endcomponent %}
+    </div>
+  </div>
+
+  <div id="director-results-validation-list" class="min-w-0">
+    {% if validation_class_cards_page.object_list %}
+      <div class="grid min-w-0 border-y border-ui-border sm:grid-cols-2 xl:grid-cols-3">
+        {% for item in validation_class_cards_page.object_list %}
+        <button type="button"
+                data-validation-class-card
+                hx-get="{% url 'accounts_portal:director_drawer' %}?panel=evaluations&class_id={{ item.class.id }}"
+                hx-target="#director-drawer-content"
+                hx-swap="innerHTML"
+                hx-disabled-elt="this"
+                hx-on::after-request="window.deOpenDrawer && window.deOpenDrawer()"
+                class="ui-focus-ring group flex min-w-0 flex-col gap-2 border-b border-ui-border p-4 text-left hover:bg-ui-surface-hover sm:border-r xl:[&:nth-child(3n)]:border-r-0">
+          <div class="flex w-full min-w-0 items-start gap-2">
+            <h4 class="min-w-0 flex-1 break-words text-sm font-bold text-ui-text group-hover:text-ui-primary">{{ item.class.display_name }}</h4>
+            {% if item.workflow_bucket == "ready" %}
+              {% component "ui_core.status_badge" label="Prête" tone="success" %}{% endcomponent %}
+            {% elif item.workflow_bucket == "rejected" %}
+              {% component "ui_core.status_badge" label="À revoir" tone="danger" %}{% endcomponent %}
+            {% else %}
+              {% component "ui_core.status_badge" label="En cours" tone="warning" %}{% endcomponent %}
+            {% endif %}
+          </div>
+          <p class="text-xs text-ui-text-muted">{{ item.student_count }} étudiant(s) · {{ item.semester_count }} semestre(s)</p>
+          <div class="mt-auto flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-ui-text-muted">
+            <span>{{ item.ready_to_validate_count }} à valider</span>
+            <span>{{ item.ready_to_publish_count }} à publier</span>
+            {% if item.rejected_count %}<span class="text-ui-danger">{{ item.rejected_count }} à corriger</span>{% endif %}
+            <i data-lucide="panel-right-open" class="ml-auto h-4 w-4 shrink-0 text-ui-primary" aria-hidden="true"></i>
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+      {% include "portal/staff/director/partials/_pagination.html" with page_obj=validation_class_cards_page page_param="classes_page" query_suffix=validation_query_suffix target_id="#director-results-validation-list" hx_select="#director-results-validation-list" pagination_url_name="accounts_portal:director_evaluations_subcontent" indicator_id="#director-results-loading" %}
+    {% else %}
+      <div class="border-y border-ui-border">
+        {% component "ui_core.empty_state" title="Aucune classe ne demande d'action" message="Les filtres actuels ne retournent aucune validation, publication ou correction à traiter." icon="circle-check-big" %}{% endcomponent %}
+        {% if validation_scope != "all" %}
+        <div class="flex justify-center pb-6">
+          <a href="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations&view={{ eval_subview }}&validation_scope=all"
+             hx-get="{% url 'accounts_portal:director_evaluations_subcontent' %}?view={{ eval_subview }}&validation_scope=all"
+             hx-target="#director-results-subcontent"
+             hx-swap="innerHTML"
+             hx-push-url="{% url 'accounts_portal:portal_dashboard' %}?section=evaluations&view={{ eval_subview }}&validation_scope=all"
+             hx-indicator="#director-results-loading"
+             class="ui-focus-ring inline-flex h-ui-control items-center gap-2 rounded-ui-button border border-ui-border bg-ui-surface px-4 text-sm font-semibold text-ui-text hover:bg-ui-surface-hover">
+            <i data-lucide="list" class="h-4 w-4" aria-hidden="true"></i>Afficher toutes les classes
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>

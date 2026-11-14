@@ -1,20 +1,21 @@
 # core/views.py
 
 import logging
+import json
+from urllib.parse import quote
 
 from django.shortcuts import render, get_object_or_404
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.utils.html import strip_tags
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
-from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import (
-    Sum, Count, F, Avg,
-    ExpressionWrapper, DurationField, Prefetch
-)
-from django.core.mail import EmailMultiAlternatives
+from django.db.models import Prefetch
 from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.conf import settings
+from django.db.utils import OperationalError, ProgrammingError
+from django.urls import NoReverseMatch, reverse
+from notifier.services import NotificationBus
 
 # PDF
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -23,28 +24,40 @@ from reportlab.lib.pagesizes import A4
 
 # Apps
 from formations.models import Programme
-from news.models import News
-from blog.models import Article
-from admissions.models import Candidature
-from inscriptions.models import Inscription
-from payments.models import Payment
+from news.models import Event, News, ResultSession
+from branches.models import Branch
 
 from .models import (
     Institution,
     InstitutionPresentation,
+    SiteConfiguration,
     InstitutionStat,
     Value,
     Infrastructure,
     Staff,
+    DirectorGeneralMessage,
     Partner,
     Testimonial,
     LegalPage,
-    ContactMessage,
+    School,
+    SchoolBranch,
 )
 
+from .context_processors import get_published_legal_links
 from .forms import ContactForm
 
 logger = logging.getLogger(__name__)
+COOKIE_CONSENT_NAME = "esfe_cookie_consent"
+COOKIE_CONSENT_MAX_AGE = 60 * 60 * 24 * 180  # 180 jours
+COOKIE_CONSENT_VERSION = 2
+
+
+def get_site_configuration_safe():
+    """Retourne la configuration site ou None si la migration n'est pas encore appliquee."""
+    try:
+        return SiteConfiguration.objects.first()
+    except (ProgrammingError, OperationalError):
+        return None
 
 
 # ==========================================================
@@ -53,18 +66,24 @@ logger = logging.getLogger(__name__)
 
 def get_institution_context():
     institution = Institution.objects.filter(is_active=True).first()
+    site_configuration = get_site_configuration_safe()
+    site_logo_url = site_configuration.site_logo.url if site_configuration and site_configuration.site_logo else ""
 
     if not institution:
         return {
             "institution": None,
+            "site_configuration": site_configuration,
+            "site_logo_url": site_logo_url,
             "institution_name": "Institution non configurée",
             "contact": {},
             "navigation": [],
-            "legal_links": [],
+            "legal_links": get_published_legal_links(),
         }
 
     return {
         "institution": institution,
+        "site_configuration": site_configuration,
+        "site_logo_url": site_logo_url,
         "institution_name": institution.name,
         "contact": {
             "address": f"{institution.address}, {institution.city}, {institution.country}",
@@ -77,12 +96,7 @@ def get_institution_context():
             {"label": "Candidatures", "url": "/candidature/"},
             {"label": "Contact", "url": "/contact/"},
         ],
-        "legal_links": [
-            {"label": "Mentions légales", "url": "/mentions-legales/"},
-            {"label": "Politique de confidentialité", "url": "/confidentialite/"},
-            {"label": "Conditions d'utilisation", "url": "/conditions-utilisation/"},
-            {"label": "Plan du site", "url": "/plan-du-site/"},
-        ],
+        "legal_links": get_published_legal_links(),
     }
 
 
@@ -90,34 +104,164 @@ def get_institution_context():
 # PLAN DU SITE
 # ==========================================================
 
+def _safe_reverse(url_name):
+    try:
+        return reverse(url_name)
+    except NoReverseMatch:
+        return None
+
+
+def _sitemap_link(label, url_name, description=""):
+    url = _safe_reverse(url_name)
+    if not url:
+        return None
+    return {
+        "label": label,
+        "url": url,
+        "description": description,
+    }
+
+
+def _clean_links(raw_links):
+    return [item for item in raw_links if item]
+
+
 def sitemap(request):
+    school_links = [
+        {
+            "label": school.display_name,
+            "url": reverse("core:school_detail", kwargs={"code": school.code.lower()}),
+            "description": school.official_name or "Composante académique UFHOB.",
+        }
+        for school in School.objects.filter(is_active=True).order_by("display_order", "code")
+    ]
+    campus_links = [
+        {
+            "label": branch.name,
+            "url": reverse("core:campus_detail", kwargs={"slug": branch.slug}),
+            "description": branch.city or "Implantation universitaire.",
+        }
+        for branch in Branch.objects.filter(is_active=True).order_by("name")
+    ]
+    sitemap_sections = [
+        {
+            "title": "L’université",
+            "icon": "fa-solid fa-compass",
+            "links": _clean_links([
+                _sitemap_link("Accueil", "core:home", "Vue d'ensemble et actualites principales."),
+                _sitemap_link("Présentation", "core:university", "Projet institutionnel, rectorat et administration."),
+                _sitemap_link("Campus", "core:campus_life", "Campus et implantations universitaires."),
+                _sitemap_link("Contact", "core:contact", "Coordonnees et formulaire de contact."),
+                _sitemap_link("Plan du site", "core:sitemap", "Structure complete des pages publiques."),
+            ]),
+        },
+        {
+            "title": "Formations et admissions",
+            "icon": "fa-solid fa-graduation-cap",
+            "links": _clean_links([
+                _sitemap_link("Catalogue des formations", "formations:list", "Programmes disponibles par cycle."),
+                _sitemap_link("Candidater", "admissions:admission_tunnel", "Parcours de candidature UFHOB."),
+                _sitemap_link("Actualites", "news:list", "Informations officielles et annonces."),
+                _sitemap_link("Galeries evenements", "news:event_list", "Evenements et vie de campus."),
+                _sitemap_link("Portail resultats", "news:result_list", "Publication des resultats academiques."),
+            ]),
+        },
+        {
+            "title": "Écoles et implantations",
+            "icon": "fa-solid fa-building-columns",
+            "links": school_links + campus_links,
+        },
+        {
+            "title": "Recherche et vie universitaire",
+            "icon": "fa-solid fa-users",
+            "links": _clean_links([
+                _sitemap_link("Recherche & innovation", "core:research_innovation", "Recherche, innovation et publications."),
+                _sitemap_link("Travaux scientifiques", "core:scientific_work_list", "Mémoires, thèses, articles et rapports publiés."),
+                _sitemap_link("Vie universitaire", "core:campus_life", "Services, activités et environnement académique."),
+            ]),
+        },
+        {
+            "title": "Informations legales",
+            "icon": "fa-solid fa-scale-balanced",
+            "links": [
+                {"label": link["label"], "url": link["url"], "description": "Document publié par l’université."}
+                for link in get_published_legal_links()
+            ],
+        },
+    ]
+
+    sitemap_stats = [
+        {"label": "Formations actives", "value": Programme.objects.public().count()},
+        {"label": "Annexes actives", "value": Branch.objects.filter(is_active=True).count()},
+        {"label": "Actualites publiees", "value": News.objects.filter(status="published").count()},
+        {"label": "Sessions de resultats", "value": ResultSession.objects.filter(is_published=True).count()},
+    ]
+
     context = {
         "page_title": "Plan du site",
+        "meta_description": "Plan du site UFHOB-Mali : formations, campus, recherche, actualités et pages légales.",
+        "og_type": "website",
+        "hero_title": "Plan du site UFHOB-Mali",
+        "hero_subtitle": "Retrouvez rapidement les principales ressources et pages publiques de l’université.",
+        "sitemap_sections": [section for section in sitemap_sections if section["links"]],
+        "sitemap_stats": sitemap_stats,
+        "updated_on": timezone.localdate(),
         **get_institution_context(),
     }
     return render(request, "sitemap.html", context)
 
 
-# ==========================================================
-# ABOUT
-# ==========================================================
+def robots_txt(request):
+    lines = ["User-agent: *"]
+    if settings.DEBUG:
+        lines.append("Disallow: /")
+    else:
+        lines.extend([
+            "Disallow: /admin/",
+            "Disallow: /superadmin/",
+            "Disallow: /accounts/",
+            "Disallow: /__reload__/",
+            "Allow: /",
+        ])
 
-# core/views.py
+    lines.append(f"Sitemap: {settings.BASE_URL}/sitemap.xml")
+    return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
 
-from django.shortcuts import render
-from django.views.decorators.cache import cache_page
 
-from core.models import (
-    Institution,
-    InstitutionPresentation,
-    InstitutionStat,
-    Value,
-    Infrastructure,
-    Staff,
-    Partner,
-)
-from formations.models import Programme
-from branches.models import Branch
+@require_http_methods(["POST"])
+def set_cookie_preferences(request):
+    """Enregistre les préférences cookies depuis la bannière de consentement."""
+    try:
+        payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "invalid_payload"}, status=400)
+
+    if not isinstance(payload, dict):
+        return JsonResponse({"ok": False, "error": "invalid_payload"}, status=400)
+
+    status = payload.get("status")
+    if not isinstance(status, str) or status not in {"accepted", "rejected"}:
+        return JsonResponse({"ok": False, "error": "invalid_status"}, status=400)
+
+    consent_payload = {
+        "version": COOKIE_CONSENT_VERSION,
+        "necessary": True,
+        "status": status,
+        "timestamp": timezone.now().isoformat(),
+    }
+
+    response = JsonResponse({"ok": True, "consent": consent_payload})
+    response.set_cookie(
+        COOKIE_CONSENT_NAME,
+        # URL encoding is readable by document.cookie without SimpleCookie's
+        # quoted-string / octal escaping of JSON commas and quotes.
+        quote(json.dumps(consent_payload, separators=(",", ":")), safe=""),
+        max_age=COOKIE_CONSENT_MAX_AGE,
+        path="/",
+        samesite="Lax",
+        secure=request.is_secure(),
+    )
+    return response
 
 
 # ==========================================================
@@ -127,6 +271,7 @@ from branches.models import Branch
 def about(request):
     institution = Institution.objects.filter(is_active=True).first()
     presentation = InstitutionPresentation.objects.first()
+    site_configuration = get_site_configuration_safe()
 
     stats = InstitutionStat.objects.filter(
         is_active=True
@@ -158,19 +303,22 @@ def about(request):
         is_active=True
     ).order_by("-is_featured", "order")
 
-    formations = Programme.objects.filter(
-        is_active=True
-    ).select_related('cycle').order_by('-is_featured', 'title')[:6]
+    formations = Programme.objects.public().select_related('cycle').order_by('-is_featured', 'title')[:6]
 
-    # ✅ AJOUTER CETTE LIGNE - BRANCHES / ANNEXES
     branches = Branch.objects.filter(is_active=True).order_by("name")
 
     # Hero data
     hero_title = presentation.hero_title if presentation else (institution.name if institution else "Notre Institution")
     hero_subtitle = presentation.hero_subtitle if presentation else "Excellence académique et formation professionnelle de qualité"
+    about_hero_background_url = (
+        site_configuration.about_hero_background_image.url
+        if site_configuration and site_configuration.about_hero_background_image
+        else ""
+    )
 
     context = {
         "institution": institution,
+        "site_configuration": site_configuration,
         "presentation": presentation,
         "stats": stats,
         "values": values,
@@ -180,9 +328,10 @@ def about(request):
         "partners": partners,
         "testimonials": testimonials,
         "formations": formations,
-        "branches": branches,  # ✅ AJOUTER CETTE LIGNE
+        "branches": branches,
         "hero_title": hero_title,
         "hero_subtitle": hero_subtitle,
+        "about_hero_background_url": about_hero_background_url,
         **get_institution_context(),
     }
 
@@ -196,55 +345,146 @@ def about(request):
 def home(request):
     institution = Institution.objects.filter(is_active=True).first()
     presentation = InstitutionPresentation.objects.first()
-
-    pillars = [
-        {"title": "Sciences de la santé", "description": "Formations spécialisées adaptées aux exigences professionnelles."},
-        {"title": "Encadrement académique", "description": "Corps enseignant qualifié et expérimenté."},
-        {"title": "Exigence académique", "description": "Rigueur pédagogique et suivi personnalisé."},
-        {"title": "Ouverture", "description": "Étudiants nationaux et internationaux."},
-    ]
-
-    formations_home = (
-        Programme.objects
-        .filter(is_active=True)
-        .select_related("cycle", "diploma_awarded")
-        .order_by("cycle__min_duration_years")[:3]
+    site_configuration = get_site_configuration_safe()
+    home_hero_image_url = site_configuration.home_hero_image.url if site_configuration and site_configuration.home_hero_image else ""
+    site_logo_url = site_configuration.site_logo.url if site_configuration and site_configuration.site_logo else ""
+    home_hero_title = (
+        site_configuration.home_hero_title
+        if site_configuration and site_configuration.home_hero_title
+        else "Université Privée Félix Houphouët-Boigny du Mali"
+    )
+    home_hero_subtitle = (
+        site_configuration.home_hero_subtitle
+        if site_configuration and site_configuration.home_hero_subtitle
+        else "Une université d’excellence académique, d’innovation scientifique et d’engagement citoyen."
+    )
+    governance_title = (
+        site_configuration.governance_title
+        if site_configuration and site_configuration.governance_title
+        else "Une organisation au service du projet universitaire"
+    )
+    governance_text = (
+        site_configuration.governance_text
+        if site_configuration and site_configuration.governance_text
+        else "La gouvernance associe les orientations administratives, académiques et scientifiques dans un cadre institutionnel cohérent."
+    )
+    campus_life_title = (
+        site_configuration.campus_life_title
+        if site_configuration and site_configuration.campus_life_title
+        else "Apprendre, participer et grandir ensemble"
+    )
+    campus_life_text = (
+        site_configuration.campus_life_text
+        if site_configuration and site_configuration.campus_life_text
+        else "La vie universitaire associe enseignement, ressources, activités scientifiques, culturelles et engagement étudiant."
+    )
+    research_title = (
+        site_configuration.research_title
+        if site_configuration and site_configuration.research_title
+        else "Créer des savoirs utiles aux communautés"
+    )
+    research_text = (
+        site_configuration.research_text
+        if site_configuration and site_configuration.research_text
+        else "L’UFHOB développe la recherche, la créativité et l’innovation au service des enjeux locaux et globaux."
     )
 
-    stats = InstitutionStat.objects.filter(is_active=True).order_by("order")
+    public_programmes = Programme.objects.public().select_related(
+        "school", "cycle", "diploma_awarded"
+    )
+    schools = list(
+        School.objects.filter(is_active=True)
+        .prefetch_related(
+            Prefetch("programmes", queryset=public_programmes, to_attr="public_programmes")
+        )
+        .order_by("-is_featured", "order", "code")
+    )
+    formations_home = list(
+        public_programmes.order_by("-is_featured", "school__order", "title")[:6]
+    )
 
-    values = Value.objects.filter(is_active=True).order_by("order")[:4]
+    values = list(Value.objects.filter(is_active=True).order_by("order")[:4])
+    if not values:
+        values = [
+            {"title": "Excellence", "description": "Une exigence constante dans l'enseignement et l'accompagnement."},
+            {"title": "Intégrité", "description": "Une communauté guidée par l'éthique, la responsabilité et le respect."},
+            {"title": "Humanisme", "description": "La proximité, l'accueil et l'accessibilité au cœur de la vie universitaire."},
+            {"title": "Innovation", "description": "La liberté de penser autrement et de créer des réponses utiles."},
+        ]
 
     latest_news = (
         News.objects
         .filter(status="published")
-        .order_by("-published_at")[:3]
+        .select_related("categorie")
+        .order_by("-is_important", "-published_at")[:3]
     )
 
-    latest_articles = (
-        Article.objects
-        .filter(status="published")
-        .order_by("-published_at")[:3]
+    latest_events = (
+        Event.objects.filter(is_published=True)
+        .select_related("event_type")
+        .order_by("-event_date")[:3]
+    )
+    director_message = DirectorGeneralMessage.objects.filter(is_active=True).first()
+
+    branches = list(
+        Branch.objects
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch(
+                "school_branches",
+                queryset=SchoolBranch.objects.filter(
+                    is_active=True, school__is_active=True
+                ).select_related("school").order_by("school__order", "school__code"),
+                to_attr="active_school_branches",
+            )
+        )
+        .order_by("name")
     )
 
-    partners = Partner.objects.filter(is_active=True).order_by("order")
+    # Only the real university photograph is published before content loading.
+    hero_slides = [
+        {
+            "id": "university",
+            "eyebrow": "Université · UFHOB",
+            "title": home_hero_title,
+            "description": home_hero_subtitle,
+            "media_type": "image",
+            "image": home_hero_image_url or static("images/hero-bg.jpg"),
+            "video_webm": "",
+            "video_mp4": "",
+            "poster": home_hero_image_url or static("images/hero-bg.jpg"),
+            "overlay_strength": "0.18",
+            "primary_cta_label": "Découvrir l’université",
+            "primary_cta_url": reverse("core:university"),
+            "secondary_cta_label": "Candidater",
+            "secondary_cta_url": reverse("admissions:admission_tunnel"),
+            "alignment": "left",
+        },
 
-    testimonials = Testimonial.objects.filter(
-        is_active=True,
-        is_featured=True
-    ).order_by("order")[:3]
+    ]
 
     context = {
         "institution": institution,
         "presentation": presentation,
-        "pillars": pillars,
+        "site_configuration": site_configuration,
+        "home_hero_image_url": home_hero_image_url,
+        "site_logo_url": site_logo_url,
+        "home_hero_title": home_hero_title,
+        "home_hero_subtitle": home_hero_subtitle,
+        "hero_slides": hero_slides,
+        "governance_title": governance_title,
+        "governance_text": governance_text,
+        "campus_life_title": campus_life_title,
+        "campus_life_text": campus_life_text,
+        "research_title": research_title,
+        "research_text": research_text,
+        "schools": schools,
         "formations_home": formations_home,
-        "stats": stats,
         "values": values,
         "latest_news": latest_news,
-        "latest_articles": latest_articles,
-        "partners": partners,
-        "testimonials": testimonials,
+        "latest_events": latest_events,
+        "director_message": director_message,
+        "annexes": branches,
         **get_institution_context(),
     }
 
@@ -341,34 +581,37 @@ def contact_view(request):
             contact_message.ip_address = request.META.get("REMOTE_ADDR")
             contact_message.user_agent = request.META.get("HTTP_USER_AGENT", "")
             contact_message.save()
+            message_context = contact_message.to_email_context()
 
-            # Email interne
-            internal_html = render_to_string(
-                "emails/contact_internal.html",
-                {"message_obj": contact_message}
-            )
-            internal_email = EmailMultiAlternatives(
-                subject=f"[CONTACT] {contact_message.get_subject_display()}",
-                body=strip_tags(internal_html),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[settings.DEFAULT_FROM_EMAIL],
-            )
-            internal_email.attach_alternative(internal_html, "text/html")
-            internal_email.send()
+            try:
+                NotificationBus.send_email(
+                    subject=f"[CONTACT] {contact_message.get_subject_display()}",
+                    recipient_email=settings.DEFAULT_FROM_EMAIL,
+                    source_app="core",
+                    event_type="contact_internal",
+                    html_template="emails/contact_internal.html",
+                    context={"message_obj": message_context},
+                    dispatch_on_commit=False,
+                    legacy_source="core.contact_view",
+                    legacy_object_id=getattr(contact_message, "pk", ""),
+                )
+            except Exception:
+                logger.exception("Echec notification interne contact id=%s", contact_message.pk)
 
-            # Email utilisateur
-            user_html = render_to_string(
-                "emails/contact_received.html",
-                {"message_obj": contact_message}
-            )
-            user_email = EmailMultiAlternatives(
-                subject="Votre demande a bien été reçue",
-                body=strip_tags(user_html),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[contact_message.email],
-            )
-            user_email.attach_alternative(user_html, "text/html")
-            user_email.send()
+            try:
+                NotificationBus.send_email(
+                    subject="Votre demande a bien ete recue",
+                    recipient_email=contact_message.email,
+                    source_app="core",
+                    event_type="contact_received",
+                    html_template="emails/contact_received.html",
+                    context={"message_obj": message_context},
+                    dispatch_on_commit=False,
+                    legacy_source="core.contact_view",
+                    legacy_object_id=getattr(contact_message, "pk", ""),
+                )
+            except Exception:
+                logger.exception("Echec accuse reception contact id=%s", contact_message.pk)
 
             return render(
                 request,
@@ -387,6 +630,8 @@ def contact_view(request):
         "core/contact.html",
         {
             "form": form,
+            "branches": Branch.objects.filter(is_active=True).order_by("name"),
+            "page_title": "Contact | UFHOB",
             **get_institution_context(),
         }
     )
@@ -397,6 +642,8 @@ def contact_view(request):
 # ==========================================================
 
 def custom_404(request, exception):
+    logger.info(f"404 | Path={request.path}")
+
     formations_home = (
         Programme.objects
         .filter(is_active=True)
@@ -452,3 +699,23 @@ def custom_400(request, exception):
     }
 
     return render(request, "core/errors/400.html", context, status=400)
+
+
+def fallback_404(request, unmatched_path=""):
+    """Fallback explicite pour les URLs non resolues (utile aussi en mode debug)."""
+    logger.warning(f"404 fallback | Path=/{unmatched_path}")
+    return custom_404(request, exception=None)
+
+
+def preview_error_page(request, error_code):
+    """Apercu rapide des pages d'erreur pour validation visuelle."""
+    if error_code == 400:
+        return custom_400(request, exception=None)
+    if error_code == 403:
+        return custom_403(request, exception=None)
+    if error_code == 404:
+        return custom_404(request, exception=None)
+    if error_code == 500:
+        return custom_500(request)
+    raise Http404("Code d'erreur non supporte")
+

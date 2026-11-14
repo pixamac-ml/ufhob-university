@@ -5,10 +5,13 @@ Signaux pour les notifications automatiques lors des changements de statut
 
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.utils import timezone
 
 from admissions.models import Candidature
-from core.models import Notification, StatusHistory
+from notifier.models import NotificationMessage
+from notifier.services import NotificationBus
+from notifier.services.policy import resolve_channel_policy
+from notifier.services.audience import resolve_candidate_user_by_email, restrict_candidate_channels
+from core.models import StatusHistory
 
 # ==========================================================
 # MESSAGES PAR TYPE DE NOTIFICATION
@@ -46,6 +49,11 @@ NOTIFICATION_MESSAGES = {
 }
 
 
+def _queue_candidature_email(*, candidature_id, notification_id, notification_type):
+    """Migration progressive: l'envoi transactionnel est pilote par communication/."""
+    return None
+
+
 # ==========================================================
 # FONCTIONS DE CREATION DE NOTIFICATION
 # ==========================================================
@@ -57,20 +65,84 @@ def create_status_notification(candidature, notification_type):
         return None
 
     data = NOTIFICATION_MESSAGES[notification_type]
+    message = data["message"]
 
     # CORRIGE: utiliser last_name et first_name au lieu de full_name
     recipient_name = f"{candidature.last_name} {candidature.first_name}"
 
-    notification = Notification.objects.create(
-        recipient_email=candidature.email,
-        recipient_name=recipient_name,
-        notification_type=notification_type,
+    extra_context = {}
+    if notification_type == "candidature_rejected" and candidature.rejection_reason:
+        extra_context["reason"] = candidature.rejection_reason
+        extra_context["comment"] = candidature.rejection_reason
+    elif notification_type == "candidature_to_complete" and candidature.completion_message:
+        message = candidature.completion_message
+        extra_context["admin_comment"] = candidature.completion_message
+        extra_context["comment"] = candidature.completion_message
+    elif notification_type == "candidature_accepted_with_reserve" and candidature.admin_comment:
+        extra_context["admin_comment"] = candidature.admin_comment
+        extra_context["comment"] = candidature.admin_comment
+
+    recipient_user = resolve_candidate_user_by_email(candidature.email)
+    default_channels = [NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL]
+    if recipient_user:
+        default_channels = [
+            NotificationMessage.CHANNEL_IN_APP,
+            NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL,
+        ]
+    policy = resolve_channel_policy(
+        notification_type,
+        default_channels=default_channels,
+        default_priority=NotificationMessage.PRIORITY_NORMAL,
+        metadata={
+            "recipient_email": candidature.email,
+            "recipient_name": recipient_name,
+            "candidate_name": candidature.full_name,
+            "first_name": candidature.first_name,
+            "candidate_reference": getattr(candidature, "reference", ""),
+            "programme": getattr(getattr(candidature, "programme", None), "title", ""),
+            "programme_name": getattr(getattr(candidature, "programme", None), "title", ""),
+            "academic_year": getattr(candidature, "academic_year", ""),
+            "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
+            "support_email": "contact@esfe-mali.org",
+            "template_key": notification_type,
+            "url": "/candidature/",
+            "context": {
+                "recipient_name": recipient_name,
+                "message": message,
+                "candidate_reference": getattr(candidature, "reference", ""),
+                "programme_name": getattr(getattr(candidature, "programme", None), "title", ""),
+                "programme": getattr(getattr(candidature, "programme", None), "title", ""),
+                "academic_year": getattr(candidature, "academic_year", ""),
+                "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
+                "first_name": candidature.first_name,
+                "candidate_name": candidature.full_name,
+                "dashboard_url": "/candidature/",
+                "login_url": "/candidature/",
+                "reference": getattr(candidature, "reference", ""),
+                **extra_context,
+            },
+        },
+    )
+    policy["channels"] = restrict_candidate_channels(recipient_user, policy["channels"])
+    event, created_notifications = NotificationBus.notify(
+        recipient=recipient_user,
+        actor=None,
+        event_type=notification_type,
         title=data["title"],
-        message=data["message"],
-        related_candidature=candidature,
+        body=message,
+        source_app="admissions",
+        channels=policy["channels"],
+        priority=policy["priority"],
+        metadata=policy["metadata"],
     )
 
-    return notification
+    _queue_candidature_email(
+        candidature_id=candidature.pk,
+        notification_id=created_notifications[0].pk if created_notifications else None,
+        notification_type=notification_type,
+    )
+
+    return event
 
 
 def create_status_history(candidature, old_status, new_status, changed_by=None, comment=""):
@@ -180,15 +252,69 @@ def check_documents_after_status_change(sender, instance, created, **kwargs):
                 # CORRIGE: utiliser last_name et first_name au lieu de full_name
                 recipient_name = f"{instance.last_name} {instance.first_name}"
 
-                Notification.objects.create(
-                    recipient_email=instance.email,
-                    recipient_name=recipient_name,
-                    notification_type="document_missing",
+                recipient_user = resolve_candidate_user_by_email(instance.email)
+                default_channels = [NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL]
+                if recipient_user:
+                    default_channels = [
+                        NotificationMessage.CHANNEL_IN_APP,
+                        NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL,
+                    ]
+                policy = resolve_channel_policy(
+                    "document_missing",
+                    default_channels=default_channels,
+                    default_priority=NotificationMessage.PRIORITY_HIGH,
+                    metadata={
+                        "recipient_email": instance.email,
+                        "recipient_name": recipient_name,
+                        "candidate_name": instance.full_name,
+                        "first_name": instance.first_name,
+                        "candidate_reference": getattr(instance, "reference", ""),
+                        "programme": getattr(getattr(instance, "programme", None), "title", ""),
+                        "programme_name": getattr(getattr(instance, "programme", None), "title", ""),
+                        "academic_year": getattr(instance, "academic_year", ""),
+                        "branch_name": getattr(getattr(instance, "branch", None), "name", ""),
+                        "template_key": "document_missing",
+                        "support_email": "contact@esfe-mali.org",
+                        "missing_documents": missing_docs,
+                        "required_documents": missing_docs,
+                        "admin_comment": message,
+                        "url": "/candidature/",
+                        "context": {
+                            "recipient_name": recipient_name,
+                            "message": message,
+                            "candidate_reference": getattr(instance, "reference", ""),
+                            "programme_name": getattr(getattr(instance, "programme", None), "title", ""),
+                            "programme": getattr(getattr(instance, "programme", None), "title", ""),
+                            "academic_year": getattr(instance, "academic_year", ""),
+                            "branch_name": getattr(getattr(instance, "branch", None), "name", ""),
+                            "first_name": instance.first_name,
+                            "candidate_name": instance.full_name,
+                            "missing_documents": missing_docs,
+                            "required_documents": missing_docs,
+                            "admin_comment": message,
+                            "dashboard_url": "/candidature/",
+                            "login_url": "/candidature/",
+                            "reference": getattr(instance, "reference", ""),
+                        },
+                    },
+                )
+                policy["channels"] = restrict_candidate_channels(recipient_user, policy["channels"])
+                NotificationBus.notify(
+                    recipient=recipient_user,
+                    actor=None,
+                    event_type="document_missing",
                     title="Document manquant",
-                    message=message,
-                    related_candidature=instance,
+                    body=message,
+                    source_app="admissions",
+                    channels=policy["channels"],
+                    priority=policy["priority"],
+                    metadata=policy["metadata"],
                 )
 
                 # Mettre a jour automatiquement le statut
                 instance.status = "to_complete"
-                instance.save(update_fields=["status"])
+                instance.admin_comment = message
+                update_fields = ["status", "admin_comment"]
+                if hasattr(instance, "updated_at"):
+                    update_fields.append("updated_at")
+                instance.save(update_fields=update_fields)

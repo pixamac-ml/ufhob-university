@@ -1,22 +1,31 @@
 # core/admin.py
 
+from accounts.admin_scoping import UniversityScopeAdminMixin
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
+from django.db import connection
+from django.db.utils import OperationalError, ProgrammingError
+from django.shortcuts import redirect
+from notifier.services import NotificationBus
 
 from .models import (
+    School,
+    SchoolBranch,
     Institution,
     InstitutionPresentation,
+    SiteConfiguration,
     Value,
     Infrastructure,
+    UniversityLifeItem,
     Staff,
+    DirectorGeneralMessage,
     InstitutionStat,
     Partner,
     LegalPage,
@@ -24,7 +33,6 @@ from .models import (
     LegalSidebarBlock,
     LegalPageHistory,
     ContactMessage,
-    Notification,
     StatusHistory,
 )
 
@@ -152,6 +160,94 @@ class InstitutionPresentationAdmin(admin.ModelAdmin):
         return False
 
 
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    fieldsets = (
+        ("Production - Images cles (Zero statique)", {
+            "fields": (
+                "home_hero_image",
+                "home_about_image",
+                "about_hero_background_image",
+                "about_hero_image",
+                "about_main_image",
+            ),
+            "description": "Ces images alimentent directement la Landing et la page A propos."
+        }),
+        ("Branding", {
+            "fields": ("site_logo",)
+        }),
+        ("Accueil - Hero", {
+            "fields": (
+                "home_hero_title",
+                "home_hero_subtitle",
+            )
+        }),
+        ("Accueil - Images sections", {
+            "fields": (
+                "home_why_image_1",
+                "home_why_image_2",
+                "home_why_image_3",
+                "home_why_image_4",
+                "home_annexe_image_1",
+                "home_annexe_image_2",
+                "home_annexe_image_3",
+                "home_annexe_image_4",
+                "home_stats_banner_image",
+            ),
+            "classes": ("collapse",)
+        }),
+        ("A propos", {
+            "fields": (
+                "about_stats_banner_image",
+                "about_vision_title",
+                "about_vision_text",
+                "about_values_title",
+                "about_values_subtitle",
+            )
+        }),
+        ("Smart Rocket", {
+            "fields": (
+                "smart_rocket_enabled",
+                "smart_rocket_title",
+                "smart_rocket_message",
+            )
+        }),
+        ("Metadonnees", {
+            "fields": ("updated_at",),
+            "classes": ("collapse",)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Tant que la migration n'est pas appliquee, la table peut ne pas exister.
+        try:
+            return not SiteConfiguration.objects.exists()
+        except (ProgrammingError, OperationalError):
+            return True
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def _site_config_table_exists(self):
+        try:
+            return SiteConfiguration._meta.db_table in connection.introspection.table_names()
+        except (ProgrammingError, OperationalError):
+            return False
+
+    def changelist_view(self, request, extra_context=None):
+        if not self._site_config_table_exists():
+            messages.warning(
+                request,
+                "La table de configuration du site n'est pas encore créée. "
+                "Exécutez d'abord les migrations (python manage.py migrate core).",
+            )
+            return redirect("admin:index")
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 # ==========================================================
 # VALEURS (MAX 4)
 # ==========================================================
@@ -255,6 +351,15 @@ class InfrastructureAdmin(admin.ModelAdmin):
     image_preview.short_description = "Photo"
 
 
+@admin.register(UniversityLifeItem)
+class UniversityLifeItemAdmin(admin.ModelAdmin):
+    list_display = ("title", "category", "order", "is_active")
+    list_editable = ("order", "is_active")
+    list_filter = ("category", "is_active")
+    search_fields = ("title", "description")
+    ordering = ("order", "title")
+
+
 # ==========================================================
 # PERSONNEL / STAFF
 # ==========================================================
@@ -311,7 +416,8 @@ class StaffAdmin(admin.ModelAdmin):
                 obj.photo.url
             )
         return format_html(
-            '<div style="width:45px;height:45px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:1.2rem;">?</div>'
+            '<div style="width:45px;height:45px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:1.2rem;">{}</div>',
+            '?',
         )
     photo_preview.short_description = ""
 
@@ -328,6 +434,22 @@ class StaffAdmin(admin.ModelAdmin):
             obj.get_category_display()
         )
     category_badge.short_description = "Catégorie"
+
+
+@admin.register(DirectorGeneralMessage)
+class DirectorGeneralMessageAdmin(admin.ModelAdmin):
+    list_display = ("full_name", "position", "title", "published_at", "order", "is_active")
+    list_editable = ("order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("full_name", "position", "title", "message")
+    ordering = ("order", "-published_at", "-updated_at")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        ("Signataire", {"fields": ("full_name", "position", "photo")} ),
+        ("Message", {"fields": ("title", "message", "signature")} ),
+        ("Publication", {"fields": ("is_active", "published_at", "order")} ),
+        ("Traçabilité", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
 
 
 # ==========================================================
@@ -627,7 +749,8 @@ class ContactMessageAdmin(admin.ModelAdmin):
                 name
             )
         return format_html(
-            '<span style="color:#dc2626;font-weight:600;">Non assigné</span>'
+            '<span style="color:#dc2626;font-weight:600;">{}</span>',
+            'Non assigne',
         )
     assigned_display.short_description = "Responsable"
 
@@ -664,11 +787,13 @@ class ContactMessageAdmin(admin.ModelAdmin):
     def sla_indicator(self, obj):
         if obj.status in ["answered", "closed"]:
             return format_html(
-                '<span style="color:#16a34a;font-weight:600;">✓ Traité</span>'
+                '<span style="color:#16a34a;font-weight:600;">{}</span>',
+                '✓ Traite',
             )
         if obj.is_overdue:
             return format_html(
-                '<span style="color:white;background:#dc2626;padding:5px 10px;border-radius:20px;font-weight:600;">⚠ En retard</span>'
+                '<span style="color:white;background:#dc2626;padding:5px 10px;border-radius:20px;font-weight:600;">{}</span>',
+                '⚠ En retard',
             )
         # Calcul des heures restantes
         remaining = obj.deadline - timezone.now()
@@ -686,22 +811,23 @@ class ContactMessageAdmin(admin.ModelAdmin):
         if reply_added and not already_answered:
             staff_name = request.user.get_full_name() or request.user.username
             context = {
-                "message_obj": obj,
+                "message_obj": obj.to_email_context(),
                 "institution_name": "École de Santé Félix Houphouët Boigny",
                 "staff_name": staff_name,
                 "contact_email": settings.DEFAULT_FROM_EMAIL,
                 "reply_date": timezone.now(),
             }
-            html_content = render_to_string("emails/contact_reply.html", context)
-            text_content = strip_tags(html_content)
-            email = EmailMultiAlternatives(
-                subject=f"[ESFé] Réponse à votre demande - {obj.get_subject_display()}",
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[obj.email],
+            NotificationBus.send_email(
+                subject=f"[ESFE] Reponse a votre demande - {obj.get_subject_display()}",
+                recipient_email=obj.email,
+                source_app="core_admin",
+                event_type="contact_reply",
+                html_template="emails/contact_reply.html",
+                context=context,
+                dispatch_on_commit=False,
+                legacy_source="core.admin.contact_reply",
+                legacy_object_id=getattr(obj, "pk", ""),
             )
-            email.attach_alternative(html_content, "text/html")
-            email.send(fail_silently=False)
             obj.status = "answered"
             obj.answered_at = timezone.now()
             messages.success(request, "✔ Réponse envoyée avec succès.")
@@ -712,70 +838,6 @@ class ContactMessageAdmin(admin.ModelAdmin):
         if obj and obj.status == "closed":
             return False
         return super().has_change_permission(request, obj)
-
-
-# ==========================================================
-# NOTIFICATIONS (LECTURE SEULE)
-# ==========================================================
-
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
-
-    list_display = (
-        "notification_type_display",
-        "recipient_name",
-        "recipient_email",
-        "title",
-        "email_status_badge",
-        "sent_at",
-        "created_at",
-    )
-
-    list_filter = (
-        "notification_type",
-        "email_sent",
-        "created_at",
-    )
-
-    search_fields = (
-        "recipient_name",
-        "recipient_email",
-        "title",
-        "message",
-    )
-
-    readonly_fields = (
-        "recipient_email",
-        "recipient_name",
-        "notification_type",
-        "title",
-        "message",
-        "related_candidature",
-        "related_inscription",
-        "related_payment",
-        "email_sent",
-        "sent_at",
-        "created_at",
-    )
-
-    ordering = ("-created_at",)
-
-    def notification_type_display(self, obj):
-        return obj.get_notification_type_display()
-    notification_type_display.short_description = "Type"
-
-    def email_status_badge(self, obj):
-        if obj.email_sent:
-            return format_html(
-                '<span style="color:white;background:#16a34a;padding:4px 8px;border-radius:4px;font-weight:600;">✓ Envoyé</span>'
-            )
-        return format_html(
-            '<span style="color:white;background:#f59e0b;padding:4px 8px;border-radius:4px;font-weight:600;">En attente</span>'
-        )
-    email_status_badge.short_description = "Email"
-
-    def has_add_permission(self, request):
-        return False
 
 
 # ==========================================================
@@ -843,3 +905,20 @@ class StatusHistoryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(School)
+class SchoolAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
+    list_display = ("code", "short_name", "institution", "is_active")
+    list_filter = ("institution", "is_active")
+    search_fields = ("code", "short_name", "official_name")
+    list_select_related = ("institution",)
+
+
+@admin.register(SchoolBranch)
+class SchoolBranchAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
+    list_display = ("school", "branch", "is_active", "opening_date", "closing_date")
+    list_filter = ("school", "branch", "is_active")
+    search_fields = ("school__code", "branch__name", "local_code")
+    autocomplete_fields = ("school", "branch")
+    list_select_related = ("school", "branch")

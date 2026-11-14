@@ -1,0 +1,6 @@
+{% comment %}
+This historical URL renders the same official annual document as the annual
+report endpoint.  Keeping a single template prevents S1/S2-only variants from
+drifting away from the final deliberation snapshot.
+{% endcomment %}
+{% include "academics/reports/student_annual_report.html" %}

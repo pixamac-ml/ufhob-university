@@ -1,0 +1,22 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Réglages techniques" title="Paramètres d’annexe" subtitle="Ces réglages concernent uniquement l’annexe active." %}
+    {% fill "actions" %}<button type="button" class="btn btn-secondary" hx-get="{% url 'accounts_portal:it_my_account_workspace' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML"><i data-lucide="user" class="h-4 w-4"></i> Mon compte</button>{% endfill %}
+  {% endcomponent %}
+
+  {% if toast %}{% component "ui_core.alert" message=toast.message tone=toast.level dismissible=True %}{% endcomponent %}{% endif %}
+
+  {% component "ui_core.panel" title="Configuration locale" subtitle="Toute modification est enregistrée côté serveur dans le périmètre de l’annexe." %}
+    {% if request.access_context.school %}
+      <p class="text-sm text-ui-text-muted">Cette configuration est commune à toutes les écoles du campus. Sa modification nécessite un accès au campus entier.</p>
+    {% else %}
+    <form method="post" hx-post="{% url 'accounts_portal:it_branch_settings_save' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML" class="grid gap-4 md:grid-cols-2">
+      {% csrf_token %}
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">Seuil de validation<input name="validation_threshold" type="number" min="0" value="{{ settings.validation_threshold|default:'' }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">Année académique active<input name="active_academic_year" value="{{ settings.active_academic_year|default:'' }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text md:col-span-2">Configuration locale (JSON)<input name="local_config" value="{{ settings.local_config|default:'' }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <div class="md:col-span-2 flex justify-end"><button class="btn btn-primary" type="submit"><i data-lucide="save" class="h-4 w-4"></i> Enregistrer les paramètres</button></div>
+    </form>
+    {% endif %}
+  {% endcomponent %}
+</div>

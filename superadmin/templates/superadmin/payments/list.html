@@ -1,0 +1,149 @@
+{% extends "superadmin/unified_base.html" %}
+{% load humanize %}
+
+{% block page_title %}Gestion des Paiements{% endblock %}
+{% block page_subtitle %}Suivi financier des transactions et du recouvrement{% endblock %}
+
+{% block content_main %}
+<div class="space-y-6">
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="card p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Total encaissé</p>
+            <p class="text-2xl font-bold text-emerald-700">{{ summary.total_validated|default:0|intcomma }}</p>
+            <p class="text-xs text-slate-500">FCFA validés</p>
+        </div>
+        <div class="card p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Total en attente</p>
+            <p class="text-2xl font-bold text-amber-700">{{ summary.total_pending|default:0|intcomma }}</p>
+            <p class="text-xs text-slate-500">FCFA pending</p>
+        </div>
+        <div class="card p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Taux de recouvrement</p>
+            <p class="text-2xl font-bold text-[var(--primary)]">{{ summary.recovery_rate|default:0 }}%</p>
+            <p class="text-xs text-slate-500">sur {{ summary.total_due|default:0|intcomma }} FCFA dus</p>
+        </div>
+        <div class="card p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Transactions</p>
+            <p class="text-2xl font-bold text-slate-900">{{ summary.total_count|default:0|intcomma }}</p>
+            <p class="text-xs text-slate-500">dans le périmètre filtré</p>
+        </div>
+    </section>
+
+    <div class="card p-4">
+        <form id="payment-filter-form"
+              method="get"
+              class="grid grid-cols-1 md:grid-cols-9 gap-3"
+              hx-get="{% url 'superadmin:payment_list' %}"
+              hx-target="#payments-table-container"
+              hx-swap="innerHTML"
+              hx-trigger="keyup changed delay:350ms, change, submit">
+            <div class="md:col-span-2">
+                <input type="text" name="search" value="{{ filters.search|default:'' }}" placeholder="Recherche: étudiant, référence, reçu..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <select name="status" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Tous statuts</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="method" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Toutes méthodes</option>
+                    {% for value, label in method_choices %}
+                    <option value="{{ value }}" {% if filters.method == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="programme" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Tous programmes</option>
+                    {% for p in programmes %}
+                    <option value="{{ p.id }}" {% if filters.programme_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="academic_year" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Toutes années</option>
+                    {% for year in academic_years %}
+                    <option value="{{ year }}" {% if filters.academic_year == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="branch" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Toutes annexes</option>
+                    {% for b in branches %}
+                    <option value="{{ b.id }}" {% if filters.branch_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <select name="agent" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Tous agents</option>
+                    {% for a in payment_agents %}
+                    <option value="{{ a.id }}" {% if filters.agent_id == a.id %}selected{% endif %}>{{ a.user.get_full_name|default:a.user.username }} ({{ a.agent_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <a href="{% url 'superadmin:payment_list' %}" class="btn btn-outline">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-4">
+        <form id="payments-bulk-form" method="post" action="{% url 'superadmin:bulk_action' %}" class="flex flex-wrap items-center gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="model_type" value="payment">
+            <select name="action" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                <option value="">Action groupée...</option>
+                <option value="validate">Valider</option>
+                <option value="cancel">Annuler</option>
+                <option value="notify">Notifier</option>
+            </select>
+            <button type="submit" class="btn btn-outline btn-sm" data-confirm-message="Appliquer cette action aux paiements sélectionnés ?" data-confirm-title="Confirmer">Appliquer</button>
+            <div class="ml-auto flex items-center gap-2">
+                <a href="{% url 'superadmin:payment_agent_list' %}" class="btn btn-outline btn-sm">Agents paiement</a>
+                <a href="{% url 'superadmin:payment_cash_session_list' %}" class="btn btn-outline btn-sm">Sessions cash</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div id="payments-table-container"
+             hx-get="{% url 'superadmin:payment_list' %}"
+             hx-trigger="refreshPayments from:body"
+             hx-target="this"
+             hx-swap="innerHTML"
+             hx-include="#payment-filter-form">
+            {% include "superadmin/payments/_payment_table.html" %}
+        </div>
+    </div>
+</div>
+
+<script>
+function bindPaymentsBulkSelection() {
+    const selectAll = document.getElementById('select-all-payments');
+    const rowCheckboxes = Array.from(document.querySelectorAll('.payment-row-checkbox'));
+    if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+    }
+
+    selectAll.addEventListener('change', function () {
+        rowCheckboxes.forEach(function (box) {
+            box.checked = selectAll.checked;
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', bindPaymentsBulkSelection);
+document.body.addEventListener('htmx:afterSwap', function (evt) {
+    if (evt.target && evt.target.id === 'payments-table-container') {
+        bindPaymentsBulkSelection();
+    }
+});
+</script>
+{% endblock %}

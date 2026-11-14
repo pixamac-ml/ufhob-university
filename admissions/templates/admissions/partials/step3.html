@@ -1,0 +1,123 @@
+<div class='tunnel-step-shell' x-data="{ subStep: 'school' }" x-effect="if (step === 3 && subStep !== step3Phase) subStep = step3Phase; refreshStepThree();">
+  <div x-show="fragmentError" x-cloak role="alert" class="funnel-error mb-3"><span x-text="fragmentError"></span> <button type="button" class="underline" @click="stepThreeRequestKey=''; refreshStepThree()">Réessayer</button></div>
+  <div class='relative h-full min-h-0 overflow-hidden'>
+
+    <div x-show="subStep === 'school'" x-cloak class='flex h-full min-h-0 flex-col'>
+      <div class='tunnel-scroll space-y-5 pr-1'>
+        <div>
+          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>École</p>
+          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Choisissez votre composante académique.</h2>
+          <p class='mt-3 text-sm text-ufhob-muted'>Cette sélection détermine les campus et les programmes compatibles.</p>
+        </div>
+        <div data-field='school_code' class='grid gap-3 lg:grid-cols-2'>
+          {% for school in schools %}
+          <button type='button'
+                  class='rounded-ufhob-md border px-4 py-4 text-left transition'
+                  :class="formData.school_code === '{{ school.code|escapejs }}' ? 'border-ufhob-secondary bg-ufhob-primary-soft ring-1 ring-ufhob-secondary/30' : (errors.school_code ? 'border-red-400' : 'border-ufhob-border hover:border-ufhob-secondary')"
+                  @click="selectSchool('{{ school.code|escapejs }}', '{{ school.short_name|escapejs }}')" :aria-pressed="formData.school_code === '{{ school.code|escapejs }}'">
+            <span class='flex items-center gap-3'>
+              <span class='flex h-11 w-11 items-center justify-center rounded-full bg-ufhob-primary text-xs font-bold text-white'>{{ school.display_name }}</span>
+              <span>
+                <strong class='block text-ufhob-primary'>{{ school.short_name }}</strong>
+                <small class='text-ufhob-muted'>{% firstof school.official_name school.code %}</small>
+              </span>
+            </span>
+          </button>
+          {% empty %}
+          <div class='lg:col-span-2'>
+            <c-public.empty_state title='Aucune école disponible' text='Les candidatures seront accessibles après publication des écoles.' />
+          </div>
+          {% endfor %}
+        </div>
+        <p x-show='errors.school_code' x-cloak class='text-xs font-medium text-red-600' x-text='errors.school_code'></p>
+      </div>
+      <div class='tunnel-nav'>
+        <button type='button' class='tunnel-btn-prev' @click='goTo(2)'>Retour</button>
+        <button type='button' class='tunnel-btn-next' :disabled='!formData.school_code' :class='!formData.school_code ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.school_code) return; subStep='campus'; step3Phase='campus';">Continuer</button>
+      </div>
+    </div>
+
+    <div x-show="subStep === 'campus'" x-cloak class='flex h-full min-h-0 flex-col'>
+      <div class='tunnel-scroll space-y-5 pr-1'>
+        <div>
+          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>Campus</p>
+          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Où souhaitez-vous étudier ?</h2>
+          <p class='mt-3 text-sm text-ufhob-muted'>Seuls les campus où <strong x-text='formData.school_name'></strong> est présente sont proposés.</p>
+        </div>
+        <div data-field='branch_id'>
+          <div id='step3-campuses-list' class='rounded-ufhob-md border border-dashed border-ufhob-border bg-white/80 p-4 text-sm text-ufhob-muted' hx-get='{% url 'admissions:step3_campuses' %}' hx-include="[name='school_code']" hx-sync="this:replace" hx-trigger='admission-step-3-campuses from:body' hx-target='#step3-campuses-list' hx-swap='innerHTML' hx-indicator='#step3-campuses-loading'>{% if formData.school_code %}Chargement des campus...{% else %}Choisissez une école pour afficher les campus.{% endif %}</div>
+          <span id='step3-campuses-loading' class='htmx-indicator htmx-loading-indicator'></span>
+        </div>
+        <p x-show='errors.branch_id' x-cloak class='text-xs font-medium text-red-600' x-text='errors.branch_id'></p>
+      </div>
+      <div class='tunnel-nav'>
+        <button type='button' class='tunnel-btn-prev' @click="subStep='school'; step3Phase='school'">Changer d'école</button>
+        <button type='button' class='tunnel-btn-next' :disabled='!formData.branch_id' :class='!formData.branch_id ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.branch_id) return; subStep='cycle'; step3Phase='cycle';">Continuer</button>
+      </div>
+    </div>
+
+    <div x-show="subStep === 'cycle'" x-cloak class='flex h-full min-h-0 flex-col'>
+      <div class='tunnel-scroll space-y-5 pr-1'>
+        <div>
+          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>Cycle</p>
+          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Choisissez votre cycle.</h2>
+          <p class='mt-3 text-sm text-ufhob-muted'>Les cycles disponibles dépendent de l'école et du campus sélectionnés.</p>
+        </div>
+        <div data-field='current_level'>
+          <div id='step3-cycles-list' class='rounded-ufhob-md border border-dashed border-ufhob-border bg-white/80 p-4 text-sm text-ufhob-muted' hx-get='{% url 'admissions:step3_cycles' %}' hx-include="[name='school_code'], [name='branch_id']" hx-sync="this:replace" hx-trigger='admission-step-3-cycles from:body' hx-target='#step3-cycles-list' hx-swap='innerHTML' hx-indicator='#step3-cycles-loading'>{% if formData.branch_id %}Chargement des cycles...{% else %}Choisissez un campus pour afficher les cycles.{% endif %}</div>
+          <span id='step3-cycles-loading' class='htmx-indicator htmx-loading-indicator'></span>
+        </div>
+        <p x-show='errors.current_level' x-cloak class='text-xs font-medium text-red-600' x-text='errors.current_level'></p>
+      </div>
+      <div class='tunnel-nav'>
+        <button type='button' class='tunnel-btn-prev' @click="subStep='campus'; step3Phase='campus'">Retour au campus</button>
+        <button type='button' class='tunnel-btn-next' :disabled='!formData.current_level' :class='!formData.current_level ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.current_level) return; subStep='program'; step3Phase='program';">Continuer</button>
+      </div>
+    </div>
+
+    <div x-show="subStep === 'program'" x-cloak class='flex h-full min-h-0 flex-col'>
+      <div class='tunnel-scroll space-y-5 pr-1'>
+        <div>
+          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>Programme</p>
+          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Choisissez votre programme.</h2>
+          <p class='mt-3 text-sm text-ufhob-muted'>Le catalogue est filtré par école, campus et cycle.</p>
+        </div>
+        <p class="funnel-selected" x-show="formData.formation_slug" x-cloak>Programme sélectionné : <strong x-text="formData.formation"></strong></p>
+        <div class='relative'>
+          <span id='step3-formations-loading' class='htmx-indicator htmx-loading-indicator'></span>
+          <div id='step3-formations-list' data-field='formation_slug' class='rounded-ufhob-md border border-dashed border-ufhob-border bg-white/70 p-4 text-sm text-ufhob-muted' hx-get='{% url 'admissions:admission_step3_formations' %}' hx-include="[name='school_code'], [name='branch_id'], [name='current_level'], [name='page'], [name='page_size']" hx-sync="this:replace" hx-trigger='admission-step-3 from:body' hx-indicator='#step3-formations-loading' hx-swap='innerHTML'>{% if formData.current_level %}Chargement des formations...{% else %}Choisissez un cycle pour afficher les formations.{% endif %}</div>
+        </div>
+        <p x-show='errors.formation_slug' x-cloak class='text-xs font-medium text-red-600' x-text='errors.formation_slug'></p>
+      </div>
+      <div class='tunnel-nav'>
+        <button type='button' class='tunnel-btn-prev' @click="subStep='cycle'; step3Phase='cycle'">Retour au cycle</button>
+        <button type='button' class='tunnel-btn-next' :disabled='!formData.formation_slug' :class='!formData.formation_slug ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.formation_slug) return; subStep='documents'; step3Phase='documents';">Continuer</button>
+      </div>
+    </div>
+
+    <div x-show="subStep === 'documents'" x-cloak class='flex h-full min-h-0 flex-col'>
+      <div class='tunnel-scroll space-y-5 pr-1'>
+        <div>
+          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>Documents</p>
+          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Ajoutez vos pièces justificatives.</h2>
+          <p class='mt-3 text-sm text-ufhob-muted'>Ajoutez les pièces demandées ou indiquez explicitement que vous les transmettrez plus tard.</p>
+        </div>
+        <div class='relative'>
+          <span id='step3-documents-loading' class='htmx-indicator htmx-loading-indicator'></span>
+          <div id='step3-documents-list' class='rounded-ufhob-md border border-dashed border-ufhob-border bg-white/80 p-4 text-sm text-ufhob-muted' hx-get='{% url 'admissions:admission_step3_documents' %}' hx-include="[name='formation_slug']" hx-sync="this:replace" hx-trigger='admission-step-3-documents from:body' hx-indicator='#step3-documents-loading' hx-swap='innerHTML'>{% if formData.formation_slug %}Chargement des documents...{% else %}Choisissez une formation pour afficher les documents requis.{% endif %}</div>
+        </div>
+        <p x-show='errors.documents' x-cloak data-field='documents' class='text-xs font-medium text-red-600' x-text='errors.documents'></p>
+        <label class="funnel-deferral" for="documents-deferred">
+          <input type="checkbox" id="documents-deferred" name="documents_deferred" x-model="documentsDeferred" @change="delete errors.documents">
+          <span>Je transmettrai les pièces manquantes ultérieurement.<small class="block mt-1 text-ufhob-muted">Le dossier restera à compléter jusqu’à réception des pièces obligatoires.</small></span>
+        </label>
+        <p class="text-xs text-ufhob-muted" x-show="filesNeedReselection" x-cloak>Après un rechargement, les fichiers doivent être sélectionnés de nouveau. Vos autres informations sont conservées.</p>
+      </div>
+      <div class='tunnel-nav'>
+        <button type='button' class='tunnel-btn-prev' @click="subStep='program'; step3Phase='program'">Retour au programme</button>
+        <button type='button' class='tunnel-btn-next' @click='if (!validateStep(3)) return; goTo(4)'>Voir le récapitulatif</button>
+      </div>
+    </div>
+
+  </div>
+</div>

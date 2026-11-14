@@ -1,0 +1,21 @@
+{% extends "emails/base_communication.html" %}
+{% block email_title %}Candidature reçue — {{ institution_short_name|default:"UFHOB" }}{% endblock %}
+{% block preheader %}Votre candidature a été reçue et peut être suivie avec sa référence dossier.{% endblock %}
+{% block headline %}VOTRE CANDIDATURE A ÉTÉ REÇUE{% endblock %}
+{% block content %}
+<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#334155;">Bonjour <strong style="color:#1d5761;">{% firstof first_name candidate_name recipient_name "Candidat" %}</strong>,</p>
+<p style="margin:0 0 22px;font-size:15px;line-height:1.7;color:#334155;">Nous avons bien reçu votre candidature. Notre service des admissions va vérifier votre dossier et vous informera de la prochaine étape.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+  <tr><td style="padding:2px 0;color:#334155;font-size:14px;line-height:2.05;">
+    <strong style="display:inline-block;min-width:112px;color:#64748b;font-size:11px;letter-spacing:.05em;text-transform:uppercase;">Référence</strong> {% firstof candidature_reference candidate_reference reference "—" %}<br>
+    <strong style="display:inline-block;min-width:112px;color:#64748b;font-size:11px;letter-spacing:.05em;text-transform:uppercase;">Formation</strong> {% firstof programme programme_name "—" %}<br>
+    <strong style="display:inline-block;min-width:112px;color:#64748b;font-size:11px;letter-spacing:.05em;text-transform:uppercase;">Année</strong> {% firstof academic_year "—" %}<br>
+    <strong style="display:inline-block;min-width:112px;color:#64748b;font-size:11px;letter-spacing:.05em;text-transform:uppercase;">Statut</strong> Dossier reçu
+  </td></tr>
+</table>
+{% endblock %}
+{% block cta_button %}
+{% if dashboard_url or login_url %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 4px;"><tr><td align="center" style="background:#1d5761;"><a href="{% firstof dashboard_url login_url %}" style="display:inline-block;padding:13px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;">Suivre ma candidature</a></td></tr></table>
+{% endif %}
+{% endblock %}

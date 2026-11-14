@@ -1,0 +1,10 @@
+<div class="h-full rounded-xl border border-[color:var(--line)] bg-[color:var(--card)] px-4 py-4 transition hover:bg-[color:var(--card-soft)]">
+  {% if icon %}
+    <div class="mb-3 grid h-9 w-9 place-items-center rounded-lg bg-[color:var(--school-primary-soft)] text-[color:var(--school-primary)]">
+      <i data-lucide="{{ icon }}" style="width:17px;height:17px;"></i>
+    </div>
+  {% endif %}
+  <span class="block text-[10px] font-black uppercase tracking-[.14em] text-[color:var(--muted)]">{{ label }}</span>
+  <strong class="mt-1 block truncate text-xl font-black tracking-tight text-[color:var(--text)]">{{ value }}</strong>
+  {% if hint %}<span class="mt-2 block text-xs font-semibold text-[color:var(--muted)]">{{ hint }}</span>{% endif %}
+</div>

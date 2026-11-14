@@ -1,0 +1,5 @@
+<nav aria-label="Pagination" class="mt-4 flex gap-4 text-sm">
+  <span>{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }} · Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+  {% if page.has_previous %}<button type="button" onclick="dgOpenListPage('{{ section_url|escapejs }}', {{ page.previous_page_number }}, '{{ query|escapejs }}')">Précédente</button>{% endif %}
+  {% if page.has_next %}<button type="button" onclick="dgOpenListPage('{{ section_url|escapejs }}', {{ page.next_page_number }}, '{{ query|escapejs }}')">Suivante</button>{% endif %}
+</nav>

@@ -1,0 +1,20 @@
+{% load component_tags %}
+{% if director_selected_calendar %}
+  <fieldset class="min-w-0" {% if director_calendar_read_only %}disabled data-calendar-read-only="true"{% endif %}>
+    {% if director_calendar_read_only %}<p class="mb-3 text-sm text-ui-text-muted">Consultation uniquement. Utilisez « Modifier le calendrier » pour intervenir.</p>{% endif %}
+    {% include director_calendar_content_template %}
+    {% if director_calendar_read_only and calendar_subview == "overview" %}
+      {% include "portal/staff/director/partials/calendar/milestones.html" %}
+    {% endif %}
+  </fieldset>
+{% elif director_calendar_has_branch and director_calendar_has_active_year %}
+  {% component "ui_core.panel" title="Calendrier à préparer" %}
+    <p class="text-sm text-ui-text">Aucun calendrier académique préparé pour cette annexe.</p>
+    <form hx-post="{% url 'accounts_portal:director_calendar_action' %}" hx-target="#director-calendar-section" hx-swap="outerHTML" class="mt-3">
+      {% csrf_token %}<input type="hidden" name="action" value="create_calendar"><input type="hidden" name="academic_year_id" value="{{ director_active_academic_year.id }}">
+      <button class="ui-focus-ring h-ui-control rounded-ui-button bg-ui-primary px-4 text-sm font-semibold text-ui-on-primary">Préparer le calendrier</button>
+    </form>
+  {% endcomponent %}
+{% else %}
+  {% component "ui_core.empty_state" title="Aucun calendrier sélectionné" message="La Direction générale doit ouvrir l’année institutionnelle, puis une annexe doit être sélectionnée." icon="calendar-x" %}{% endcomponent %}
+{% endif %}

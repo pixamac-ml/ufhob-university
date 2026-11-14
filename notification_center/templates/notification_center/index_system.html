@@ -1,0 +1,6 @@
+{% extends "portal/staff/director_dashboard.html" %}
+{% block title %}Centre de notifications | UFHOB{% endblock %}
+{% block extra_head %}{{ block.super }}{% load static %}<link rel="stylesheet" href="{% static 'css/app/notification_center.css' %}">{% endblock %}
+{% block dashboard_content %}
+  {% include "notification_center/partials/center.html" %}
+{% endblock %}

@@ -1,0 +1,93 @@
+{% load humanize notification_center_tags %}
+{% notification_action_url notification as action_url %}
+<article
+  id="notification-{{ notification.id }}"
+  class="nc-item {% if not notification.read_at %}nc-item--unread{% endif %}"
+>
+  {# Indicateur non lu #}
+  <div class="nc-item__dot" aria-hidden="true"></div>
+
+  {# Icône priorité #}
+  <div class="nc-item__icon
+    {% if notification.priority == 'critical' %}nc-item__icon--danger
+    {% elif notification.priority == 'high' %}nc-item__icon--warning
+    {% else %}nc-item__icon--neutral{% endif %}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {% if notification.priority == 'critical' %}
+        <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      {% elif notification.priority == 'high' %}
+        <path d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      {% else %}
+        <path d="M15 17H9m9-2V11a6 6 0 0 0-12 0v4l-2 2h16l-2-2Zm-6 6a2.5 2.5 0 0 0 2.35-1.65h-4.7A2.5 2.5 0 0 0 12 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      {% endif %}
+    </svg>
+  </div>
+
+  {# Contenu #}
+  <div class="nc-item__body">
+    <div class="nc-item__title">{{ notification.title }}</div>
+    <div class="nc-item__meta">{{ notification|notification_category }}</div>
+    <div class="nc-item__excerpt">{{ notification.body|default:""|truncatechars:120 }}</div>
+    <div class="nc-item__meta">
+      <span>{{ notification.created_at|date:"d/m/Y à H:i" }}</span>
+      {% if not notification.read_at %}<span class="nc-item__unread-label">Non lue</span>{% endif %}
+    </div>
+  </div>
+
+  {# Actions #}
+  <div class="nc-item__actions">
+    {% if action_url %}
+    <a class="nc-btn" href="{% url 'notification_center:open_notification' notification.id %}">Accéder</a>
+    {% endif %}
+    <button
+      type="button"
+      class="nc-btn"
+      hx-get="{% url 'notification_center:notification_detail' notification.id %}"
+      hx-target="#comm-detail"
+      hx-swap="innerHTML"
+      aria-label="Lire : {{ notification.title }}"
+    >Lire</button>
+    {% if notification.archived_at %}
+    <button
+      type="button"
+      class="nc-btn"
+      hx-post="{% url 'notification_center:unarchive_notification' notification.id %}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-swap="outerHTML"
+      hx-target="#notification-{{ notification.id }}"
+    >Restaurer</button>
+    {% else %}
+      {% if not notification.read_at %}
+    <button
+      type="button"
+      class="nc-btn nc-btn--ghost"
+      hx-post="{% url 'notification_center:mark_notification_read' notification.id %}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-swap="outerHTML"
+      hx-target="#notification-{{ notification.id }}"
+      aria-label="Marquer comme lue"
+      title="Marquer comme lue"
+    >✓</button>
+      {% else %}
+    <button
+      type="button"
+      class="nc-btn nc-btn--ghost"
+      hx-post="{% url 'notification_center:mark_notification_unread' notification.id %}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-swap="outerHTML"
+      hx-target="#notification-{{ notification.id }}"
+      aria-label="Marquer comme non lue"
+      title="Marquer comme non lue"
+    >○</button>
+      {% endif %}
+    <button
+      type="button"
+      class="nc-btn"
+      hx-post="{% url 'notification_center:archive_notification' notification.id %}"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-swap="outerHTML"
+      hx-target="#notification-{{ notification.id }}"
+    >Archiver</button>
+    {% endif %}
+  </div>
+</article>

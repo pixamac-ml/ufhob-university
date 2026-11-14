@@ -1,28 +1,28 @@
-from django.shortcuts import render
-from django.views.generic import ListView, DetailView
-from django.db.models import Q
+import json
 
-from .models import News, Category, Program, ResultSession
+from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404
+from django.views.generic import ListView, DetailView
+from django.core.paginator import Paginator
+from django.db.models import Q, Count, Prefetch
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+from .models import (
+    News,
+    Category,
+    Program,
+    ResultSession,
+    Event,
+    EventType,
+    MediaItem,
+)
 from .filters import filter_news
 
 
 # =====================================================
 # ACTUALITÉS — LISTE
 # =====================================================
-
-from django.shortcuts import render
-from django.views.generic import ListView
-from django.shortcuts import render
-from django.db.models import Q
-
-from .models import News, Category, Program
-from .filters import filter_news
-
-from django.views.generic import ListView
-from django.shortcuts import render
-
-from .models import News, Category, Program
-from .filters import filter_news
 
 
 class NewsListView(ListView):
@@ -40,6 +40,12 @@ class NewsListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        params = self.request.GET.copy()
+        for key in ["page", "fragment", "_"]:
+            if key in params:
+                params.pop(key)
+
+        active_querystring = params.urlencode()
 
         published_qs = (
             News.published
@@ -47,24 +53,80 @@ class NewsListView(ListView):
             .order_by("-published_at")
         )
 
+        latest_news = (
+            News.published
+            .order_by("-updated_at")
+            .only("updated_at")
+            .first()
+        )
+
         context.update({
+            "page_title": "Actualites & evenements | UFHOB",
             "categories": Category.objects.filter(is_active=True),
             "current_category": self.request.GET.get("category"),
+            "current_search": self.request.GET.get("q", ""),
+            "active_querystring": active_querystring,
+            "active_query_prefix": f"{active_querystring}&" if active_querystring else "",
+            "last_updated_at": timezone.now(),
 
             "featured_news": published_qs[:3],
             "recent_news": published_qs[:5],
+            "latest_news_timestamp": latest_news.updated_at if latest_news else None,
+            "public_events": (
+                Event.objects.filter(is_published=True, is_archived=False)
+                .select_related("event_type")
+                .order_by("-event_date")[:6]
+            ),
         })
 
         return context
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get("HX-Request"):
+            template_name = self.template_name
+
+            if template_name == "news/list.html":
+                fragment = self.request.GET.get("fragment")
+                template_name = "news/fragments/news_content_fragment.html"
+
+                if fragment == "list":
+                    template_name = "news/fragments/news_list_fragment.html"
+                elif fragment == "sidebar":
+                    template_name = "news/fragments/news_right_sidebar_fragment.html"
+
             return render(
                 self.request,
-                "news/fragments/news_content_fragment.html",
+                template_name,
                 context
             )
         return super().render_to_response(context, **response_kwargs)
+
+
+class NewsListFragmentView(NewsListView):
+    template_name = "news/fragments/news_list_fragment.html"
+
+
+class NewsSidebarFragmentView(NewsListView):
+    template_name = "news/fragments/news_right_sidebar_fragment.html"
+
+
+class NewsPollingView(NewsListView):
+    def render_to_response(self, context, **response_kwargs):
+        since_raw = self.request.GET.get("since")
+        since = parse_datetime(since_raw) if since_raw else None
+        latest = context.get("latest_news_timestamp")
+
+        if since and timezone.is_naive(since):
+            since = timezone.make_aware(since, timezone.get_current_timezone())
+
+        if latest and (since is None or latest > since):
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                "news:refresh": {"latest": latest.isoformat()}
+            })
+            return response
+
+        return HttpResponse(status=204)
 
 
 # =====================================================
@@ -107,7 +169,7 @@ class NewsDetailView(DetailView):
             ),
         })
 
-        return context  # ← MANQUAIT ICI
+        return context
 
 # =====================================================
 # PROGRAMMES — LISTE
@@ -167,11 +229,6 @@ class ProgramDetailView(DetailView):
         return context
 
 
-from django.views.generic import ListView
-from django.db.models import Count
-from .models import ResultSession
-
-
 class ResultSessionListView(ListView):
     model = ResultSession
     template_name = "news/result_list.html"
@@ -208,6 +265,12 @@ class ResultSessionListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        params = self.request.GET.copy()
+        for key in ["page", "fragment", "_"]:
+            if key in params:
+                params.pop(key)
+
+        active_querystring = params.urlencode()
 
         # Années distinctes (pour sidebar)
         annees = (
@@ -249,18 +312,56 @@ class ResultSessionListView(ListView):
             "current_annexe": self.request.GET.get("annexe", ""),
             "current_type": self.request.GET.get("type", ""),
             "current_search": self.request.GET.get("q", ""),
+            "active_querystring": active_querystring,
+            "active_query_prefix": f"{active_querystring}&" if active_querystring else "",
+            "last_updated_at": timezone.now(),
+            "latest_results_timestamp": (
+                ResultSession.objects
+                .filter(is_published=True)
+                .order_by("-created_at")
+                .values_list("created_at", flat=True)
+                .first()
+            ),
         })
 
         return context
 
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get("HX-Request"):
+            template_name = self.template_name
+
+            if template_name == "news/result_list.html":
+                fragment = self.request.GET.get("fragment")
+                template_name = "news/fragments/result_content_fragment.html"
+                if fragment == "list":
+                    template_name = "news/fragments/result_list_fragment.html"
+
+            return render(self.request, template_name, context)
+
+        return super().render_to_response(context, **response_kwargs)
 
 
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Count, Q, Prefetch
-from django.core.paginator import Paginator
-from django.utils import timezone
+class ResultSessionListFragmentView(ResultSessionListView):
+    template_name = "news/fragments/result_list_fragment.html"
 
-from .models import Event, EventType, MediaItem
+
+class ResultSessionPollingView(ResultSessionListView):
+    def render_to_response(self, context, **response_kwargs):
+        since_raw = self.request.GET.get("since")
+        since = parse_datetime(since_raw) if since_raw else None
+        latest = context.get("latest_results_timestamp")
+
+        if since and timezone.is_naive(since):
+            since = timezone.make_aware(since, timezone.get_current_timezone())
+
+        if latest and (since is None or latest > since):
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                "results:refresh": {"latest": latest.isoformat()}
+            })
+            return response
+
+        return HttpResponse(status=204)
 
 
 # ==========================================================
@@ -271,7 +372,7 @@ def event_list_view(request):
     # ========================
     # MODE DE VUE
     # ========================
-    view_mode = request.GET.get("mode", "events")  # 'events' ou 'photos'
+    view_mode = request.GET.get("mode", "photos")  # 'events' ou 'photos'
 
     # ========================
     # FILTRAGE PAR TYPE
@@ -288,7 +389,7 @@ def event_list_view(request):
 
         events_queryset = (
             Event.objects
-            .filter(is_published=True)
+            .filter(is_published=True, is_archived=False)
             .select_related("event_type")
             .prefetch_related(
                 Prefetch(
@@ -339,7 +440,8 @@ def event_list_view(request):
             MediaItem.objects
             .filter(
                 media_type=MediaItem.IMAGE,
-                event__is_published=True
+                event__is_published=True,
+                event__is_archived=False
             )
             .select_related("event", "event__event_type")
             .order_by("-created_at")
@@ -381,7 +483,8 @@ def event_detail_view(request, slug):
             )
         ),
         slug=slug,
-        is_published=True
+        is_published=True,
+        is_archived=False
     )
 
     # ========================
@@ -406,7 +509,8 @@ def event_detail_view(request, slug):
         Event.objects
         .filter(
             event_type=event.event_type,
-            is_published=True
+            is_published=True,
+            is_archived=False
         )
         .exclude(id=event.id)
         .order_by("-event_date")[:4]

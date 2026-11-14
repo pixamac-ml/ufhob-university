@@ -60,10 +60,13 @@ class StudentPaymentForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         from payments.models import Payment
-        self.fields["method"].choices = Payment.METHOD_CHOICES
+        # V1 exposes physical collection only.  Historical Orange Money and
+        # bank-transfer records remain readable at model/report level.
+        self.fields["method"].choices = [(Payment.METHOD_CASH, "Espèces")]
 
         self.inscription = inscription
         self.agent = None
+        self.cash_session = None
 
     # ==================================================
     # VALIDATION GLOBALE
@@ -110,16 +113,17 @@ class StudentPaymentForm(forms.Form):
                 )
 
             # 4️⃣ Validation code dynamique
-            is_valid, error = validate_cash_code(
+            session, error = validate_cash_code(
                 self.inscription,
                 agent,
                 code
             )
 
-            if not is_valid:
+            if not session:
                 raise forms.ValidationError(error)
 
             # 5️⃣ OK
             self.agent = agent
+            self.cash_session = session
 
         return cleaned_data

@@ -1,7 +1,26 @@
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
 from django import template
 from django.template.defaultfilters import stringfilter
 
 register = template.Library()
+
+
+@register.filter
+def human_decimal(value, places=2):
+    """Render a business decimal without exposing stored precision in the UI."""
+    if value in (None, ""):
+        return ""
+    try:
+        places = max(int(places), 0)
+        decimal_value = Decimal(str(value))
+        quantum = Decimal("1").scaleb(-places)
+        rendered = format(decimal_value.quantize(quantum, rounding=ROUND_HALF_UP), "f")
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    if "." in rendered:
+        rendered = rendered.rstrip("0").rstrip(".")
+    return rendered.replace(".", ",")
 
 @register.filter
 def str_class(obj):

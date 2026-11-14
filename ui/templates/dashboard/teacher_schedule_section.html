@@ -1,0 +1,34 @@
+{% load component_tags %}
+<section id="teacher-panel-schedule" data-teacher-section="schedule" class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Planning publié" title="Mon emploi du temps" subtitle="Vision hebdomadaire de vos cours, classes et salles." %}
+    {% fill "actions" %}{% component "ui_core.status_badge" label="Semaine affichée" tone="info" icon="calendar-days" %}{% endcomponent %}{% endfill %}
+  {% endcomponent %}
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in section_kpi_cards %}{% component "ui_core.stat_card" label=card.label value=card.value icon=card.icon tone=card.tone compact=True %}{% endcomponent %}{% endfor %}
+  </div>
+  {% component "ui_core.data_table" id="teacher-schedule-table" caption="Planning hebdomadaire" headers=teacher_ui_tables.schedule_headers rows=teacher_ui_tables.schedule density="compact" empty_title="Aucun cours planifié" empty_message="Aucune séance publiée pour cette semaine." %}{% endcomponent %}
+  {% if teacher_recordings %}
+    {% component "ui_core.panel" title="Enregistrements des cours en ligne" subtitle="Les médias ne sont accessibles qu'après transfert sécurisé." padding=False %}
+      {% fill "default" %}<div class="divide-y divide-ui-border">{% for row in teacher_recordings %}
+        <article class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-ui-text">{{ row.recording.event.ec.title }}</strong>{% component "ui_core.status_badge" label=row.state.label tone=row.state.tone icon="video" %}{% endcomponent %}</div><p class="mt-1 text-xs text-ui-text-muted">{{ row.recording.event.academic_class.display_name }} · {{ row.recording.event.end_datetime|date:"d/m/Y H:i" }}</p></div>{% if row.can_access_media %}<div class="flex gap-2"><a href="{% url 'accounts_portal:teacher_recording_download' row.recording.id %}" target="_blank" rel="noopener" class="ui-focus-ring inline-flex min-h-9 items-center rounded-ui-button border border-ui-border px-3 text-xs font-semibold text-ui-text">Revoir</a><a href="{% url 'accounts_portal:teacher_recording_download' row.recording.id %}?download=1" class="ui-focus-ring inline-flex min-h-9 items-center rounded-ui-button bg-ui-primary px-3 text-xs font-semibold text-ui-on-primary">Télécharger</a></div>{% else %}<span class="text-xs text-ui-text-muted">{{ row.state.label }}</span>{% endif %}</article>
+      {% endfor %}</div>{% endfill %}
+    {% endcomponent %}
+  {% endif %}
+  {% if recent_online_rows %}
+    {% component "ui_core.panel" title="Séances en ligne récentes" subtitle="Historique conservé après minuit ; l'accès reste soumis à la fenêtre prévue." padding=False %}
+      {% fill "default" %}
+        <div class="divide-y divide-ui-border">
+          {% for row in recent_online_rows %}
+            <article class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-ui-text">{{ row.event.ec.title }}</strong>{% component "ui_core.status_badge" label="En ligne" tone="info" icon="video" %}{% endcomponent %}{% component "ui_core.status_badge" label=row.recording_state.label tone=row.recording_state.tone icon="video" %}{% endcomponent %}</div>
+                <p class="mt-1 text-xs text-ui-text-muted">{{ row.event.academic_class.display_name }} · {{ row.event.start_datetime|date:"d/m/Y H:i" }}–{{ row.event.end_datetime|date:"H:i" }}</p>
+              </div>
+              {% if row.recordings %}{% for recording in row.recordings %}{% if recording.can_access_media %}<div class="flex gap-2"><a href="{% url 'accounts_portal:teacher_recording_download' recording.recording.id %}" target="_blank" rel="noopener" class="text-xs font-semibold text-ui-primary">Revoir</a><a href="{% url 'accounts_portal:teacher_recording_download' recording.recording.id %}?download=1" class="text-xs font-semibold text-ui-primary">Télécharger</a></div>{% endif %}{% endfor %}{% else %}<span class="text-xs font-medium text-ui-text-muted">{{ row.recording_state.label }}</span>{% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% endfill %}
+    {% endcomponent %}
+  {% endif %}
+</section>

@@ -1,0 +1,92 @@
+{% load humanize %}
+
+<div class="overflow-x-auto">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th class="w-10"><input id="select-all-payments" type="checkbox"></th>
+                <th>Étudiant</th>
+                <th>Inscription liée</th>
+                <th class="text-right">Montant</th>
+                <th>Mode</th>
+                <th>Agent</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th class="text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>
+                    <input type="checkbox" name="selected_ids" value="{{ payment.pk }}" form="payments-bulk-form" class="payment-row-checkbox">
+                </td>
+                <td>
+                    <div class="font-medium text-slate-800">{{ payment.inscription.candidature.full_name }}</div>
+                    <div class="text-xs text-slate-500">{{ payment.student_matricule|default:payment.inscription.candidature.email }}</div>
+                </td>
+                <td>
+                    <div class="font-medium text-slate-800">{{ payment.inscription.public_token }}</div>
+                    <div class="text-xs text-slate-500">{{ payment.inscription.candidature.programme.title }}</div>
+                </td>
+                <td class="text-right font-semibold text-slate-800">{{ payment.amount|intcomma }} FCFA</td>
+                <td>
+                    <span class="badge-status badge-{% if payment.method == 'cash' %}draft{% elif payment.method == 'orange_money' %}warning{% else %}info{% endif %}">{{ payment.get_method_display }}</span>
+                </td>
+                <td>
+                    {% if payment.agent %}
+                        <div class="font-medium text-slate-800">{{ payment.agent.user.get_full_name|default:payment.agent.user.username }}</div>
+                        <div class="text-xs text-slate-500">Agent code: <span class="font-mono">{{ payment.agent.agent_code }}</span></div>
+                        {% if payment.method == 'cash' and payment.cash_session %}
+                            <div class="text-xs text-slate-500">Code cash: <span class="font-mono">{{ payment.cash_session.verification_code }}</span></div>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-xs text-slate-400">Non assigné</span>
+                    {% endif %}
+                </td>
+                <td>{{ payment.paid_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="badge-status badge-{% if payment.status == 'validated' %}success{% elif payment.status == 'pending' %}warning{% else %}danger{% endif %}">{{ payment.get_status_display }}</span>
+                </td>
+                <td class="text-right">
+                    <div class="inline-flex items-center gap-1">
+                        <a href="{% url 'superadmin:payment_detail' payment.pk %}" class="btn btn-sm btn-outline"><i data-lucide="eye" class="h-4 w-4"></i></a>
+                        {% if payment.status == 'validated' %}
+                            <button type="button" class="btn btn-sm btn-outline" disabled title="Paiement validé verrouillé"><i data-lucide="lock" class="h-4 w-4"></i></button>
+                        {% else %}
+                            <a href="{% url 'superadmin:payment_edit' payment.pk %}" class="btn btn-sm btn-outline"><i data-lucide="pencil" class="h-4 w-4"></i></a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="py-10 text-center text-slate-500">Aucun paiement trouvé pour ces filtres.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if payments.has_other_pages %}
+<div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-100">
+    <p class="text-sm text-slate-500">Page {{ payments.number }} / {{ payments.paginator.num_pages }} ({{ payments.paginator.count }} résultats)</p>
+    <div class="flex items-center gap-1">
+        {% if payments.has_previous %}
+            <a class="btn btn-sm btn-outline" href="?search={{ filters.search|urlencode }}&status={{ filters.status|urlencode }}&method={{ filters.method|urlencode }}&programme={{ filters.programme|urlencode }}&academic_year={{ filters.academic_year|urlencode }}&branch={{ filters.branch|urlencode }}&agent={{ filters.agent|urlencode }}&page={{ payments.previous_page_number }}">&laquo;</a>
+        {% endif %}
+        {% for num in payments.paginator.page_range %}
+            {% if num >= payments.number|add:'-2' and num <= payments.number|add:'2' %}
+                {% if num == payments.number %}
+                    <span class="btn btn-sm btn-primary">{{ num }}</span>
+                {% else %}
+                    <a class="btn btn-sm btn-outline" href="?search={{ filters.search|urlencode }}&status={{ filters.status|urlencode }}&method={{ filters.method|urlencode }}&programme={{ filters.programme|urlencode }}&academic_year={{ filters.academic_year|urlencode }}&branch={{ filters.branch|urlencode }}&agent={{ filters.agent|urlencode }}&page={{ num }}">{{ num }}</a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        {% if payments.has_next %}
+            <a class="btn btn-sm btn-outline" href="?search={{ filters.search|urlencode }}&status={{ filters.status|urlencode }}&method={{ filters.method|urlencode }}&programme={{ filters.programme|urlencode }}&academic_year={{ filters.academic_year|urlencode }}&branch={{ filters.branch|urlencode }}&agent={{ filters.agent|urlencode }}&page={{ payments.next_page_number }}">&raquo;</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

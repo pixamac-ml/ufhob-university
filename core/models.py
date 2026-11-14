@@ -1,5 +1,10 @@
 # core/models.py
 
+import hashlib
+import secrets
+
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
@@ -9,6 +14,7 @@ from django.contrib.auth.models import Group
 from django.utils.functional import cached_property
 from django_ckeditor_5.fields import CKEditor5Field
 import uuid
+from datetime import timedelta
 
 
 # ==========================================================
@@ -166,6 +172,133 @@ class InstitutionPresentation(models.Model):
 
 
 # ==========================================================
+# SITE CONFIGURATION (SINGLETON)
+# ==========================================================
+
+class SiteConfiguration(models.Model):
+    """Configuration visuelle centralisée du site public (singleton)."""
+
+    # Identité visuelle globale
+    site_logo = models.ImageField(
+        upload_to="site/branding/",
+        blank=True,
+        null=True,
+        verbose_name="Logo principal"
+    )
+
+    # Home - Hero
+    home_hero_image = models.ImageField(
+        upload_to="site/home/hero/",
+        blank=True,
+        null=True,
+        verbose_name="Image Hero Accueil"
+    )
+    home_hero_title = models.CharField(
+        max_length=255,
+        default="École de Santé Félix Houphouët-Boigny Mali",
+        verbose_name="Titre Hero Accueil"
+    )
+    home_hero_subtitle = models.CharField(
+        max_length=500,
+        default="Former les cadres de la santé",
+        verbose_name="Sous-titre Hero Accueil"
+    )
+
+    # Home - Sections imagees
+    home_about_image = models.ImageField(
+        upload_to="site/home/about/",
+        blank=True,
+        null=True,
+        verbose_name="Image section Qui sommes-nous (Accueil)"
+    )
+    home_why_image_1 = models.ImageField(upload_to="site/home/why/", blank=True, null=True)
+    home_why_image_2 = models.ImageField(upload_to="site/home/why/", blank=True, null=True)
+    home_why_image_3 = models.ImageField(upload_to="site/home/why/", blank=True, null=True)
+    home_why_image_4 = models.ImageField(upload_to="site/home/why/", blank=True, null=True)
+    home_annexe_image_1 = models.ImageField(upload_to="site/home/annexes/", blank=True, null=True)
+    home_annexe_image_2 = models.ImageField(upload_to="site/home/annexes/", blank=True, null=True)
+    home_annexe_image_3 = models.ImageField(upload_to="site/home/annexes/", blank=True, null=True)
+    home_annexe_image_4 = models.ImageField(upload_to="site/home/annexes/", blank=True, null=True)
+    home_stats_banner_image = models.ImageField(
+        upload_to="site/home/banners/",
+        blank=True,
+        null=True,
+        verbose_name="Banniere statistiques Accueil"
+    )
+
+    # Contenus institutionnels fixes de la vitrine UFHOB.
+    governance_title = models.CharField(max_length=255, blank=True, verbose_name="Titre gouvernance")
+    governance_text = models.TextField(blank=True, verbose_name="Introduction gouvernance")
+    governance_admin_title = models.CharField(max_length=150, blank=True, verbose_name="Titre gouvernance administrative")
+    governance_admin_text = models.TextField(blank=True, verbose_name="Texte gouvernance administrative")
+    governance_academic_title = models.CharField(max_length=150, blank=True, verbose_name="Titre gouvernance académique")
+    governance_academic_text = models.TextField(blank=True, verbose_name="Texte gouvernance académique")
+
+    campus_life_title = models.CharField(max_length=255, blank=True, verbose_name="Titre vie universitaire")
+    campus_life_text = models.TextField(blank=True, verbose_name="Présentation vie universitaire")
+    campus_life_image_1 = models.ImageField(upload_to="site/campus-life/", blank=True, null=True)
+    campus_life_image_2 = models.ImageField(upload_to="site/campus-life/", blank=True, null=True)
+
+    research_title = models.CharField(max_length=255, blank=True, verbose_name="Titre recherche et innovation")
+    research_text = models.TextField(blank=True, verbose_name="Présentation recherche et innovation")
+    research_image = models.ImageField(upload_to="site/research/", blank=True, null=True)
+
+    facebook_url = models.URLField(blank=True, verbose_name="Facebook")
+    instagram_url = models.URLField(blank=True, verbose_name="Instagram")
+    linkedin_url = models.URLField(blank=True, verbose_name="LinkedIn")
+    youtube_url = models.URLField(blank=True, verbose_name="YouTube")
+    tiktok_url = models.URLField(blank=True, verbose_name="TikTok")
+    whatsapp_url = models.URLField(blank=True, verbose_name="WhatsApp")
+
+    # About
+    about_hero_background_image = models.ImageField(
+        upload_to="site/about/hero/background/",
+        blank=True,
+        null=True,
+        verbose_name="Image de fond Hero (A propos)",
+    )
+    about_hero_image = models.ImageField(
+        upload_to="site/about/hero/",
+        blank=True,
+        null=True,
+        verbose_name="Image Hero (A propos)"
+    )
+    about_main_image = models.ImageField(
+        upload_to="site/about/main/",
+        blank=True,
+        null=True,
+        verbose_name="Image principale de presentation (A propos)"
+    )
+    about_stats_banner_image = models.ImageField(upload_to="site/about/banners/", blank=True, null=True)
+    about_vision_title = models.CharField(max_length=255, default="Notre Vision")
+    about_vision_text = models.TextField(blank=True)
+    about_values_title = models.CharField(max_length=255, default="Nos Valeurs")
+    about_values_subtitle = models.CharField(max_length=500, blank=True)
+
+    # Smart Rocket
+    smart_rocket_enabled = models.BooleanField(default=True)
+    smart_rocket_title = models.CharField(max_length=120, default="Assistant ESFE")
+    smart_rocket_message = models.CharField(max_length=255, default="Accedez rapidement aux actions clés.")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if SiteConfiguration.objects.exclude(pk=self.pk).exists():
+            raise ValidationError("Une seule configuration du site est autorisée.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Configuration du site"
+
+    class Meta:
+        verbose_name = "Configuration du site"
+        verbose_name_plural = "Configuration du site"
+
+
+# ==========================================================
 # VALEURS (3-4 MAX)
 # ==========================================================
 
@@ -267,6 +400,41 @@ class Infrastructure(models.Model):
         return f"{self.name} ({self.get_category_display()})"
 
 
+class UniversityLifeItem(models.Model):
+    """Contenu public administrable de la vie universitaire.
+
+    Il ne représente ni une école ni un campus : ces deux dimensions restent
+    portées par leurs modèles respectifs. Il sert aux activités, services et
+    associations publiés par l'université.
+    """
+
+    class Category(models.TextChoices):
+        LEARN = "learn", "Apprendre"
+        PARTICIPATE = "participate", "Participer"
+        PROGRESS = "progress", "Progresser"
+        RESOURCES = "resources", "Ressources"
+        EQUIPMENT = "equipment", "Équipements"
+        ACTIVITY = "activity", "Activité"
+        SERVICE = "service", "Service"
+        ASSOCIATION = "association", "Association étudiante"
+
+    title = models.CharField(max_length=180, verbose_name="Titre")
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.ACTIVITY)
+    description = models.TextField(verbose_name="Description")
+    image = models.ImageField(upload_to="university_life/", blank=True, null=True, verbose_name="Image")
+    link_url = models.URLField(blank=True, verbose_name="Lien complémentaire")
+    is_active = models.BooleanField(default=True, verbose_name="Publié")
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Élément de vie universitaire"
+        verbose_name_plural = "Éléments de vie universitaire"
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
+
+
 # ==========================================================
 # PERSONNEL / STAFF
 # ==========================================================
@@ -336,6 +504,36 @@ class Staff(models.Model):
 
     def __str__(self):
         return f"{self.full_name} - {self.position}"
+
+
+# ==========================================================
+# MESSAGE DE LA DIRECTION GENERALE
+# ==========================================================
+
+class DirectorGeneralMessage(models.Model):
+    """Contenu éditorial publié dans le mot du Directeur Général."""
+
+    full_name = models.CharField(max_length=150, verbose_name="Nom complet")
+    position = models.CharField(max_length=200, verbose_name="Fonction")
+    photo = models.ImageField(
+        upload_to="institution/direction/", blank=True, null=True, verbose_name="Photo"
+    )
+    title = models.CharField(max_length=255, verbose_name="Titre du message")
+    message = models.TextField(verbose_name="Message")
+    signature = models.CharField(max_length=255, blank=True, verbose_name="Formule ou signature")
+    is_active = models.BooleanField(default=True, verbose_name="Publié")
+    order = models.PositiveIntegerField(default=0, verbose_name="Ordre")
+    published_at = models.DateTimeField(blank=True, null=True, verbose_name="Date de publication")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("order", "-published_at", "-updated_at")
+        verbose_name = "Mot du Directeur Général"
+        verbose_name_plural = "Mots du Directeur Général"
+
+    def __str__(self):
+        return f"{self.full_name} — {self.title}"
 
 
 # ==========================================================
@@ -608,6 +806,115 @@ class LegalSidebarBlock(models.Model):
 # CONTACT MESSAGE
 # ==========================================================
 
+class SignatureRequest(models.Model):
+    """Preuve de signature manuscrite reutilisable pour les workflows ESFE.
+
+    La preuve est attachee a une version immuable (``snapshot`` +
+    ``document_digest``) d'un objet metier. Le module ne declenche aucune
+    action metier lui-meme : chaque workflow valide ensuite sa propre chaine
+    (paiement, cahier de texte, document, etc.).
+    """
+
+    PURPOSE_LESSON_LOG = "lesson_log"
+    PURPOSE_PAYMENT = "payment"
+    PURPOSE_DOCUMENT = "document"
+    PURPOSE_CHOICES = [
+        (PURPOSE_LESSON_LOG, "Cahier de texte"),
+        (PURPOSE_PAYMENT, "Paiement"),
+        (PURPOSE_DOCUMENT, "Document"),
+    ]
+
+    STATUS_AWAITING_SIGNATURE = "awaiting_signature"
+    STATUS_SIGNED = "signed"
+    STATUS_APPROVED = "approved"
+    STATUS_RETURNED = "returned"
+    STATUS_EXPIRED = "expired"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_AWAITING_SIGNATURE, "En attente de signature"),
+        (STATUS_SIGNED, "Signée"),
+        (STATUS_APPROVED, "Approuvée"),
+        (STATUS_RETURNED, "Retournée"),
+        (STATUS_EXPIRED, "Expirée"),
+        (STATUS_CANCELLED, "Annulée"),
+    ]
+    ACTIVE_STATUSES = (STATUS_AWAITING_SIGNATURE, STATUS_SIGNED)
+
+    branch = models.ForeignKey(
+        "branches.Branch",
+        on_delete=models.PROTECT,
+        related_name="signature_requests",
+        db_index=True,
+    )
+    purpose = models.CharField(max_length=40, choices=PURPOSE_CHOICES, db_index=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT)
+    object_id = models.PositiveBigIntegerField(db_index=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+    signer = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.PROTECT,
+        related_name="signature_requests_to_sign",
+    )
+    requested_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="requested_signature_requests",
+    )
+    title = models.CharField(max_length=255)
+    snapshot = models.JSONField(default=dict, blank=True)
+    document_digest = models.CharField(max_length=64, db_index=True)
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default=STATUS_AWAITING_SIGNATURE,
+        db_index=True,
+    )
+    expires_at = models.DateTimeField(db_index=True)
+    signature_data = models.TextField(blank=True)
+    signature_sha256 = models.CharField(max_length=64, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    signed_ip = models.GenericIPAddressField(null=True, blank=True)
+    signed_user_agent = models.CharField(max_length=300, blank=True)
+    approved_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_signature_requests",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    return_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["branch", "purpose", "status"]),
+            models.Index(fields=["content_type", "object_id", "status"]),
+            models.Index(fields=["signer", "status", "expires_at"]),
+        ]
+
+    @staticmethod
+    def issue_token():
+        raw_token = secrets.token_urlsafe(32)
+        return raw_token, hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def hash_token(raw_token):
+        return hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def __str__(self):
+        return f"Signature {self.get_purpose_display()} #{self.pk} - {self.status}"
+
+
 class ContactMessage(models.Model):
 
     SUBJECT_CHOICES = [
@@ -699,6 +1006,28 @@ class ContactMessage(models.Model):
         except Group.DoesNotExist:
             pass
 
+    def to_email_context(self):
+        return {
+            "id": self.id,
+            "reference": str(self.reference),
+            "full_name": self.full_name,
+            "email": self.email,
+            "phone": self.phone,
+            "subject": self.subject,
+            "get_subject_display": self.get_subject_display(),
+            "message": self.message,
+            "reply": self.reply,
+            "priority": self.priority,
+            "status": self.status,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "is_read": self.status != "new",
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "created_at_display": self.created_at.strftime("%d/%m/%Y a %H:%M") if self.created_at else "",
+            "created_date_display": self.created_at.strftime("%d/%m/%Y") if self.created_at else "",
+            "created_time_display": self.created_at.strftime("%H:%M") if self.created_at else "",
+        }
+
     def save(self, *args, **kwargs):
         if self.subject == "payment":
             self.priority = "high"
@@ -719,7 +1048,7 @@ class ContactMessage(models.Model):
 
     @cached_property
     def deadline(self):
-        return self.created_at + timezone.timedelta(hours=self.sla_hours)
+        return self.created_at + timedelta(hours=self.sla_hours)
 
     @property
     def is_overdue(self):
@@ -729,79 +1058,6 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.full_name} - {self.get_subject_display()}"
-
-
-# ==========================================================
-# NOTIFICATIONS
-# ==========================================================
-
-class Notification(models.Model):
-    """
-    Notifications automatiques pour les candidats.
-    """
-    TYPE_CHOICES = [
-        ("candidature_submitted", "Candidature soumise"),
-        ("candidature_under_review", "Candidature en cours d'analyse"),
-        ("candidature_to_complete", "Candidature à compléter"),
-        ("candidature_accepted", "Candidature acceptée"),
-        ("candidature_accepted_with_reserve", "Candidature acceptée sous réserve"),
-        ("candidature_rejected", "Candidature refusée"),
-        ("inscription_created", "Inscription créée"),
-        ("inscription_active", "Inscription active"),
-        ("payment_received", "Paiement reçu"),
-        ("payment_validated", "Paiement validé"),
-        ("document_missing", "Document manquant"),
-    ]
-
-    recipient_email = models.EmailField()
-    recipient_name = models.CharField(max_length=150)
-
-    notification_type = models.CharField(max_length=50, choices=TYPE_CHOICES)
-
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-
-    related_candidature = models.ForeignKey(
-        "admissions.Candidature",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notifications"
-    )
-
-    related_inscription = models.ForeignKey(
-        "inscriptions.Inscription",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notifications"
-    )
-
-    related_payment = models.ForeignKey(
-        "payments.Payment",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="notifications"
-    )
-
-    email_sent = models.BooleanField(default=False)
-    sent_at = models.DateTimeField(null=True, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-        verbose_name = "Notification"
-        verbose_name_plural = "Notifications"
-        indexes = [
-            models.Index(fields=["notification_type"]),
-            models.Index(fields=["recipient_email"]),
-            models.Index(fields=["created_at"]),
-        ]
-
-    def __str__(self):
-        return f"{self.get_notification_type_display()} - {self.recipient_email}"
 
 
 # ==========================================================
@@ -840,3 +1096,192 @@ class StatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.candidature.full_name}: {self.old_status} -> {self.new_status}"
+
+
+# ==========================================================
+# ÉCOLE (SCHOOL)
+# ==========================================================
+
+class School(models.Model):
+    """
+    École ou faculté au sein de l'institution (UFHOB).
+    Exemples : ESMED, ESGA, FATEC.
+    """
+
+    institution = models.ForeignKey(
+        Institution,
+        on_delete=models.CASCADE,
+        related_name="schools",
+        verbose_name="Institution",
+    )
+
+    code = models.CharField(
+        max_length=20,
+        verbose_name="Code",
+        help_text="Code court de l'école (ex: ESMED, ESGA, FATEC)",
+    )
+
+    short_name = models.CharField(
+        max_length=100,
+        verbose_name="Nom court",
+    )
+
+    official_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Nom officiel",
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description",
+    )
+
+    detailed_description = models.TextField(
+        blank=True,
+        verbose_name="Présentation détaillée",
+    )
+
+    logo = models.ImageField(
+        upload_to="schools/logos/",
+        blank=True,
+        null=True,
+        verbose_name="Logo",
+    )
+
+    hero_image = models.ImageField(
+        upload_to="schools/heroes/",
+        blank=True,
+        null=True,
+        verbose_name="Image de couverture",
+    )
+
+    is_featured = models.BooleanField(
+        default=False,
+        verbose_name="Mise en avant",
+    )
+
+    cta_title = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Titre de l'appel à l'action",
+    )
+    cta_text = models.TextField(
+        blank=True,
+        verbose_name="Texte de l'appel à l'action",
+    )
+    cta_button_text = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Libellé du bouton",
+    )
+    cta_button_url = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Lien du bouton",
+        help_text="Chemin interne ou URL complète. Laissez vide pour le parcours de candidature.",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        db_index=True,
+    )
+
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Ordre d'affichage",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "École"
+        verbose_name_plural = "Écoles"
+        ordering = ["order", "code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["institution", "code"],
+                name="core_school_institution_code_uniq",
+            )
+        ]
+
+    def __str__(self):
+        return self.display_name
+
+    @property
+    def display_name(self):
+        """Institutional label intended for human-facing interfaces.
+
+        ``code`` remains a stable technical identifier for URLs, filters and
+        relationships; it must not be used to rebuild a visible school name.
+        """
+        return self.short_name or self.code
+
+
+# ==========================================================
+# LIAISON ÉCOLE ANNEXE (SCHOOLBRANCH)
+# ==========================================================
+
+class SchoolBranch(models.Model):
+    """
+    Présence d'une école sur une implantation/annexe.
+    Permet à une annexe d'accueillir plusieurs écoles
+    sans multiplier les objets Branch.
+    """
+
+    school = models.ForeignKey(
+        School,
+        on_delete=models.CASCADE,
+        related_name="school_branches",
+        verbose_name="École",
+    )
+
+    branch = models.ForeignKey(
+        "branches.Branch",
+        on_delete=models.CASCADE,
+        related_name="school_branches",
+        verbose_name="Annexe",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        db_index=True,
+    )
+
+    opening_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date d'ouverture",
+    )
+
+    closing_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fermeture",
+    )
+
+    local_code = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Code local",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "École / Annexe"
+        verbose_name_plural = "Écoles / Annexes"
+        ordering = ["school", "branch"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "branch"],
+                name="core_schoolbranch_uniq",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.school} @ {self.branch}"

@@ -1,0 +1,11 @@
+{% load component_tags %}
+<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  {% component "ui_core.stat_card" label="Écoles actives" value=university_indicators.schools icon="school" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Campus actifs" value=university_indicators.campuses icon="building-2" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Implantations actives" value=university_indicators.implantations description="Associations école / campus" icon="network" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Programmes actifs" value=university_indicators.programmes icon="book-open" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Candidatures de l’année" value=university_indicators.candidatures icon="file-text" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Inscriptions académiques actives" value=university_indicators.enrollments icon="graduation-cap" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Personnel actif identifié" value=university_indicators.staff description="Affectation institutionnelle ou pédagogique" icon="users" compact=True %}{% endcomponent %}
+  {% component "ui_core.stat_card" label="Enseignants actifs identifiés" value=university_indicators.teachers icon="user" compact=True %}{% endcomponent %}
+</div>

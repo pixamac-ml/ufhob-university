@@ -1,78 +1,57 @@
 # admissions/emails.py
-"""
-Fonctions d'envoi des notifications par email
-"""
+"""Adaptateur de reprise email branche sur le noyau communication/."""
 
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.conf import settings
-from django.utils import timezone
+import logging
 
-from core.models import Notification
+from notifier.models import NotificationMessage
+from notifier.services import Dispatcher
+
+
+logger = logging.getLogger(__name__)
 
 
 def send_notification_email(notification_id):
     """
-    Envoie un email de notification au candidat
+    Rejoue une notification email centralisee.
     """
 
     try:
-        notification = Notification.objects.get(pk=notification_id)
-    except Notification.DoesNotExist:
-        return False
-
-    if notification.email_sent:
-        return False
-
-    context = {
-        "recipient_name": notification.recipient_name,
-        "message": notification.message,
-        "candidate_reference": notification.related_candidature.id if notification.related_candidature else None,
-        "programme_name": notification.related_candidature.programme.title if notification.related_candidature else None,
-        "dashboard_url": getattr(settings, "BASE_URL", "https://www.esfe-mali.org"),
-    }
-
-    template_name = "emails/notification_candidature.html"
-
-    try:
-        html_message = render_to_string(template_name, context)
-    except Exception:
-        html_message = f"""
-        <html>
-        <body>
-            <h2>Bonjour {notification.recipient_name},</h2>
-            <p>{notification.message}</p>
-        </body>
-        </html>
-        """
-
-    try:
-        send_mail(
-            subject=f"[EPSFe] {notification.title}",
-            message=notification.message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[notification.recipient_email],
-            html_message=html_message,
-            fail_silently=False,
+        notification = NotificationMessage.objects.get(
+            pk=notification_id,
+            channel=NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL,
         )
+    except NotificationMessage.DoesNotExist:
+        return False
 
-        notification.email_sent = True
-        notification.sent_at = timezone.now()
-        notification.save(update_fields=["email_sent", "sent_at"])
+    if notification.status in {
+        NotificationMessage.STATUS_SENT,
+        NotificationMessage.STATUS_DELIVERED,
+        NotificationMessage.STATUS_READ,
+        NotificationMessage.STATUS_SKIPPED,
+    }:
+        return False
 
+    try:
+        Dispatcher.dispatch(notification)
         return True
-
-    except Exception as e:
-        print(f"Erreur envoi email: {e}")
+    except Exception:
+        logger.exception("Echec replay notification centralisee id=%s", notification_id)
         return False
 
 
 def send_pending_notifications():
     """
-    Envoie toutes les notifications en attente
+    Rejoue toutes les notifications email centralisees en attente.
     """
 
-    pending = Notification.objects.filter(email_sent=False)
+    pending = NotificationMessage.objects.filter(
+        channel=NotificationMessage.CHANNEL_EMAIL_TRANSACTIONAL,
+        status__in=[
+            NotificationMessage.STATUS_PENDING,
+            NotificationMessage.STATUS_QUEUED,
+            NotificationMessage.STATUS_FAILED,
+        ],
+    ).order_by("created_at")
     sent_count = 0
 
     for notification in pending:

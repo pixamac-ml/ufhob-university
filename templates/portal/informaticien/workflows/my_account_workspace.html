@@ -1,0 +1,25 @@
+{% load component_tags %}
+<div class="space-y-5">
+  {% component "ui_core.page_header" eyebrow="Compte" title=request.user.get_full_name|default:request.user.username subtitle="Profil, sécurité et préférences personnelles." %}
+    {% fill "actions" %}
+      <a class="btn btn-secondary" href="{% url 'password_change' %}"><i data-lucide="key-round" class="h-4 w-4"></i> Mot de passe</a>
+    {% endfill %}
+  {% endcomponent %}
+
+  {% if toast %}{% component "ui_core.alert" message=toast.message tone=toast.level dismissible=True %}{% endcomponent %}{% endif %}
+
+  {% component "ui_core.panel" title="Informations personnelles" %}
+    <form method="post" hx-post="{% url 'accounts_portal:it_my_account_save' %}" hx-target="#it-dashboard-workspace" hx-swap="innerHTML" class="grid gap-4 md:grid-cols-2">
+      {% csrf_token %}
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">Prénom<input name="first_name" value="{{ request.user.first_name }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text">Nom<input name="last_name" value="{{ request.user.last_name }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <label class="grid gap-1.5 text-sm font-semibold text-ui-text md:col-span-2">E-mail<input name="email" type="email" value="{{ request.user.email }}" class="rounded-ui-input border border-ui-border bg-ui-surface px-3 py-2"></label>
+      <div class="md:col-span-2 flex justify-end"><button class="btn btn-primary" type="submit"><i data-lucide="save" class="h-4 w-4"></i> Enregistrer</button></div>
+    </form>
+  {% endcomponent %}
+
+  <div class="grid gap-4 md:grid-cols-2">
+    {% component "ui_core.panel" title="Profil staff" %}<dl class="space-y-2 text-sm"><div class="flex justify-between gap-3"><dt class="text-ui-text-muted">Annexe</dt><dd class="font-semibold text-ui-text">{{ profile.branch.name|default:"Non rattaché" }}</dd></div><div class="flex justify-between gap-3"><dt class="text-ui-text-muted">Poste</dt><dd class="font-semibold text-ui-text">{{ profile.get_position_display|default:"Informaticien" }}</dd></div></dl>{% endcomponent %}
+    {% component "ui_core.panel" title="Préférences" %}<p class="text-sm text-ui-text-muted">Les préférences du compte sont accessibles dans les paramètres communs.</p><a class="btn btn-secondary mt-4" href="{% url 'accounts:edit_preferences' %}">Préférences communes</a>{% endcomponent %}
+  </div>
+</div>

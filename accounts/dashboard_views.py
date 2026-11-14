@@ -88,7 +88,7 @@ def is_global_viewer(user):
     if hasattr(user, "profile") and user.profile.role == "executive":
         return True
 
-    if user_has_group(user, "executive_director"):
+    if user_has_group(user, "executive_director") or user_has_group(user, "deputy_executive_director"):
         return True
 
     return False
@@ -115,6 +115,7 @@ def check_executive_access(user):
     return (
         user.is_superuser
         or user_has_group(user, "executive_director")
+        or user_has_group(user, "deputy_executive_director")
         or getattr(user.profile, "role", None) == "executive"
     )
 # =====================================================
@@ -523,7 +524,7 @@ def finance_dashboard(request):
 
     # Inscriptions en attente de paiement
     inscriptions_pending = inscriptions_qs.filter(
-        status='created'
+        status__in=['created', 'awaiting_payment', 'partial_paid']
     ).select_related(
         'candidature__programme',
         'candidature__branch'
@@ -554,14 +555,14 @@ def finance_dashboard(request):
     # Inscriptions disponibles pour session
     if is_global:
         available_inscriptions = Inscription.objects.filter(
-            status='created'
+            status__in=['created', 'awaiting_payment', 'partial_paid']
         ).select_related(
             'candidature__programme',
             'candidature__branch'
         ).order_by('-created_at')[:50]
     elif user_branch:
         available_inscriptions = Inscription.objects.filter(
-            status='created',
+            status__in=['created', 'awaiting_payment', 'partial_paid'],
             candidature__branch=user_branch
         ).select_related(
             'candidature__programme',
@@ -642,6 +643,7 @@ def finance_dashboard(request):
         # Sessions
         'payment_agent': payment_agent,
         'active_sessions': active_sessions,
+        'sessions': active_sessions,
         'today_sessions': today_sessions,
         'recent_sessions': recent_sessions,
 
@@ -1065,7 +1067,8 @@ def approve_candidature_htmx(request, candidature_id):
             # 2️⃣ PUIS créer l'inscription
             inscription = create_inscription_from_candidature(
                 candidature=candidature,
-                amount_due=amount_due
+                amount_due=amount_due,
+                actor=request.user,
             )
 
         # Email notification
@@ -1249,7 +1252,8 @@ def create_inscription_htmx(request, candidature_id):
         with transaction.atomic():
             inscription = create_inscription_from_candidature(
                 candidature=candidature,
-                amount_due=amount_due
+                amount_due=amount_due,
+                actor=request.user,
             )
 
         return render(request, 'accounts/dashboard/partials/candidature_approved.html', {

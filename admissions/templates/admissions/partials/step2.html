@@ -1,0 +1,76 @@
+<div class="tunnel-step-shell">
+  <div class="tunnel-scroll pr-1">
+    <div class="space-y-3">
+      <p class="text-xs uppercase tracking-[0.25em] text-ufhob-secondary-dark font-semibold">Profil</p>
+      <h2 class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold leading-tight text-ufhob-primary">Dites-nous en un peu plus pour mieux vous préparer.</h2>
+      <p class="text-sm text-slate-600">Renseignez vos informations de contact et votre profil.</p>
+    </div>
+
+    <fieldset class="mt-5 max-w-2xl" data-field="gender">
+      <legend class="text-sm font-semibold text-ufhob-primary">Genre</legend>
+      <div class="mt-2 grid grid-cols-2 gap-3">
+        <button type="button"
+                class="rounded-xl border px-4 py-3 text-sm font-semibold transition"
+                :class="formData.gender === 'female' ? 'border-ufhob-secondary bg-ufhob-primary-soft/10 text-ufhob-primary ring-1 ring-ufhob-secondary/35' : (errors.gender ? 'border-red-400' : 'border-slate-200 text-slate-700 hover:border-ufhob-secondary/60')"
+                @click="formData.gender='female'; delete errors.gender">
+          Féminin
+        </button>
+        <button type="button"
+                class="rounded-xl border px-4 py-3 text-sm font-semibold transition"
+                :class="formData.gender === 'male' ? 'border-ufhob-secondary bg-ufhob-primary-soft/10 text-ufhob-primary ring-1 ring-ufhob-secondary/35' : (errors.gender ? 'border-red-400' : 'border-slate-200 text-slate-700 hover:border-ufhob-secondary/60')"
+                @click="formData.gender='male'; delete errors.gender">
+          Masculin
+        </button>
+      </div>
+      <p x-show="errors.gender" x-cloak class="mt-2 text-xs text-red-600" x-text="errors.gender"></p>
+    </fieldset>
+
+    <div class="mt-6 space-y-4 max-w-2xl">
+    <label class="relative block">
+      <input x-model="formData.email" type="email" placeholder=" " data-field="email"
+             class="peer h-12 md:h-14 w-full border-0 border-b border-slate-300 bg-transparent pr-10 pl-0 text-base md:text-lg text-slate-900 focus:border-ufhob-secondary focus:outline-none focus:ring-0"
+             :class="errors.email ? '!border-red-500' : ''" />
+      <span class="pointer-events-none absolute left-0 transition-all duration-300"
+            :class="fieldLabelClasses(formData.email)">Email</span>
+      <i class="fa-regular fa-envelope absolute right-1 top-5 text-slate-400 text-sm"></i>
+      <p x-show="errors.email" x-cloak class="mt-1 text-xs text-red-600" x-text="errors.email"></p>
+    </label>
+
+    <label class="relative block">
+      <input x-model="formData.phone" type="text" placeholder=" " data-field="phone"
+             class="peer h-12 md:h-14 w-full border-0 border-b border-slate-300 bg-transparent pr-10 pl-0 text-base md:text-lg text-slate-900 focus:border-ufhob-secondary focus:outline-none focus:ring-0"
+             :class="errors.phone ? '!border-red-500' : ''" />
+      <span class="pointer-events-none absolute left-0 transition-all duration-300"
+            :class="fieldLabelClasses(formData.phone)">Téléphone</span>
+      <i class="fa-solid fa-phone absolute right-1 top-5 text-slate-400 text-sm"></i>
+      <p x-show="errors.phone" x-cloak class="mt-1 text-xs text-red-600" x-text="errors.phone"></p>
+    </label>
+
+    <label class="relative block">
+      <input x-model="formData.birth_date" type="date" placeholder=" " data-field="birth_date"
+             class="peer h-12 md:h-14 w-full border-0 border-b border-slate-300 bg-transparent pr-10 pl-0 text-base md:text-lg text-slate-900 focus:border-ufhob-secondary focus:outline-none focus:ring-0"
+             :class="errors.birth_date ? '!border-red-500' : ''" />
+      <span class="pointer-events-none absolute left-0 transition-all duration-300"
+            :class="fieldLabelClasses(formData.birth_date)">Date de naissance</span>
+      <i class="fa-solid fa-cake-candles absolute right-1 top-5 text-slate-400 text-sm"></i>
+      <p x-show="errors.birth_date" x-cloak class="mt-1 text-xs text-red-600" x-text="errors.birth_date"></p>
+    </label>
+    </div>
+  </div>
+
+  <div class="tunnel-nav">
+    <button type="button"
+            class="tunnel-btn-prev"
+            @click="goTo(1)">
+      Retour
+    </button>
+    <button type="button"
+            class="group tunnel-btn-next"
+            :disabled="!isStepComplete(2)"
+            :class="!isStepComplete(2) ? 'opacity-60 cursor-not-allowed' : ''"
+            @click="goTo(3)">
+      Suivant
+      <i class="fa-solid fa-chevron-right text-xs transition-transform group-hover:translate-x-1"></i>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,132 @@
+{% extends "portal/app_base.html" %}
+{% load static component_tags %}
+
+{% block title %}{{ dashboard_shell.page_title|default:page_title }}{% endblock %}
+
+{% block extra_head %}
+  {{ block.super }}
+  {% if dashboard_shell.stylesheet_path %}
+    <link rel="stylesheet" href="{% static dashboard_shell.stylesheet_path %}">
+  {% endif %}
+  {% if dashboard_shell.role == "teacher" and active_section == "evaluations" %}
+    <link rel="stylesheet" href="{% static 'django_ckeditor_5/dist/styles.css' %}">
+    <script defer src="{% static 'django_ckeditor_5/dist/bundle.js' %}"></script>
+  {% endif %}
+  <script defer src="{% static 'src/js/portal/certified_dashboard_shell.js' %}"></script>
+  {% if dashboard_shell.script_path %}
+    <script defer src="{% static dashboard_shell.script_path %}"></script>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div
+  data-certified-dashboard-shell="true"
+  data-app-shell
+  data-theme="{{ request.user.user_preference.theme|default:'SYSTEM'|lower }}"
+  data-font-scale="{{ request.user.user_preference.font_scale|default:'MD'|lower }}"
+  data-appearance-user="{{ request.user.pk }}"
+  data-dashboard-role="{{ dashboard_shell.role }}"
+  data-dashboard-key="{{ dashboard_shell.key }}"
+>
+{% component "ui_core.app_shell" theme=request.user.user_preference.theme|default:"SYSTEM" font_scale=request.user.user_preference.font_scale|default:"MD" %}
+  {% fill "sidebar" %}
+    {% component "ui_core.app_sidebar"
+      groups=dashboard_shell.navigation
+      brand="UFHOB"
+      subtitle=dashboard_shell.subtitle
+      user_name=dashboard_shell.user_name
+      user_meta=dashboard_shell.context_label
+    %}{% endcomponent %}
+  {% endfill %}
+
+  {% fill "topbar" %}
+    {% component "ui_core.app_topbar"
+      title=dashboard_shell.title
+      context_label=dashboard_shell.context_label
+      user_name=""
+      notification_count=notification_count
+      notifications_url=dashboard_shell.notifications_url
+      show_notifications_button=dashboard_shell.show_notifications_button
+    %}
+      {% fill "actions" %}
+        {% include dashboard_shell.topbar_template %}
+      {% endfill %}
+    {% endcomponent %}
+  {% endfill %}
+
+  {% fill "default" %}
+    <div class="relative min-w-0 max-w-full">
+      {% if dashboard_shell.role != "teacher" and dashboard_shell.role != "student" %}{% include "portal/staff/shared/university_context.html" %}{% endif %}
+      <div
+        id="{{ dashboard_shell.loading_id }}"
+        class="hidden fixed inset-x-0 top-0 z-40 h-0.5 pointer-events-none"
+      >
+        <div class="h-full w-1/3 animate-pulse rounded-r-full bg-ui-primary"></div>
+      </div>
+      <div
+        id="{{ dashboard_shell.workspace_id }}"
+        data-dashboard-workspace="{{ dashboard_shell.key }}"
+        {% if dashboard_shell.key == "executive" %}
+          data-dg-dashboard
+          data-dg-dashboard-url="{% url 'accounts_portal:portal_dg' %}"
+          data-dg-section-url="{% url 'accounts_portal:dg_section' section='overview' %}"
+          data-dg-modal-url="{% url 'accounts_portal:dg_modal' %}"
+          data-dg-initial-section="{{ dg_active_section|default:'overview' }}"
+          data-dashboard-section="{{ dg_active_section|default:'overview' }}"
+          data-executive-section="{{ dg_active_section|default:'overview' }}"
+        {% endif %}
+        tabindex="-1"
+        aria-live="polite"
+        aria-busy="false"
+        class="min-w-0 max-w-full"
+      >
+        {% block dashboard_content %}
+          {% include dashboard_shell.workspace_template %}
+        {% endblock %}
+      </div>
+    </div>
+
+    {% component "ui_core.drawer" id=dashboard_shell.drawer_id title=dashboard_shell.drawer_title size=dashboard_shell.drawer_size has_form=True %}
+      {% fill "default" %}
+        {% if dashboard_shell.role == "teacher" or dashboard_shell.role == "secretary" %}
+          <div id="sg-drawer-content">
+            <p class="text-sm text-ui-text-muted">{{ dashboard_shell.empty_drawer_message }}</p>
+          </div>
+        {% else %}
+          <div id="{{ dashboard_shell.key }}-drawer-content">
+            <p class="text-sm text-ui-text-muted">{{ dashboard_shell.empty_drawer_message }}</p>
+          </div>
+        {% endif %}
+      {% endfill %}
+    {% endcomponent %}
+
+    {% component "ui_core.modal" id=dashboard_shell.modal_id title=dashboard_shell.modal_title size="wide" has_form=True %}
+      {% fill "default" %}
+        {% if dashboard_shell.role == "teacher" or dashboard_shell.role == "secretary" %}
+          <div id="sg-modal-content">
+            <p class="text-sm text-ui-text-muted">{{ dashboard_shell.empty_modal_message }}</p>
+          </div>
+        {% else %}
+          <div id="{{ dashboard_shell.key }}-modal-content">
+            <p class="text-sm text-ui-text-muted">{{ dashboard_shell.empty_modal_message }}</p>
+          </div>
+        {% endif %}
+      {% endfill %}
+    {% endcomponent %}
+
+    {% component "ui_core.confirm_dialog" id=dashboard_shell.confirm_id title="Confirmer l'action" message="Cette action nécessite votre confirmation." confirm_label="Confirmer" cancel_label="Annuler" %}{% endcomponent %}
+  {% endfill %}
+{% endcomponent %}
+<div
+  id="{{ dashboard_shell.fullscreen_workspace_id }}"
+  data-dashboard-fullscreen-workspace="{{ dashboard_shell.key }}"
+  class="fixed inset-0 z-[100] hidden h-[100dvh] w-screen overflow-hidden bg-ui-surface"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Espace de travail"
+  aria-live="polite"
+  tabindex="-1"
+></div>
+{% block dashboard_overlays %}{% endblock %}
+</div>
+{% endblock %}

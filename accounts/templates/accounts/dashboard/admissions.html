@@ -1,4 +1,5 @@
-{% extends "accounts/dashboard/base_dashboard.html" %}
+{% extends "portal/staff/director_dashboard.html" %}
+{% load component_tags %}
 {% load humanize %}
 {% load custom_filters %}
 
@@ -7,7 +8,6 @@
 
 {% block extra_head %}
 {{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     /* Mobile card stack */
     @media (max-width: 640px) {
@@ -56,6 +56,21 @@
 
 {% block dashboard_content %}
 
+<!-- ================= OPERATION HERO ================= -->
+<div class="rounded-2xl p-5 sm:p-6 mb-6 text-white border border-white/10" style="background: linear-gradient(135deg, #1e4f6f 0%, #2d6a8f 50%, #1db5b0 100%);">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <p class="text-xs uppercase tracking-widest text-white/80">Poste de travail admissions</p>
+            <h2 class="text-xl sm:text-2xl font-bold mt-1">Traitement des candidatures et validation documentaire</h2>
+            <p class="text-sm text-white/85 mt-2">Flux quotidien optimise pour les agents: lecture, decision, suivi et creation d'inscription.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-3 py-1.5 rounded-full bg-white/15 border border-white/20 text-xs font-semibold">Actions HTMX instantanees</span>
+            <span class="px-3 py-1.5 rounded-full bg-white/15 border border-white/20 text-xs font-semibold">Mode production</span>
+        </div>
+    </div>
+</div>
+
 <!-- ================= ALERTES SYSTÈME ================= -->
 {% if alerts %}
 <div class="space-y-3 mb-6">
@@ -70,10 +85,7 @@
             {% elif alert.type == 'danger' %}bg-red-100
             {% elif alert.type == 'success' %}bg-green-100
             {% else %}bg-blue-100{% endif %}">
-            <i class="fas {% if alert.type == 'warning' %}fa-exclamation-triangle text-amber-500
-                {% elif alert.type == 'danger' %}fa-times-circle text-red-500
-                {% elif alert.type == 'success' %}fa-check-circle text-green-500
-                {% else %}fa-info-circle text-blue-500{% endif %}"></i>
+            {% component "icon" name="award" class_str="{% if alert.type == 'warning' %}triangle-alert text-amber-500 {% elif alert.type == 'danger' %}circle-x text-red-500 {% elif alert.type == 'success' %}circle-check text-green-500 {% else %}circle-info text-blue-500{% endif %}" %}{% endcomponent %}
         </div>
         <div class="flex-1 min-w-0">
             <p class="font-semibold {% if alert.type == 'warning' %}text-amber-800
@@ -90,7 +102,7 @@
             </p>
         </div>
         <button class="text-slate-400 hover:text-slate-600 p-1" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
+            {% component "icon" name="x" %}{% endcomponent %}
         </button>
     </div>
     {% endfor %}
@@ -99,45 +111,37 @@
 
 <!-- ================= INDICATEUR ANNEXE ================= -->
 {% if not is_global %}
-<div class="bg-gradient-to-r from-[#1e4f6f] to-[#2d6a8f] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+<div class="bg-gradient-to-r from-primary-700 to-primary-600 rounded-2xl p-5 mb-6 text-white border border-white/10 shadow-sm">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-building text-lg sm:text-xl"></i>
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
+                {% component "icon" name="building-2" class_str="text-lg" %}{% endcomponent %}
             </div>
             <div>
-                <p class="text-xs sm:text-sm text-white/70">Annexe actuelle</p>
-                <p class="font-bold text-base sm:text-lg">{{ branch.name|default:"Non assignée" }}</p>
+                <p class="text-xs uppercase tracking-wide text-primary-100">Perimetre actif</p>
+                <p class="font-bold text-lg">{{ branch.name|default:"Non assignee" }}</p>
             </div>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-left sm:text-right">
-                <p class="text-xs sm:text-sm text-white/70">Vous gérez uniquement</p>
-                <p class="font-semibold text-sm sm:text-base">les candidatures de cette annexe</p>
-            </div>
-        </div>
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/15 border border-white/20 w-fit">
+            Gestion locale des candidatures
+        </span>
     </div>
 </div>
 {% else %}
-<div class="bg-gradient-to-r from-[#1db5b0] to-[#49c7c3] rounded-2xl p-4 sm:p-5 mb-6 text-white">
+<div class="bg-gradient-to-r from-secondary to-[#49c7c3] rounded-2xl p-5 mb-6 text-white border border-white/10 shadow-sm">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-globe text-lg sm:text-xl"></i>
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
+                {% component "icon" name="globe" class_str="text-lg" %}{% endcomponent %}
             </div>
             <div>
-                <p class="text-xs sm:text-sm text-white/70">Mode Direction</p>
-                <p class="font-bold text-base sm:text-lg">Vue Globale - Toutes les annexes</p>
+                <p class="text-xs uppercase tracking-wide text-white/80">Mode direction</p>
+                <p class="font-bold text-lg">Vue globale des annexes</p>
             </div>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20">
-                <i class="fas fa-eye mr-1"></i> Accès complet
-            </span>
-            <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20">
-                <i class="fas fa-code-branch mr-1"></i> {{ branches_count|default:0 }} annexe{{ branches_count|pluralize }}
-            </span>
-        </div>
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/15 border border-white/20 w-fit">
+            {{ branches_count|default:0 }} annexe{{ branches_count|pluralize }}
+        </span>
     </div>
 </div>
 {% endif %}
@@ -148,7 +152,7 @@
         <!-- Search + Actions Row -->
         <div class="flex flex-col sm:flex-row gap-3">
             <div class="relative flex-1">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                {% component "icon" name="search" class_str="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" %}{% endcomponent %}
                 <input type="text" name="search" value="{{ request.GET.search }}"
                        placeholder="Rechercher un candidat (nom, email, téléphone)..."
                        class="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1e4f6f] focus:border-transparent">
@@ -156,17 +160,17 @@
             <div class="flex gap-2">
                 <a href="{% url 'accounts:export_candidatures_csv' %}?{{ request.GET.urlencode }}"
                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1db5b0] text-white font-medium rounded-xl hover:bg-[#19a09b] transition-colors btn-action">
-                    <i class="fas fa-download"></i>
+                    {% component "icon" name="download" %}{% endcomponent %}
                     <span class="hidden sm:inline">CSV</span>
                 </a>
                 <a href="{% url 'accounts:export_candidatures_csv' %}?{{ request.GET.urlencode }}&format=excel"
                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors btn-action">
-                    <i class="fas fa-file-excel"></i>
+                    {% component "icon" name="sheet" %}{% endcomponent %}
                     <span class="hidden sm:inline">Excel</span>
                 </a>
                 <button type="button" onclick="printDashboard()"
                         class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-600 text-white font-medium rounded-xl hover:bg-slate-700 transition-colors btn-action">
-                    <i class="fas fa-print"></i>
+                    {% component "icon" name="printer" %}{% endcomponent %}
                 </button>
             </div>
         </div>
@@ -174,7 +178,7 @@
         <!-- Filters Row -->
         <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-2 text-slate-600">
-                <i class="fas fa-filter text-[#1db5b0]"></i>
+                {% component "icon" name="filter" class_str="text-[#1db5b0]" %}{% endcomponent %}
                 <span class="text-sm font-semibold hidden sm:inline">Filtres:</span>
             </div>
 
@@ -224,12 +228,12 @@
 
             <div class="flex gap-2 w-full sm:w-auto">
                 <button type="submit" class="flex-1 sm:flex-none px-5 py-2.5 bg-[#1e4f6f] text-white font-medium rounded-xl hover:bg-[#163b53] flex items-center justify-center gap-2 transition-colors btn-action">
-                    <i class="fas fa-search"></i>
+                    {% component "icon" name="search" %}{% endcomponent %}
                     <span>Filtrer</span>
                 </button>
                 {% if request.GET %}
                 <a href="{% url 'accounts:admissions_dashboard' %}" class="px-4 py-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl text-sm flex items-center gap-2 transition-colors">
-                    <i class="fas fa-times"></i>
+                    {% component "icon" name="x" %}{% endcomponent %}
                     <span class="hidden sm:inline">Réinitialiser</span>
                 </a>
                 {% endif %}
@@ -242,22 +246,22 @@
             <span class="text-xs text-slate-500">Filtres actifs:</span>
             {% if request.GET.search %}
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg">
-                <i class="fas fa-search"></i> "{{ request.GET.search }}"
+                {% component "icon" name="search" %}{% endcomponent %} "{{ request.GET.search }}"
             </span>
             {% endif %}
             {% if request.GET.status %}
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-lg">
-                <i class="fas fa-tag"></i> {{ request.GET.status }}
+                {% component "icon" name="tag" %}{% endcomponent %} {{ request.GET.status }}
             </span>
             {% endif %}
             {% if request.GET.programme %}
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-lg">
-                <i class="fas fa-graduation-cap"></i> Programme filtré
+                {% component "icon" name="graduation-cap" %}{% endcomponent %} Programme filtré
             </span>
             {% endif %}
             {% if request.GET.date_from or request.GET.date_to %}
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 text-xs rounded-lg">
-                <i class="fas fa-calendar"></i> Période filtrée
+                {% component "icon" name="calendar" %}{% endcomponent %} Période filtrée
             </span>
             {% endif %}
         </div>
@@ -271,7 +275,7 @@
     <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(30, 79, 111, 0.1);">
-                <i class="fas fa-file-alt text-lg sm:text-xl" style="color: #1e4f6f;"></i>
+                {% component "icon" name="file-text" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
             {% if stats.total_change %}
             <span class="text-xs font-medium {% if stats.total_change > 0 %}text-green-500{% else %}text-red-500{% endif %}">
@@ -288,7 +292,7 @@
          onclick="filterByStatus('submitted')">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(243, 156, 18, 0.1);">
-                <i class="fas fa-clock text-lg sm:text-xl" style="color: #f39c12;"></i>
+                {% component "icon" name="clock" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
         </div>
         <p class="text-2xl sm:text-3xl font-bold" style="color: #f39c12;">{{ stats.pending|default:0 }}</p>
@@ -300,7 +304,7 @@
          onclick="filterByStatus('under_review')">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(59, 130, 246, 0.1);">
-                <i class="fas fa-search text-lg sm:text-xl" style="color: #3b82f6;"></i>
+                {% component "icon" name="search" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
         </div>
         <p class="text-2xl sm:text-3xl font-bold" style="color: #3b82f6;">{{ stats.under_review|default:0 }}</p>
@@ -312,7 +316,7 @@
          onclick="filterByStatus('accepted')">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
-                <i class="fas fa-check-circle text-lg sm:text-xl" style="color: #1db5b0;"></i>
+                {% component "icon" name="circle-check" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
         </div>
         <p class="text-2xl sm:text-3xl font-bold" style="color: #1db5b0;">{{ stats.accepted|default:0 }}</p>
@@ -324,7 +328,7 @@
          onclick="filterByStatus('rejected')">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(239, 68, 68, 0.1);">
-                <i class="fas fa-times-circle text-lg sm:text-xl" style="color: #ef4444;"></i>
+                {% component "icon" name="times-circle" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
         </div>
         <p class="text-2xl sm:text-3xl font-bold" style="color: #ef4444;">{{ stats.rejected|default:0 }}</p>
@@ -335,7 +339,7 @@
     <div class="stat-card bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-5 hover:shadow-md transition-shadow col-span-2 sm:col-span-1">
         <div class="flex items-center justify-between mb-2 sm:mb-3">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(139, 92, 246, 0.1);">
-                <i class="fas fa-chart-line text-lg sm:text-xl" style="color: #8b5cf6;"></i>
+                {% component "icon" name="chart-no-axes-combined" class_str="text-lg sm:text-xl" %}{% endcomponent %}
             </div>
         </div>
         <p class="text-2xl sm:text-3xl font-bold" style="color: #8b5cf6;">
@@ -351,7 +355,7 @@
     <!-- Status Distribution Chart -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
         <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
-            <i class="fas fa-chart-pie mr-2" style="color: #1db5b0;"></i>Répartition par statut
+            {% component "icon" name="chart-pie" class_str="mr-2" %}{% endcomponent %}Répartition par statut
         </h3>
         <div class="relative h-64 sm:h-72">
             <canvas id="statusChart"></canvas>
@@ -361,7 +365,7 @@
     <!-- Weekly Trend Chart -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
         <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
-            <i class="fas fa-chart-line mr-2" style="color: #f39c12;"></i>Tendance mensuelle
+            {% component "icon" name="chart-no-axes-combined" class_str="mr-2" %}{% endcomponent %}Tendance mensuelle
         </h3>
         <div class="relative h-64 sm:h-72">
             <canvas id="trendChart"></canvas>
@@ -371,7 +375,7 @@
     <!-- Recent Activity Timeline -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 sm:p-6">
         <h3 class="font-bold text-lg mb-4" style="color: #1e4f6f;">
-            <i class="fas fa-history mr-2" style="color: #8b5cf6;"></i>Activité récente
+            {% component "icon" name="history" class_str="mr-2" %}{% endcomponent %}Activité récente
         </h3>
         <div class="max-h-72 overflow-y-auto custom-scrollbar">
             {% if recent_activities %}
@@ -383,10 +387,7 @@
                         {% elif activity.action == 'rejected' %}bg-red-100
                         {% elif activity.action == 'submitted' %}bg-blue-100
                         {% else %}bg-slate-100{% endif %}">
-                        <i class="fas {% if activity.action == 'accepted' %}fa-check text-green-500
-                            {% elif activity.action == 'rejected' %}fa-times text-red-500
-                            {% elif activity.action == 'submitted' %}fa-paper-plane text-blue-500
-                            {% else %}fa-edit text-slate-500{% endif %} text-sm"></i>
+                        {% component "icon" name="award" class_str="{% if activity.action == 'accepted' %}check text-green-500 {% elif activity.action == 'rejected' %}x text-red-500 {% elif activity.action == 'submitted' %}send text-blue-500 {% else %}pencil text-slate-500{% endif %} text-sm" %}{% endcomponent %}
                     </div>
                     <div>
                         <p class="text-sm font-medium text-slate-800">{{ activity.description }}</p>
@@ -397,7 +398,7 @@
             </div>
             {% else %}
             <div class="text-center py-8">
-                <i class="fas fa-inbox text-3xl text-slate-300 mb-2"></i>
+                {% component "icon" name="inbox" class_str="text-3xl text-slate-300 mb-2" %}{% endcomponent %}
                 <p class="text-sm text-slate-400">Aucune activité récente</p>
             </div>
             {% endif %}
@@ -414,19 +415,19 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <button onclick="bulkAction('under_review')" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                <i class="fas fa-search"></i>
+                {% component "icon" name="search" %}{% endcomponent %}
                 <span class="hidden sm:inline">Passer en analyse</span>
             </button>
             <button onclick="bulkAction('accepted')" class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                <i class="fas fa-check"></i>
+                {% component "icon" name="check" %}{% endcomponent %}
                 <span class="hidden sm:inline">Accepter</span>
             </button>
             <button onclick="bulkAction('rejected')" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                <i class="fas fa-times"></i>
+                {% component "icon" name="x" %}{% endcomponent %}
                 <span class="hidden sm:inline">Rejeter</span>
             </button>
             <button onclick="clearSelection()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-                <i class="fas fa-times"></i>
+                {% component "icon" name="x" %}{% endcomponent %}
             </button>
         </div>
     </div>
@@ -438,7 +439,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
             <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
-                <i class="fas fa-list-alt mr-2" style="color: #1db5b0;"></i>
+                {% component "icon" name="list-alt" class_str="mr-2" %}{% endcomponent %}
                 <span class="hidden sm:inline">Candidatures en attente</span>
                 <span class="sm:hidden">En attente</span>
             </h2>
@@ -446,11 +447,11 @@
                 <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
                     {{ pending_candidatures|length }}
                 </span>
-                <button hx-get="{% url 'accounts:candidatures_list_htmx' %}?status=pending"
+                <button hx-get="{% url 'accounts:candidatures_list_htmx' %}?status=submitted"
                         hx-target="#pending-list"
                         hx-swap="innerHTML"
                         class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Actualiser">
-                    <i class="fas fa-sync-alt"></i>
+                    {% component "icon" name="sync-alt" %}{% endcomponent %}
                 </button>
             </div>
         </div>
@@ -470,7 +471,7 @@
                             <p class="text-sm text-slate-500 truncate">{{ cand.programme.title }}</p>
                             <div class="flex flex-wrap items-center gap-2 mt-1">
                                 <span class="text-xs text-slate-400">
-                                    <i class="fas fa-clock mr-1"></i>{{ cand.submitted_at|date:"d/m/Y H:i" }}
+                                    {% component "icon" name="clock" class_str="mr-1" %}{% endcomponent %}{{ cand.submitted_at|date:"d/m/Y H:i" }}
                                 </span>
                                 {% if cand.branch %}
                                 <span class="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">
@@ -495,11 +496,11 @@
                                 hx-swap="innerHTML"
                                 onclick="openModal('candidate-detail-modal')"
                                 class="p-2 text-slate-400 hover:text-[#1e4f6f] hover:bg-slate-200 rounded-lg transition-colors" title="Voir détails">
-                            <i class="fas fa-eye"></i>
+                            {% component "icon" name="eye" %}{% endcomponent %}
                         </button>
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg">
-                                <i class="fas fa-ellipsis-v"></i>
+                                {% component "icon" name="ellipsis-vertical" %}{% endcomponent %}
                             </button>
                             <div x-show="open" @click.away="open = false"
                                  x-transition:enter="transition ease-out duration-100"
@@ -515,7 +516,7 @@
                                             @click="open = false"
                                             class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                            <i class="fas fa-search text-blue-500 text-xs"></i>
+                                            {% component "icon" name="search" class_str="text-blue-500 text-xs" %}{% endcomponent %}
                                         </div>
                                         Passer en analyse
                                     </button>
@@ -527,7 +528,7 @@
                                             @click="open = false"
                                             class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                                            <i class="fas fa-edit text-amber-500 text-xs"></i>
+                                            {% component "icon" name="pencil" class_str="text-amber-500 text-xs" %}{% endcomponent %}
                                         </div>
                                         Demander complément
                                     </button>
@@ -539,7 +540,7 @@
                                             @click="open = false"
                                             class="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50 flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                                            <i class="fas fa-check text-green-500 text-xs"></i>
+                                            {% component "icon" name="check" class_str="text-green-500 text-xs" %}{% endcomponent %}
                                         </div>
                                         Accepter
                                     </button>
@@ -550,7 +551,7 @@
                                             @click="open = false"
                                             class="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                                            <i class="fas fa-times text-red-500 text-xs"></i>
+                                            {% component "icon" name="x" class_str="text-red-500 text-xs" %}{% endcomponent %}
                                         </div>
                                         Rejeter
                                     </button>
@@ -562,7 +563,7 @@
                                             @click="open = false"
                                             class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                                            <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                                            {% component "icon" name="external-link" class_str="text-slate-500 text-xs" %}{% endcomponent %}
                                         </div>
                                         Voir le dossier complet
                                     </button>
@@ -576,7 +577,7 @@
             {% else %}
             <div class="text-center py-12">
                 <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
-                    <i class="fas fa-check-circle text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                    {% component "icon" name="circle-check" class_str="text-2xl sm:text-3xl" %}{% endcomponent %}
                 </div>
                 <p class="font-semibold text-slate-600">Aucune candidature en attente</p>
                 <p class="text-sm text-slate-400 mt-1">Toutes les candidatures ont été traitées</p>
@@ -589,7 +590,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between" style="background-color: #f4fbfb;">
             <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
-                <i class="fas fa-file-upload mr-2" style="color: #f39c12;"></i>
+                {% component "icon" name="file-upload" class_str="mr-2" %}{% endcomponent %}
                 <span class="hidden sm:inline">Documents à valider</span>
                 <span class="sm:hidden">Documents</span>
             </h2>
@@ -601,7 +602,7 @@
                         hx-target="#docs-list"
                         hx-swap="innerHTML"
                         class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Actualiser">
-                    <i class="fas fa-sync-alt"></i>
+                    {% component "icon" name="sync-alt" %}{% endcomponent %}
                 </button>
             </div>
         </div>
@@ -613,25 +614,25 @@
                     <div class="flex items-center gap-3 sm:gap-4 min-w-0">
                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: rgba(243, 156, 18, 0.1);">
                             {% if doc.file.name|slice:"-3:" == "pdf" %}
-                            <i class="fas fa-file-pdf text-lg" style="color: #ef4444;"></i>
+                            {% component "icon" name="file-text" class_str="text-lg" %}{% endcomponent %}
                             {% elif doc.file.name|slice:"-3:" == "jpg" or doc.file.name|slice:"-4:" == "jpeg" or doc.file.name|slice:"-3:" == "png" %}
-                            <i class="fas fa-file-image text-lg" style="color: #3b82f6;"></i>
+                            {% component "icon" name="file-image" class_str="text-lg" %}{% endcomponent %}
                             {% else %}
-                            <i class="fas fa-file text-lg" style="color: #f39c12;"></i>
+                            {% component "icon" name="file" class_str="text-lg" %}{% endcomponent %}
                             {% endif %}
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="font-semibold text-slate-800 truncate">{{ doc.candidature.full_name }}</p>
                             <p class="text-sm text-slate-500 truncate">{{ doc.document_type.name }}</p>
                             <p class="text-xs text-slate-400 mt-1">
-                                <i class="fas fa-clock mr-1"></i>{{ doc.uploaded_at|date:"d/m/Y H:i" }}
+                                {% component "icon" name="clock" class_str="mr-1" %}{% endcomponent %}{{ doc.uploaded_at|date:"d/m/Y H:i" }}
                             </p>
                         </div>
                     </div>
                     <div class="flex gap-2 justify-end sm:justify-start flex-shrink-0">
                         <a href="{{ doc.file.url }}" target="_blank"
                            class="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                            <i class="fas fa-eye"></i>
+                            {% component "icon" name="eye" %}{% endcomponent %}
                             <span class="hidden sm:inline">Voir</span>
                         </a>
                         <button hx-post="{% url 'accounts:validate_document_htmx' doc.id %}"
@@ -639,7 +640,7 @@
                                 hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                                 class="px-3 sm:px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors"
                                 style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
-                            <i class="fas fa-check"></i>
+                            {% component "icon" name="check" %}{% endcomponent %}
                             <span class="hidden sm:inline">Valider</span>
                         </button>
                     </div>
@@ -659,7 +660,7 @@
             {% else %}
             <div class="text-center py-12">
                 <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(29, 181, 176, 0.1);">
-                    <i class="fas fa-check-double text-2xl sm:text-3xl" style="color: #1db5b0;"></i>
+                    {% component "icon" name="check-check" class_str="text-2xl sm:text-3xl" %}{% endcomponent %}
                 </div>
                 <p class="font-semibold text-slate-600">Aucun document à valider</p>
                 <p class="text-sm text-slate-400 mt-1">Tous les documents ont été validés</p>
@@ -673,8 +674,8 @@
 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
     <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" style="background-color: #f4fbfb;">
         <h2 class="font-bold text-base sm:text-lg" style="color: #1e4f6f;">
-            <i class="fas fa-user-check mr-2" style="color: #1db5b0;"></i>
-            <span class="hidden sm:inline">Candidatures acceptées - Prêtes pour inscription</span>
+            {% component "icon" name="user-check" class_str="mr-2" %}{% endcomponent %}
+            <span class="hidden sm:inline">Candidatures acceptees - A inscrire</span>
             <span class="sm:hidden">Acceptées</span>
         </h2>
         <div class="flex items-center gap-2">
@@ -700,15 +701,9 @@
                             <p class="text-xs text-slate-500">{{ cand.email }}</p>
                         </div>
                     </div>
-                    {% if cand.inscription %}
-                    <span class="px-2 py-1 text-xs font-medium rounded-lg bg-green-100 text-green-700">
-                        <i class="fas fa-check-circle mr-1"></i>Inscrit
-                    </span>
-                    {% else %}
                     <span class="px-2 py-1 text-xs font-medium rounded-lg" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
-                        <i class="fas fa-clock mr-1"></i>En attente
+                        {% component "icon" name="clock" class_str="mr-1" %}{% endcomponent %}En attente
                     </span>
-                    {% endif %}
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div>
@@ -721,21 +716,13 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    {% if cand.inscription %}
-                    <button onclick="showInscriptionModal('{{ cand.full_name|escapejs }}', '{{ cand.inscription.access_code }}', '{{ cand.inscription.get_public_url }}')"
-                            class="flex-1 px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
-                            style="background-color: rgba(30, 79, 111, 0.1); color: #1e4f6f;">
-                        <i class="fas fa-link"></i>Voir lien
-                    </button>
-                    {% else %}
-                    <button hx-post="{% url 'accounts:create_inscription_htmx' cand.id %}"
-                            hx-target="#accepted-card-{{ cand.id }}" hx-swap="outerHTML"
-                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    <button hx-get="{% url 'accounts:inscription_positioning_modal_htmx' cand.id %}"
+                            hx-target="#modal-container" hx-swap="innerHTML"
+                            onclick="openDashboardModal()"
                             class="flex-1 px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
                             style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
-                        <i class="fas fa-plus"></i>Créer inscription
+                        {% component "icon" name="plus" %}{% endcomponent %}Créer inscription
                     </button>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -747,12 +734,12 @@
                 <thead>
                     <tr class="text-left text-sm text-slate-500 border-b border-slate-200">
                         <th class="pb-4 font-semibold sortable-header">
-                            Candidat <i class="fas fa-sort ml-1 text-xs"></i>
+                            Candidat {% component "icon" name="sort" class_str="ml-1 text-xs" %}{% endcomponent %}
                         </th>
                         <th class="pb-4 font-semibold">Programme</th>
                         <th class="pb-4 font-semibold">Année</th>
                         <th class="pb-4 font-semibold sortable-header">
-                            Date acceptation <i class="fas fa-sort ml-1 text-xs"></i>
+                            Date acceptation {% component "icon" name="sort" class_str="ml-1 text-xs" %}{% endcomponent %}
                         </th>
                         <th class="pb-4 font-semibold">Statut inscription</th>
                         <th class="pb-4 font-semibold">Actions</th>
@@ -780,33 +767,19 @@
                         <td class="py-4 text-slate-600">{{ cand.entry_year }}ère/ème année</td>
                         <td class="py-4 text-slate-600">{{ cand.reviewed_at|date:"d/m/Y" }}</td>
                         <td class="py-4">
-                            {% if cand.inscription %}
-                            <span class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-100 text-green-700">
-                                <i class="fas fa-check-circle mr-1"></i>Inscrit
-                            </span>
-                            {% else %}
                             <span class="px-3 py-1.5 text-xs font-medium rounded-lg" style="background-color: rgba(243, 156, 18, 0.1); color: #f39c12;">
-                                <i class="fas fa-clock mr-1"></i>En attente
+                                {% component "icon" name="clock" class_str="mr-1" %}{% endcomponent %}En attente
                             </span>
-                            {% endif %}
                         </td>
                         <td class="py-4">
                             <div class="flex items-center gap-2">
-                                {% if cand.inscription %}
-                                <button onclick="showInscriptionModal('{{ cand.full_name|escapejs }}', '{{ cand.inscription.access_code }}', '{{ cand.inscription.get_public_url }}')"
-                                        class="px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-2"
-                                        style="background-color: rgba(30, 79, 111, 0.1); color: #1e4f6f;">
-                                    <i class="fas fa-link"></i>Lien
-                                </button>
-                                {% else %}
-                                <button hx-post="{% url 'accounts:create_inscription_htmx' cand.id %}"
-                                        hx-target="#accepted-row-{{ cand.id }}" hx-swap="outerHTML"
-                                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                <button hx-get="{% url 'accounts:inscription_positioning_modal_htmx' cand.id %}"
+                                        hx-target="#modal-container" hx-swap="innerHTML"
+                                        onclick="openDashboardModal()"
                                         class="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"
                                         style="background-color: rgba(29, 181, 176, 0.1); color: #1db5b0;">
-                                    <i class="fas fa-plus"></i>Créer inscription
+                                    {% component "icon" name="plus" %}{% endcomponent %}Créer inscription
                                 </button>
-                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -821,7 +794,7 @@
             {% if accepted_candidatures.has_previous %}
             <a href="?accepted_page={{ accepted_candidatures.previous_page_number }}"
                class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                <i class="fas fa-chevron-left"></i>
+                {% component "icon" name="chevron-left" %}{% endcomponent %}
             </a>
             {% endif %}
             <span class="px-4 py-2 text-sm text-slate-600">
@@ -830,7 +803,7 @@
             {% if accepted_candidatures.has_next %}
             <a href="?accepted_page={{ accepted_candidatures.next_page_number }}"
                class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                <i class="fas fa-chevron-right"></i>
+                {% component "icon" name="chevron-right" %}{% endcomponent %}
             </a>
             {% endif %}
         </div>
@@ -839,10 +812,10 @@
         {% else %}
         <div class="text-center py-12">
             <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: rgba(30, 79, 111, 0.1);">
-                <i class="fas fa-user-plus text-2xl sm:text-3xl" style="color: #1e4f6f;"></i>
+                {% component "icon" name="user-plus" class_str="text-2xl sm:text-3xl" %}{% endcomponent %}
             </div>
-            <p class="font-semibold text-slate-600">Aucune candidature acceptée</p>
-            <p class="text-sm text-slate-400 mt-1">Les candidatures acceptées apparaîtront ici</p>
+            <p class="font-semibold text-slate-600">Aucune candidature a inscrire</p>
+            <p class="text-sm text-slate-400 mt-1">Toutes les candidatures acceptees ont deja ete traitees.</p>
         </div>
         {% endif %}
     </div>
@@ -855,10 +828,10 @@
     <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4 sm:mb-6">
             <h3 class="text-lg sm:text-xl font-bold" style="color: #1e4f6f;">
-                <i class="fas fa-link mr-2" style="color: #1db5b0;"></i>Lien d'inscription
+                {% component "icon" name="link" class_str="mr-2" %}{% endcomponent %}Lien d'inscription
             </h3>
             <button onclick="closeModal('inscription-modal')" class="text-slate-400 hover:text-slate-600 p-2">
-                <i class="fas fa-times text-xl"></i>
+                {% component "icon" name="x" class_str="text-xl" %}{% endcomponent %}
             </button>
         </div>
         <div id="inscription-modal-content"></div>
@@ -875,22 +848,21 @@
     <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold" style="color: #1e4f6f;">
-                <i class="fas fa-user mr-2" style="color: #1db5b0;"></i>Détails du candidat
+                {% component "icon" name="user" class_str="mr-2" %}{% endcomponent %}Détails du candidat
             </h3>
             <button onclick="closeModal('candidate-detail-modal')" class="text-slate-400 hover:text-slate-600 p-2">
-                <i class="fas fa-times"></i>
+                {% component "icon" name="x" %}{% endcomponent %}
             </button>
         </div>
         <div id="candidate-detail-content" class="min-h-[200px]">
             <div class="flex items-center justify-center py-12">
-                <i class="fas fa-spinner fa-spin text-2xl text-slate-400"></i>
+                {% component "icon" name="loader-circle" class_str="text-2xl text-slate-400" %}{% endcomponent %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Toast Notifications Container -->
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+<div id="modal-container"></div>
 
 <!-- ================= SCRIPTS ================= -->
 <script>
@@ -907,7 +879,7 @@ function showInscriptionModal(name, code, url) {
                            id="inscription-url">
                     <button onclick="copyToClipboard('${window.location.origin}${url}', 'Lien copié!')"
                             class="px-3 sm:px-4 py-2 sm:py-3 rounded-xl flex-shrink-0 btn-action" style="background-color: #1e4f6f; color: white;">
-                        <i class="fas fa-copy"></i>
+                        {% component "icon" name="copy" %}{% endcomponent %}
                     </button>
                 </div>
             </div>
@@ -919,7 +891,7 @@ function showInscriptionModal(name, code, url) {
                            style="color: #1e4f6f;" id="inscription-code">
                     <button onclick="copyToClipboard('${code}', 'Code copié!')"
                             class="px-3 sm:px-4 py-2 sm:py-3 rounded-xl flex-shrink-0 btn-action" style="background-color: #1e4f6f; color: white;">
-                        <i class="fas fa-copy"></i>
+                        {% component "icon" name="copy" %}{% endcomponent %}
                     </button>
                 </div>
             </div>
@@ -935,6 +907,18 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function openDashboardModal() {
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDashboardModal() {
+    const container = document.getElementById('modal-container');
+    if (container) {
+        container.innerHTML = '';
+    }
     document.body.style.overflow = '';
 }
 
@@ -955,6 +939,42 @@ document.addEventListener('keydown', function(e) {
             if (e.target === this) closeModal(id);
         });
     }
+});
+
+document.body.addEventListener('htmx:afterSwap', function (event) {
+    if (event.target && event.target.id === 'modal-container' && event.target.innerHTML.trim()) {
+        openDashboardModal();
+    }
+});
+
+document.body.addEventListener('inscriptionCreated', function () {
+    closeDashboardModal();
+    window.location.reload();
+});
+
+document.body.addEventListener('openInscriptionPositioning', function (event) {
+    const target = document.getElementById('modal-container');
+    const url = event.detail && event.detail.url;
+    if (!target || !url) return;
+
+    target.innerHTML = '<div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4"><div class="rounded-2xl bg-white px-5 py-4 text-sm font-semibold text-slate-600 shadow-xl">Chargement du positionnement academique...</div></div>';
+    openDashboardModal();
+
+    fetch(url, {
+        headers: { 'HX-Request': 'true', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin'
+    })
+        .then(function (response) {
+            if (!response.ok) throw new Error('Positionnement indisponible');
+            return response.text();
+        })
+        .then(function (html) {
+            target.innerHTML = html;
+            openDashboardModal();
+        })
+        .catch(function () {
+            target.innerHTML = '<div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4"><div class="rounded-2xl bg-white px-5 py-4 text-sm font-semibold text-red-600 shadow-xl">Impossible de charger le positionnement academique.</div></div>';
+        });
 });
 
 // ========== BULK ACTIONS ==========
@@ -1042,7 +1062,7 @@ function copyToClipboard(text, message = 'Copié!') {
     });
 }
 
-function showToast(message, type = 'info') {
+function legacyAdmissionsToastUnused(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
 
@@ -1054,15 +1074,15 @@ function showToast(message, type = 'info') {
     };
 
     const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
+        success: 'circle-check',
+        error: 'circle-x',
+        warning: 'triangle-alert',
+        info: 'circle-info'
     };
 
     toast.className = `${bgColors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-x-full transition-transform duration-300`;
     toast.innerHTML = `
-        <i class="fas ${icons[type]}"></i>
+        <i data-lucide="${icons[type]}" class="h-4 w-4" aria-hidden="true"></i>
         <span>${message}</span>
     `;
 
@@ -1214,7 +1234,7 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
 });
 
 // Show toast on HTMX success
-document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+document.body.addEventListener('esfe:legacy-toast-disabled', function(evt) {
     const xhr = evt.detail.xhr;
     if (xhr.status >= 200 && xhr.status < 300) {
         // Check for success messages in response headers

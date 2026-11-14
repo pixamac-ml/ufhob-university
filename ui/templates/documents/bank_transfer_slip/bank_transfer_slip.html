@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Bordereau de versement {{ reference }}</title>
+  <style>
+    @page { size: A4 portrait; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { color: #182230; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.45; }
+    .header { border-bottom: 2px solid #1d5761; padding-bottom: 12px; }
+    .header img { float: left; width: 62px; height: auto; margin-right: 14px; }
+    .institution { color: #1d5761; font-size: 17pt; font-weight: 700; margin: 0; }
+    .branch { color: #52606d; font-size: 10pt; margin: 4px 0 0; }
+    h1 { color: #1d5761; font-size: 15pt; letter-spacing: 1px; margin: 25px 0 8px; text-align: center; }
+    .reference { color: #1d5761; font-size: 11pt; font-weight: 700; text-align: center; margin: 0 0 24px; }
+    .meta { background: #f4f7fb; border: 1px solid #d8e2ef; padding: 11px 13px; margin-bottom: 18px; }
+    table { border-collapse: collapse; width: 100%; }
+    td { border-bottom: 1px solid #dce4ed; padding: 8px 10px; vertical-align: top; }
+    td.label { color: #475569; font-weight: 700; width: 37%; }
+    .amount { background: #edf6f2; border-left: 5px solid #237a57; margin: 20px 0; padding: 14px; }
+    .amount strong { color: #14543a; display: block; font-size: 15pt; margin-top: 4px; }
+    .note { color: #52606d; font-size: 9pt; font-style: italic; margin-top: 18px; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 52px; text-align: center; }
+    .signature { width: 38%; border-top: 1px solid #64748b; padding-top: 6px; }
+    .footer { border-top: 1px solid #dce4ed; color: #64748b; font-size: 8pt; margin-top: 36px; padding-top: 9px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    {% if logo_url %}<img src="{{ logo_url }}" alt="{{ institution_short_name }}">{% endif %}
+    <p class="institution">{{ institution_official_name|default:institution_name }}</p>
+    {% if branch_name %}<p class="branch">Annexe : {{ branch_name }}</p>{% endif %}
+    <div style="clear: both"></div>
+  </header>
+
+  <h1>BORDEREAU INTERNE DE VERSEMENT BANCAIRE</h1>
+  <p class="reference">Référence serveur : {{ reference }}</p>
+
+  <div class="meta">Document interne généré par {{ institution_short_name|default:"UFHOB" }} le {{ generated_at }}. Il ne remplace pas le justificatif délivré par la banque.</div>
+  <table>
+    <tr><td class="label">État du versement</td><td>{{ status }}</td></tr>
+    <tr><td class="label">Date du versement</td><td>{{ transfer_date }}</td></tr>
+    <tr><td class="label">Banque</td><td>{{ bank_name }}{% if bank_country %} — {{ bank_country }}{% endif %}</td></tr>
+    <tr><td class="label">Caisse source</td><td>{{ cash_source }}</td></tr>
+    <tr><td class="label">Solde avant versement</td><td>{{ cash_before }} FCFA</td></tr>
+    <tr><td class="label">Solde après versement</td><td>{{ cash_after }} FCFA</td></tr>
+    {% if author %}<tr><td class="label">Gestionnaire / auteur</td><td>{{ author }}</td></tr>{% endif %}
+    {% if validated_at %}<tr><td class="label">Validation</td><td>{{ validated_at }}</td></tr>{% endif %}
+    {% if comment %}<tr><td class="label">Commentaire</td><td>{{ comment }}</td></tr>{% endif %}
+  </table>
+  <div class="amount">Montant versé<strong>{{ amount }} FCFA</strong></div>
+  <p class="note">Le justificatif bancaire externe, lorsqu’il est disponible, est conservé séparément dans le dossier de ce versement.</p>
+  <div class="signatures"><div class="signature">Gestionnaire</div><div class="signature">Visa / cachet UFHOB</div></div>
+  <footer class="footer">Bordereau interne UFHOB — Référence serveur {{ reference }}</footer>
+</body>
+</html>

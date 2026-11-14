@@ -1,9 +1,9 @@
-# formations/models.py
-
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 from unidecode import unidecode
+from django_ckeditor_5.fields import CKEditor5Field
 
 
 # ==================================================
@@ -23,7 +23,7 @@ class Cycle(models.Model):
     theme = models.CharField(
         max_length=20,
         choices=THEME_CHOICES,
-        default="accent",
+        default="accent",  # ✅ CORRIGÉ : était "primary" qui n'existe pas
     )
 
     min_duration_years = models.PositiveSmallIntegerField()
@@ -32,8 +32,6 @@ class Cycle(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Cycle"
-        verbose_name_plural = "Cycles"
         ordering = ["min_duration_years"]
 
     def __str__(self):
@@ -60,10 +58,6 @@ class Diploma(models.Model):
         ]
     )
 
-    class Meta:
-        verbose_name = "Diplôme"
-        verbose_name_plural = "Diplômes"
-
     def __str__(self):
         return self.name
 
@@ -77,8 +71,6 @@ class Filiere(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Filière"
-        verbose_name_plural = "Filières"
         ordering = ["name"]
 
     def __str__(self):
@@ -88,23 +80,37 @@ class Filiere(models.Model):
 # ==================================================
 # PROGRAMME
 # ==================================================
+class ProgrammeQuerySet(models.QuerySet):
+    """Lecture canonique du catalogue institutionnel selon son état public."""
+
+    def public(self):
+        return self.filter(
+            is_active=True, is_public=True, is_archived=False,
+            cycle__is_active=True, filiere__is_active=True,
+        ).filter(models.Q(school__isnull=True) | models.Q(school__is_active=True))
+
+    def accepting_admissions(self):
+        return self.public().filter(admissions_open=True)
+
+    def available_on(self, branch):
+        """Campus eligibility, including the legacy null-School transition."""
+        from django.db.models import Q
+
+        branch_id = getattr(branch, "pk", branch)
+        if not branch_id:
+            return self.none()
+        return self.filter(
+            Q(school__isnull=True) | Q(
+                school__is_active=True,
+                school__school_branches__branch_id=branch_id,
+                school__school_branches__is_active=True,
+            )
+        ).distinct()
+
+
 class Programme(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, blank=True)
-
-    # ==================================================
-    # LIEN VERS L'ÉCOLE (NOUVEAU - UFHOB)
-    # ==================================================
-    school = models.ForeignKey(
-        'schools.School',
-        on_delete=models.PROTECT,
-        related_name="programmes",
-        verbose_name="École",
-        help_text="École à laquelle appartient ce programme (EsMed, ESGA, FATEC)",
-        null=True,
-        blank=True
-    )
-    # ==================================================
 
     filiere = models.ForeignKey(
         Filiere,
@@ -122,10 +128,23 @@ class Programme(models.Model):
         related_name="programmes"
     )
 
+    # ==================================================
+    # ÉCOLE PRINCIPALE
+    # ==================================================
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        related_name="programmes",
+        null=True,
+        blank=True,
+        verbose_name="École",
+        help_text="École à laquelle appartient le programme.",
+    )
+
     duration_years = models.PositiveSmallIntegerField()
 
     short_description = models.CharField(max_length=300)
-    description = models.TextField()
+    description = CKEditor5Field("Description", config_name="default")
 
     # ==================================================
     # CONTENU LANDING PAGE
@@ -153,32 +172,101 @@ class Programme(models.Model):
     )
 
     # ==================================================
+    # SEO / RESEAUX SOCIAUX (CAMPAGNES FACEBOOK)
+    # ==================================================
 
+    meta_title = models.CharField(
+        max_length=70,
+        blank=True,
+        help_text="Titre SEO/reseaux sociaux. Laisser vide pour utiliser le titre du programme."
+    )
+
+    meta_description = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text="Description SEO/reseaux sociaux. Laisser vide pour utiliser la description courte."
+    )
+
+    og_image = models.ImageField(
+        upload_to="programmes/og_images/",
+        blank=True,
+        null=True,
+        help_text="Image dediee au partage social (recommande 1200x630px). Laisser vide pour utiliser l'illustration du programme."
+    )
+
+    # ==================================================
+
+    # Le statut institutionnel, la publication et l'admission restent distincts.
     is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(default=True, db_index=True)
+    admissions_open = models.BooleanField(default=True, db_index=True)
+    is_archived = models.BooleanField(default=False, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True, db_index=True)
     is_featured = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)  # ✅ NOUVEAU
+
+    objects = ProgrammeQuerySet.as_manager()
 
     class Meta:
-        verbose_name = "Programme"
-        verbose_name_plural = "Programmes"
         ordering = ["title"]
         indexes = [
             models.Index(fields=["is_active"]),
             models.Index(fields=["is_featured"]),
-            models.Index(fields=["school"]),  # Index pour filtrage par école
         ]
 
     def __str__(self):
-        if self.school:
-            return f"{self.title} ({self.school.short_name})"
         return self.title
 
     def get_absolute_url(self):
         return reverse("formations:detail", args=[self.slug])
 
+    @property
+    def effective_meta_title(self):
+        return self.meta_title or self.title
+
+    @property
+    def effective_meta_description(self):
+        return self.meta_description or self.short_description
+
+    @property
+    def effective_og_image(self):
+        return self.og_image or self.illustration
+
+    def archive(self):
+        """Retire le programme des flux vivants sans détruire son historique."""
+        self.is_archived = True
+        self.is_active = False
+        self.admissions_open = False
+        self.is_featured = False
+        self.archived_at = timezone.now()
+        self.save(update_fields=[
+            "is_archived", "is_active", "admissions_open", "is_featured",
+            "archived_at", "updated_at",
+        ])
+
     def save(self, *args, **kwargs):
+        if self.is_archived:
+            self.is_active = False
+            self.admissions_open = False
+            self.is_featured = False
+            if self.archived_at is None:
+                self.archived_at = timezone.now()
+        if self.pk:
+            previous_school_id = type(self).objects.filter(pk=self.pk).values_list("school_id", flat=True).first()
+            if previous_school_id != self.school_id:
+                from django.core.exceptions import ValidationError
+                from formations.availability import validate_programme_branch
+
+                used = self.academic_classes.exists() or self.candidatures.exists()
+                if previous_school_id and used:
+                    raise ValidationError({"school": "L'école d'un programme déjà utilisé ne peut pas être changée : son historique doit être conservé."})
+                if self.school_id:
+                    branch_ids = set(self.academic_classes.values_list("branch_id", flat=True))
+                    branch_ids.update(self.candidatures.values_list("branch_id", flat=True))
+                    for branch_id in branch_ids:
+                        validate_programme_branch(self, branch_id)
         if not self.slug:
             base = unidecode(self.title).lower()
             base = base.replace("'", "").replace("'", "")
@@ -222,8 +310,6 @@ class ProgrammeYear(models.Model):
     year_number = models.PositiveSmallIntegerField()
 
     class Meta:
-        verbose_name = "Année de programme"
-        verbose_name_plural = "Années de programme"
         unique_together = ("programme", "year_number")
         ordering = ["year_number"]
 
@@ -245,9 +331,7 @@ class Fee(models.Model):
     due_month = models.CharField(max_length=50)
 
     class Meta:
-        verbose_name = "Frais"
-        verbose_name_plural = "Frais"
-        ordering = ["amount"]
+        ordering = ["programme_year", "label"]
         unique_together = ("programme_year", "label")
 
     def __str__(self):
@@ -279,8 +363,6 @@ class ProgrammeQuickFact(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        verbose_name = "Fait rapide"
-        verbose_name_plural = "Faits rapides"
         ordering = ["order", "id"]
         unique_together = ("programme", "icon", "label")
 
@@ -312,8 +394,6 @@ class ProgrammeTab(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Onglet"
-        verbose_name_plural = "Onglets"
         ordering = ["order", "id"]
         unique_together = ("programme", "slug")
 
@@ -346,8 +426,6 @@ class ProgrammeSection(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        verbose_name = "Section"
-        verbose_name_plural = "Sections"
         ordering = ["order", "id"]
 
 
@@ -365,8 +443,6 @@ class CompetenceBlock(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        verbose_name = "Bloc de compétences"
-        verbose_name_plural = "Blocs de compétences"
         ordering = ["order", "id"]
 
 
@@ -384,8 +460,6 @@ class CompetenceItem(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        verbose_name = "Item de compétence"
-        verbose_name_plural = "Items de compétences"
         ordering = ["order", "id"]
 
 
@@ -396,10 +470,6 @@ class RequiredDocument(models.Model):
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
     is_mandatory = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = "Document requis"
-        verbose_name_plural = "Documents requis"
 
     def __str__(self):
         return self.name
@@ -417,6 +487,4 @@ class ProgrammeRequiredDocument(models.Model):
     )
 
     class Meta:
-        verbose_name = "Document requis pour programme"
-        verbose_name_plural = "Documents requis pour programmes"
         unique_together = ("programme", "document")
