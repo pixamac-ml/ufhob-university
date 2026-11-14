@@ -1,0 +1,59 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{% if partner %}Modifier le partenaire{% else %}Nouveau partenaire{% endif %}{% endblock %}
+{% block page_subtitle %}{% if partner %}{{ partner.name }}{% else %}Ajouter un partenaire{% endif %}{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-handshake" style="margin-right: 0.5rem;"></i>
+            {% if partner %}Modifier : {{ partner.name }}{% else %}Nouveau partenaire{% endif %}
+        </h3>
+        <a href="{% url 'superadmin:partner_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_name">Nom <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="id_name" name="name" class="form-input"
+                       value="{{ partner.name|default:'' }}" required
+                       placeholder="Nom du partenaire">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_website">Site web</label>
+                <input type="url" id="id_website" name="website" class="form-input"
+                       value="{{ partner.website|default:'' }}"
+                       placeholder="https://www.example.com">
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_active" id="id_is_active"
+                           {% if partner.is_active or not partner %}checked{% endif %}
+                           style="width: 1rem; height: 1rem; cursor: pointer;">
+                    <span class="form-label" style="margin: 0;">Partenaire actif (visible sur le site)</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {% if partner %}Mettre à jour{% else %}Ajouter le partenaire{% endif %}
+                </button>
+                <a href="{% url 'superadmin:partner_list' %}" class="btn btn-outline btn-secondary">Annuler</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Inscriptions{% endblock %}
+{% block page_subtitle %}Gestion des inscriptions{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Rechercher une inscription...">
+        </div>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Étudiant</th>
+                    <th>Formation</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inscription in inscriptions %}
+                <tr>
+                    <td>
+                        {% if inscription.student %}
+                            <strong>{{ inscription.student.user.get_full_name|default:inscription.student.user.username }}</strong>
+                            <div style="font-size: 0.8rem; color: #64748b;">{{ inscription.student.matricule|default:"" }}</div>
+                        {% else %}
+                            <span style="color: #94a3b8;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ inscription.programme.title|default:inscription.formation.title|default:"—" }}</td>
+                    <td>
+                        {% if inscription.status == 'active' %}
+                            <span class="badge-status badge-success">Actif</span>
+                        {% elif inscription.status == 'pending' %}
+                            <span class="badge-status badge-warning">En attente</span>
+                        {% elif inscription.status == 'cancelled' %}
+                            <span class="badge-status badge-danger">Annulé</span>
+                        {% elif inscription.status == 'completed' %}
+                            <span class="badge-status badge-draft">Terminé</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">{{ inscription.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ inscription.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <a href="{% url 'superadmin:inscription_detail' inscription.id %}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune inscription enregistrée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if inscriptions.has_other_pages %}
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if inscriptions.has_previous %}
+        <a href="?page={{ inscriptions.previous_page_number }}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        {% for num in inscriptions.paginator.page_range %}
+        {% if inscriptions.number == num %}
+        <span class="btn btn-sm btn-primary">{{ num }}</span>
+        {% elif num > inscriptions.number|add:'-3' and num < inscriptions.number|add:'3' %}
+        <a href="?page={{ num }}" class="btn btn-sm btn-outline">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+        {% if inscriptions.has_next %}
+        <a href="?page={{ inscriptions.next_page_number }}" class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

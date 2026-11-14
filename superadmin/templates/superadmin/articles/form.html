@@ -1,0 +1,72 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{% if article %}Modifier l'article{% else %}Nouvel article{% endif %}{% endblock %}
+{% block page_subtitle %}{% if article %}Modifier : {{ article.title|truncatechars:40 }}{% else %}Créer un article{% endif %}{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-newspaper" style="margin-right: 0.5rem;"></i>
+            {% if article %}Modifier l'article{% else %}Nouvel article{% endif %}
+        </h3>
+        <a href="{% url 'superadmin:article_list' %}" class="btn btn-sm btn-outline">
+            <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="id_title">Titre <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="id_title" name="title" class="form-input"
+                       value="{{ article.title|default:'' }}" required
+                       placeholder="Titre de l'article">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="id_category">Catégorie</label>
+                    <select id="id_category" name="category" class="form-input">
+                        <option value="">-- Aucune catégorie --</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}"
+                            {% if article.category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_status">Statut</label>
+                    <select id="id_status" name="status" class="form-input">
+                        <option value="draft" {% if article.status == 'draft' or not article %}selected{% endif %}>Brouillon</option>
+                        <option value="published" {% if article.status == 'published' %}selected{% endif %}>Publié</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="id_content">Contenu <span style="color: #ef4444;">*</span></label>
+                <textarea id="id_content" name="content" class="form-textarea" rows="15"
+                          required placeholder="Contenu de l'article...">{{ article.content|default:'' }}</textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {% if article %}Mettre à jour{% else %}Publier l'article{% endif %}
+                </button>
+                <a href="{% url 'superadmin:article_list' %}" class="btn btn-outline btn-secondary">Annuler</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

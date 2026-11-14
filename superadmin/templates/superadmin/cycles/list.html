@@ -1,0 +1,64 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Cycles{% endblock %}
+{% block page_subtitle %}Gestion des cycles académiques{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Rechercher un cycle...">
+        </div>
+        <a href="{% url 'superadmin:cycle_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouveau cycle
+        </a>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Formations</th>
+                    <th>Description</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cycle in cycles %}
+                <tr>
+                    <td><strong>{{ cycle.name }}</strong></td>
+                    <td>{{ cycle.formations_count|default:0 }}</td>
+                    <td>{{ cycle.description|truncatechars:80|default:"—" }}</td>
+                    <td class="text-right">
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <a href="{% url 'superadmin:cycle_edit' cycle.id %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{% url 'superadmin:cycle_delete' cycle.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Supprimer le cycle « {{ cycle.name }} » ?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucun cycle enregistré
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

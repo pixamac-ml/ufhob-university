@@ -1,0 +1,140 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Tableau de bord{% endblock %}
+{% block page_subtitle %}Vue d'ensemble de l'université{% endblock %}
+
+{% block content_main %}
+
+<!-- Stats Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(30,79,111,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-graduation-cap" style="color: var(--primary); font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ formations_count|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Formations</div>
+                <div style="font-size: 0.75rem; color: #22c55e;">{{ formations_published|default:0 }} publiées</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(245,158,11,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-user-plus" style="color: var(--accent); font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ candidatures_count|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Candidatures</div>
+                <div style="font-size: 0.75rem; color: #f59e0b;">{{ candidatures_pending|default:0 }} en attente</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(29,181,176,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-user-check" style="color: var(--secondary); font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ inscriptions_count|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Inscriptions</div>
+                <div style="font-size: 0.75rem; color: #22c55e;">{{ inscriptions_active|default:0 }} actives</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(34,197,94,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-users" style="color: #22c55e; font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ students_count|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Étudiants</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(59,130,246,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-money-bill-wave" style="color: #3b82f6; font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">{{ payments_total|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Paiements (CDF)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
+            <div style="width: 48px; height: 48px; background: rgba(239,68,68,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-envelope" style="color: #ef4444; font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--primary);">{{ messages_unread|default:0 }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Messages non lus</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Recent Candidatures -->
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-clock" style="margin-right: 0.5rem;"></i>Candidatures récentes
+        </h3>
+        <a href="{% url 'superadmin:candidature_list' %}" class="btn btn-sm btn-outline">
+            Voir tout <i class="fas fa-arrow-right" style="margin-left: 0.25rem;"></i>
+        </a>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Candidat</th>
+                    <th>Programme</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in recent_candidatures %}
+                <tr>
+                    <td><strong>{{ c.user.get_full_name|default:c.user.username }}</strong></td>
+                    <td>{{ c.programme.title|default:"—" }}</td>
+                    <td>
+                        {% if c.status == 'approved' %}
+                            <span class="badge-status badge-success">Approuvé</span>
+                        {% elif c.status == 'rejected' %}
+                            <span class="badge-status badge-danger">Rejeté</span>
+                        {% elif c.status == 'pending' %}
+                            <span class="badge-status badge-warning">En attente</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">{{ c.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ c.submitted_at|date:"d/m/Y"|default:c.created_at|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune candidature récente
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

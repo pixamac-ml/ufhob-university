@@ -1,0 +1,81 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Paiement #{{ payment.id }}{% endblock %}
+{% block page_subtitle %}Détails du paiement{% endblock %}
+
+{% block content_main %}
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+
+    <div class="card">
+        <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-money-bill-wave" style="margin-right: 0.5rem;"></i>Informations du paiement
+            </h3>
+        </div>
+        <div class="card-body">
+            <dl style="display: grid; grid-template-columns: 180px 1fr; gap: 0.75rem;">
+                <dt style="font-weight: 600; color: #64748b;">Référence</dt>
+                <dd>#{{ payment.id }}{% if payment.reference %} — {{ payment.reference }}{% endif %}</dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Étudiant</dt>
+                <dd>
+                    {% if payment.student %}
+                        {{ payment.student.user.get_full_name|default:payment.student.user.username }}
+                    {% elif payment.inscription.student %}
+                        {{ payment.inscription.student.user.get_full_name|default:"—" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Inscription</dt>
+                <dd>{{ payment.inscription.programme.title|default:"—" }}</dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Montant</dt>
+                <dd style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">{{ payment.amount }} CDF</dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Statut</dt>
+                <dd>
+                    {% if payment.status == 'paid' %}
+                        <span class="badge-status badge-success">Payé</span>
+                    {% elif payment.status == 'pending' %}
+                        <span class="badge-status badge-warning">En attente</span>
+                    {% elif payment.status == 'failed' %}
+                        <span class="badge-status badge-danger">Échoué</span>
+                    {% else %}
+                        <span class="badge-status badge-draft">{{ payment.status }}</span>
+                    {% endif %}
+                </dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Mode de paiement</dt>
+                <dd>{{ payment.payment_method|default:"—" }}</dd>
+
+                <dt style="font-weight: 600; color: #64748b;">Date</dt>
+                <dd>{{ payment.created_at|date:"d/m/Y H:i" }}</dd>
+
+                {% if payment.notes %}
+                <dt style="font-weight: 600; color: #64748b;">Notes</dt>
+                <dd>{{ payment.notes }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <a href="{% url 'superadmin:payment_list' %}" class="btn btn-outline btn-secondary" style="text-align: center;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i>Retour à la liste
+            </a>
+            {% if payment.inscription.student %}
+            <a href="{% url 'superadmin:student_detail' payment.inscription.student.id %}" class="btn btn-primary" style="text-align: center;">
+                <i class="fas fa-user" style="margin-right: 0.5rem;"></i>Voir l'étudiant
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}Candidatures{% endblock %}
+{% block page_subtitle %}Gestion des candidatures d'admission{% endblock %}
+
+{% block content_main %}
+
+<!-- Filter Form -->
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 1rem;">
+        <form method="GET" action="" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                <label class="form-label">Filtrer par statut</label>
+                <select name="status" class="form-input" onchange="this.form.submit()">
+                    <option value="">Tous les statuts</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: fit-content;">
+                <i class="fas fa-filter"></i> Filtrer
+            </button>
+            {% if request.GET.status %}
+            <a href="{% url 'superadmin:candidature_list' %}" class="btn btn-outline btn-secondary" style="height: fit-content;">
+                <i class="fas fa-times"></i> Réinitialiser
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-user-plus" style="margin-right: 0.5rem;"></i>
+            Candidatures {% if request.GET.status %}(filtrées){% endif %}
+        </h3>
+    </div>
+
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Candidat</th>
+                    <th>Programme</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidature in candidatures %}
+                <tr>
+                    <td>
+                        <strong>{{ candidature.user.get_full_name|default:candidature.user.username }}</strong>
+                        <div style="font-size: 0.8rem; color: #64748b;">{{ candidature.user.email }}</div>
+                    </td>
+                    <td>{{ candidature.programme.title|default:"—" }}</td>
+                    <td>
+                        {% if candidature.status == 'approved' %}
+                            <span class="badge-status badge-success">Approuvé</span>
+                        {% elif candidature.status == 'rejected' %}
+                            <span class="badge-status badge-danger">Rejeté</span>
+                        {% elif candidature.status == 'pending' %}
+                            <span class="badge-status badge-warning">En attente</span>
+                        {% elif candidature.status == 'reviewing' %}
+                            <span class="badge-status badge-draft">En révision</span>
+                        {% else %}
+                            <span class="badge-status badge-draft">{{ candidature.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ candidature.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-right">
+                        <a href="{% url 'superadmin:candidature_detail' candidature.id %}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        Aucune candidature trouvée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if candidatures.has_other_pages %}
+    <div style="padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if candidatures.has_previous %}
+        <a href="?page={{ candidatures.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+
+        {% for num in candidatures.paginator.page_range %}
+        {% if candidatures.number == num %}
+        <span class="btn btn-sm btn-primary">{{ num }}</span>
+        {% elif num > candidatures.number|add:'-3' and num < candidatures.number|add:'3' %}
+        <a href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="btn btn-sm btn-outline">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if candidatures.has_next %}
+        <a href="?page={{ candidatures.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="btn btn-sm btn-outline">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

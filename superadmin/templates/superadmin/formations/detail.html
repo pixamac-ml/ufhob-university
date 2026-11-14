@@ -1,0 +1,50 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ formation.title }}{% endblock %}
+{% block page_subtitle %}Détails de la formation{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-graduation-cap" style="margin-right: 0.5rem;"></i>{{ formation.title }}
+        </h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'superadmin:formation_edit' formation.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit" style="margin-right: 0.25rem;"></i> Modifier
+            </a>
+            <a href="{% url 'superadmin:formation_list' %}" class="btn btn-sm btn-outline">
+                <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <dl style="display: grid; grid-template-columns: 200px 1fr; gap: 1rem;">
+            <dt style="font-weight: 600; color: #64748b;">Titre</dt>
+            <dd>{{ formation.title }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Cycle</dt>
+            <dd>{{ formation.cycle.name|default:"—" }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Durée</dt>
+            <dd>{{ formation.duration_years }} an{{ formation.duration_years|pluralize }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Statut</dt>
+            <dd>
+                {% if formation.is_active %}
+                    <span class="badge-status badge-success">Actif</span>
+                {% else %}
+                    <span class="badge-status badge-draft">Inactif</span>
+                {% endif %}
+            </dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Description</dt>
+            <dd style="white-space: pre-wrap;">{{ formation.short_description|default:"Aucune description" }}</dd>
+        </dl>
+    </div>
+</div>
+
+{% endblock %}

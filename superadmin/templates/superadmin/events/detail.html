@@ -1,0 +1,44 @@
+{% extends "superadmin/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ event.title|truncatechars:50 }}{% endblock %}
+{% block page_subtitle %}Détails de l'événement{% endblock %}
+
+{% block content_main %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size: 1rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>{{ event.title }}
+        </h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'superadmin:event_edit' event.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit" style="margin-right: 0.25rem;"></i> Modifier
+            </a>
+            <a href="{% url 'superadmin:event_list' %}" class="btn btn-sm btn-outline">
+                <i class="fas fa-arrow-left" style="margin-right: 0.25rem;"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <dl style="display: grid; grid-template-columns: 160px 1fr; gap: 0.75rem;">
+            <dt style="font-weight: 600; color: #64748b;">Titre</dt>
+            <dd>{{ event.title }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Date de début</dt>
+            <dd>{{ event.start_date|date:"d/m/Y" }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Date de fin</dt>
+            <dd>{{ event.end_date|date:"d/m/Y"|default:"—" }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Lieu</dt>
+            <dd>{{ event.location|default:"—" }}</dd>
+
+            <dt style="font-weight: 600; color: #64748b;">Description</dt>
+            <dd style="white-space: pre-wrap;">{{ event.description|default:"Aucune description" }}</dd>
+        </dl>
+    </div>
+</div>
+
+{% endblock %}
