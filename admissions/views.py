@@ -23,6 +23,8 @@ from formations.models import Programme
 from academics.services.academic_years import get_current_academic_year_name
 from .forms import CandidatureForm
 from .models import CandidatureDocument, Candidature
+from .tracking import capture_tracking, admission_url, tracked_redirect_url
+from formations.fatec_esga import canonical_slug
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ TUNNEL_MAX_DOCUMENT_SIZE = 10 * 1024 * 1024
 
 
 def _programme_cycle_key(programme):
-    return (programme.cycle.slug or "").lower()
+    return (programme.cycle.slug or "").lower() if programme.cycle_id else "programme"
 
 
 def _build_formation_cards(cycle_slug="all", branch_id=None, school_code="", page=1, per_page=6):
@@ -54,7 +56,9 @@ def _build_formation_cards(cycle_slug="all", branch_id=None, school_code="", pag
         .prefetch_related("years__fees")
         .order_by("title", "pk")
     )
-    if cycle_slug and cycle_slug != "all":
+    if cycle_slug == "programme":
+        formations_qs = formations_qs.filter(cycle__isnull=True)
+    elif cycle_slug and cycle_slug != "all":
         formations_qs = formations_qs.filter(cycle__slug__iexact=cycle_slug)
 
     page_obj = Paginator(formations_qs, per_page).get_page(page)
@@ -69,8 +73,8 @@ def _build_formation_cards(cycle_slug="all", branch_id=None, school_code="", pag
             {
                 "title": formation.title,
                 "slug": formation.slug,
-                "cycle": formation.cycle.name,
-                "diploma": formation.diploma_awarded.name,
+                "cycle": formation.cycle.name if formation.cycle_id else "",
+                "diploma": formation.diploma_awarded.name if formation.diploma_awarded_id else "",
                 "duration_years": formation.duration_years,
                 "first_year_cost": first_year_cost,
                 "short_description": formation.short_description,
@@ -144,7 +148,7 @@ def _initial_tunnel_state(request):
         cycle_filter = "all"
 
     school_token = (request.GET.get("school") or request.GET.get("school_code") or "").strip()
-    school = School.objects.filter(is_active=True, code__iexact=school_token).first() if school_token else None
+    school = School.objects.filter(is_active=True, is_public=True, code__iexact=school_token).first() if school_token else None
 
     branch_token = (
         request.GET.get("branch")
@@ -166,6 +170,8 @@ def _initial_tunnel_state(request):
     formation_slug = (
         request.GET.get("formation") or request.GET.get("formation_slug") or ""
     ).strip()
+    from formations.fatec_esga import canonical_slug
+    formation_slug = canonical_slug(formation_slug)
     programme = (
         Programme.objects.accepting_admissions().filter(slug=formation_slug)
         .select_related("school", "cycle")
@@ -173,6 +179,9 @@ def _initial_tunnel_state(request):
         if formation_slug
         else None
     )
+    if formation_slug and not programme:
+        from django.http import Http404
+        raise Http404("La formation demandée est inconnue ou fermée aux candidatures. Choisissez une formation depuis le catalogue.")
     if programme:
         programme_cycle = _programme_cycle_key(programme)
         form_data.update(
@@ -270,11 +279,12 @@ def _first_tunnel_error(errors):
 
 
 def admission_tunnel(request):
+    campaign_tracking = capture_tracking(request)
     wants_json = request.headers.get("Accept", "").startswith("application/json")
     documents_deferred = request.POST.get("documents_deferred") == "on"
     branches = Branch.objects.filter(is_active=True, accepts_online_registration=True).order_by("name")
     schools = list(
-        School.objects.filter(is_active=True)
+        School.objects.filter(is_active=True, is_public=True)
         .prefetch_related(
             Prefetch(
                 "school_branches",
@@ -308,7 +318,7 @@ def admission_tunnel(request):
             "current_level": request.POST.get("current_level", "").strip(),
             "current_cycle_name": request.POST.get("current_cycle_name", "").strip(),
             "formation": request.POST.get("formation", "").strip(),
-            "formation_slug": request.POST.get("formation_slug", "").strip(),
+            "formation_slug": canonical_slug(request.POST.get("formation_slug", "").strip()),
             "branch_id": request.POST.get("branch_id", "").strip(),
             "branch_name": request.POST.get("branch_name", "").strip(),
             "branch_city": request.POST.get("branch_city", "").strip(),
@@ -394,7 +404,7 @@ def admission_tunnel(request):
 
         school = None
         if form_data["school_code"]:
-            school = School.objects.filter(is_active=True, code__iexact=form_data["school_code"]).first()
+            school = School.objects.filter(is_active=True, is_public=True, code__iexact=form_data["school_code"]).first()
             if not school:
                 backend_errors["school_code"] = "L'ecole selectionnee n'est plus disponible."
             else:
@@ -486,6 +496,7 @@ def admission_tunnel(request):
                             "Engagement du candidat : Je transmettrai les pièces manquantes ultérieurement. "
                             + "Pièces à compléter : " + ", ".join(missing_documents)
                         ) if documents_deferred else "",
+                        campaign_tracking=campaign_tracking,
                     )
 
                     for document_type, uploaded_file in uploaded_documents:
@@ -497,8 +508,8 @@ def admission_tunnel(request):
 
                 messages.success(request, "Votre candidature a ete enregistree avec succes.")
                 if wants_json:
-                    return JsonResponse({"ok": True, "redirect": reverse("admissions:done", args=[candidature.pk])})
-                return redirect("admissions:done", candidature_id=candidature.id)
+                    return JsonResponse({"ok": True, "redirect": tracked_redirect_url(request, reverse("admissions:done", args=[candidature.pk]))})
+                return redirect(tracked_redirect_url(request, reverse("admissions:done", args=[candidature.pk])))
             except IntegrityError:
                 backend_errors["email"] = "Cette adresse email est deja utilisee pour cette formation cette annee."
             except Exception:
@@ -599,7 +610,7 @@ def admission_step3_campuses(request):
     campuses = []
 
     if school_code:
-        school = School.objects.filter(is_active=True, code__iexact=school_code).first()
+        school = School.objects.filter(is_active=True, is_public=True, code__iexact=school_code).first()
 
     if school:
         campuses = _build_school_campus_cards(school)
@@ -627,8 +638,8 @@ def admission_step3_cycles(request):
         if branch:
             cycles = [
                 {
-                    "slug": item["cycle__slug"],
-                    "name": item["cycle__name"],
+                    "slug": item["cycle__slug"] or "programme",
+                    "name": item["cycle__name"] or "Formations ouvertes à la candidature",
                     "min_duration_years": item["cycle__min_duration_years"],
                 }
                 for item in Programme.objects.accepting_admissions()
@@ -664,6 +675,8 @@ def apply_to_programme(request, slug):
     - prévention des doublons d'email
     """
 
+    from formations.fatec_esga import canonical_slug
+    slug = canonical_slug(slug)
     programme = get_object_or_404(
         Programme.objects.accepting_admissions(),
         slug=slug,
@@ -671,7 +684,7 @@ def apply_to_programme(request, slug):
 
     # Conserver l'ancienne URL pour les favoris existants tout en utilisant
     # exclusivement le tunnel UFHOB et ses validations Ecole/Campus.
-    return redirect(f"/admissions/?formation={programme.slug}")
+    return redirect(admission_url(request, programme))
 
     if request.method == "GET":
         return redirect(f"/admissions/?formation={programme.slug}")

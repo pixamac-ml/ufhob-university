@@ -34,6 +34,7 @@
           <h1 class="mt-4 max-w-4xl text-balance text-4xl font-bold leading-[1.05] text-white sm:text-5xl lg:text-6xl">
             {{ school.display_name }}
           </h1>
+          {% if school.official_name %}<p class="mt-4 max-w-3xl text-lg font-semibold text-white">{{ school.official_name }}</p>{% endif %}
           <p class="mt-6 max-w-2xl text-base leading-7 text-white/80 sm:text-lg sm:leading-8">
             {% if school.description %}{{ school.description }}{% else %}Découvrez les formations, les parcours et les implantations de cette composante académique de l’UFHOB.{% endif %}
           </p>
@@ -54,18 +55,18 @@
       </div>
 
       <dl class="mt-14 grid grid-cols-1 gap-6 border-t border-white/15 pt-8 sm:grid-cols-3" data-aos="fade-up">
-        <div>
+        {% if programmes %}<div>
           <dt class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Programmes publiés</dt>
           <dd class="mt-1 text-3xl font-bold text-white">{{ programmes|length }}</dd>
-        </div>
-        <div>
+        </div>{% endif %}
+        {% if cycles %}<div>
           <dt class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Cycles proposés</dt>
           <dd class="mt-1 text-3xl font-bold text-white">{{ cycles|length }}</dd>
-        </div>
-        <div>
+        </div>{% endif %}
+        {% if school_branches %}<div>
           <dt class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Implantations actives</dt>
           <dd class="mt-1 text-3xl font-bold text-white">{{ school_branches|length }}</dd>
-        </div>
+        </div>{% endif %}
       </dl>
     </div>
   </section>
@@ -88,9 +89,9 @@
         <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-ufhob-primary">
           <span>{{ programmes|length }} programme{{ programmes|length|pluralize }}</span>
           <span class="text-ufhob-border">·</span>
-          <span>{{ cycles|length }} cycle{{ cycles|length|pluralize }}</span>
+          {% if cycles %}<span>{{ cycles|length }} cycle{{ cycles|length|pluralize }}</span>{% endif %}
           <span class="text-ufhob-border">·</span>
-          <span>{{ school_branches|length }} campus</span>
+          {% if school_branches %}<span>{{ school_branches|length }} campus</span>{% endif %}
         </div>
       </div>
       <div class="school-media relative" data-aos="fade-up">
@@ -136,7 +137,7 @@
       {% for group in programmes_by_cycle %}
       <div class="mt-12" data-aos="fade-up">
         <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-ufhob-border pb-4">
-          <h3 class="text-xl font-bold text-ufhob-primary sm:text-2xl">{{ group.cycle.name }}</h3>
+          <h3 class="text-xl font-bold text-ufhob-primary sm:text-2xl">{{ group.cycle.name|default:"Formations" }}</h3>
           <p class="text-sm font-semibold text-ufhob-muted">{{ group.programmes|length }} programme{{ group.programmes|length|pluralize }}</p>
         </div>
         <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">

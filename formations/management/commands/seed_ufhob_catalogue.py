@@ -66,7 +66,7 @@ class Command(BaseCommand):
         # =====================================================
         SCHOOL_NAMES = {
             "ESMED": "École des Sciences Médicales Félix Houphouët Boigny",
-            "FATEC": "Faculté de Technologies Appliquées Cheick Modibo Diarra",
+            "FATEC": "Faculté des Technologies Appliquées Cheick Modibo Diarra",
             "ESGA": "École Supérieure de Gestion Alassane Dramane Ouattara",
         }
 
@@ -212,9 +212,9 @@ class Command(BaseCommand):
                 "filiere": "Sciences de la Santé",
                 "cycle": "Doctorat",
                 "diploma": "Doctorat en Pharmacie",
-                "duration_years": 6,
-                "semestres": 12,
-                "credits": 360,
+                "duration_years": 7,
+                "semestres": 14,
+                "credits": 420,
                 "short": "Doctorat en Pharmacie",
                 "description": (
                     "<p>Le doctorat en pharmacie forme des professionnels de la santé compétents "
@@ -229,15 +229,15 @@ class Command(BaseCommand):
                 "filiere": "Sciences de la Santé",
                 "cycle": "Doctorat",
                 "diploma": "Doctorat en Chirurgie Dentaire",
-                "duration_years": 5,
-                "semestres": 10,
-                "credits": 300,
+                "duration_years": 6,
+                "semestres": 12,
+                "credits": 360,
                 "short": "Doctorat en Chirurgie Dentaire",
                 "description": (
                     "<p>Le doctorat en chirurgie dentaire prépare des praticiens capables "
                     "d'exercer la médecine bucco-dentaire avec autonomie et rigueur clinique.</p>"
                     "<p>La formation allie sciences fondamentales, pratiques cliniques et éthique "
-                    "professionnelle sur cinq années.</p>"
+                    "professionnelle sur six années.</p>"
                 ),
             },
         ]

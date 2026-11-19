@@ -86,8 +86,9 @@ class ProgrammeQuerySet(models.QuerySet):
     def public(self):
         return self.filter(
             is_active=True, is_public=True, is_archived=False,
-            cycle__is_active=True, filiere__is_active=True,
-        ).filter(models.Q(school__isnull=True) | models.Q(school__is_active=True))
+            filiere__is_active=True,
+        ).filter(models.Q(cycle__isnull=True) | models.Q(cycle__is_active=True)).filter(
+            models.Q(school__isnull=True) | models.Q(school__is_active=True, school__is_public=True))
 
     def accepting_admissions(self):
         return self.public().filter(admissions_open=True)
@@ -119,11 +120,15 @@ class Programme(models.Model):
     )
     cycle = models.ForeignKey(
         Cycle,
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="programmes"
     )
     diploma_awarded = models.ForeignKey(
         Diploma,
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="programmes"
     )
@@ -141,7 +146,12 @@ class Programme(models.Model):
         help_text="École à laquelle appartient le programme.",
     )
 
-    duration_years = models.PositiveSmallIntegerField()
+    duration_years = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    # A public offer may precede validation of its degree, duration and fees.
+    campaign_published = models.BooleanField(default=False, db_index=True)
+    delivery_modes = models.CharField(max_length=200, blank=True)
+    registration_notice = models.CharField(max_length=100, blank=True)
 
     short_description = models.CharField(max_length=300)
     description = CKEditor5Field("Description", config_name="default")
@@ -220,6 +230,8 @@ class Programme(models.Model):
         return self.title
 
     def get_absolute_url(self):
+        if self.school_id and (self.campaign_published or self.school.code in ('FATEC', 'ESGA')):
+            return reverse("formations:school_detail", args=[self.school.code.lower(), self.slug])
         return reverse("formations:detail", args=[self.slug])
 
     @property

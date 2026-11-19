@@ -29,12 +29,12 @@ class Institution(models.Model):
     name = models.CharField(max_length=255, verbose_name="Nom complet")
     short_name = models.CharField(max_length=100, blank=True, verbose_name="Nom court")
 
-    address = models.CharField(max_length=255, verbose_name="Adresse")
-    city = models.CharField(max_length=100, verbose_name="Ville")
+    address = models.CharField(max_length=255, blank=True, verbose_name="Adresse")
+    city = models.CharField(max_length=100, blank=True, verbose_name="Ville")
     country = models.CharField(max_length=100, default="Mali", verbose_name="Pays")
 
     phone = models.CharField(max_length=50, verbose_name="Téléphone")
-    email = models.EmailField(verbose_name="Email")
+    email = models.EmailField(blank=True, verbose_name="Email")
 
     is_active = models.BooleanField(default=True)
 
@@ -1185,6 +1185,13 @@ class School(models.Model):
     is_active = models.BooleanField(
         default=True,
         verbose_name="Active",
+        db_index=True,
+    )
+
+    # Visibilité sur le site public uniquement : l'école reste active en interne.
+    is_public = models.BooleanField(
+        default=True,
+        verbose_name="Visible sur le site public",
         db_index=True,
     )
 

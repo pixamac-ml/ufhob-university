@@ -55,6 +55,7 @@
 	--ufhob-accent-soft: #FEB465;
 	--ufhob-accent-soft-rgb: 254 180 101;
 
+
 	--ufhob-ivory: #FFFDF3;
 	--ufhob-ivory-rgb: 255 253 243;
 	--ufhob-white: #FFFFFF;
@@ -291,6 +292,34 @@
 	content: "";
 	background: var(--ufhob-accent);
 	vertical-align: 0.05rem;
+  }
+
+  /* Bouton WhatsApp flottant : discret sur mobile, zone sûre respectée. */
+  .whatsapp-float {
+	position: fixed;
+	right: calc(1rem + env(safe-area-inset-right, 0px));
+	bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+	z-index: 40;
+	display: inline-flex;
+	height: 3rem;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: 999px;
+	background: #15803d;
+	padding-inline: 1.1rem;
+	font-weight: 700;
+	color: #fff;
+	box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+	transition: transform 180ms var(--ufhob-ease), opacity 180ms var(--ufhob-ease);
+  }
+  .whatsapp-float:hover { transform: translateY(-2px); }
+  /* Espace en bas de page : le bouton ne recouvre jamais la dernière ligne. */
+  .institutional-footer { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  .whatsapp-float i { font-size: 1.35rem; line-height: 1; }
+  @media (max-width: 639px) {
+	.whatsapp-float { right: calc(0.75rem + env(safe-area-inset-right, 0px)); bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); height: 2.75rem; width: 2.75rem; padding: 0; opacity: 0.92; }
+	.whatsapp-float__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   }
 
   .cinematic-hero {

@@ -1,7 +1,8 @@
 # Phase initiale ACME uniquement. Aucun portail ni media n'est expose en HTTP.
 server {
     listen 80;
-    server_name ufhob.example.com;
+    listen [::]:80;
+    server_name ufhob-mali.ml;
     location ^~ /.well-known/acme-challenge/ {
         root /var/lib/ufhob/acme;
     }

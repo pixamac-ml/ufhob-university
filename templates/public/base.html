@@ -6,7 +6,9 @@
   <c-public.navbar :schools="public_schools" logo_url="{{ public_site_logo_url }}" />
 {% endblock %}
 
-{% block public_floating_widget %}{% endblock %}
+{% block public_floating_widget %}
+{% if public_whatsapp_url %}<a href="{{ public_whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="Contacter UFHOB-Mali sur WhatsApp" class="whatsapp-float"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span class="whatsapp-float__label">WhatsApp</span></a>{% endif %}
+{% endblock %}
 
 {% block public_footer %}
   <c-public.footer logo_url="{{ public_site_logo_url }}" :institution="public_institution" :site_configuration="public_site_configuration" :public_legal_links="public_legal_links" />

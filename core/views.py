@@ -133,7 +133,7 @@ def sitemap(request):
             "url": reverse("core:school_detail", kwargs={"code": school.code.lower()}),
             "description": school.official_name or "Composante académique UFHOB.",
         }
-        for school in School.objects.filter(is_active=True).order_by("display_order", "code")
+        for school in School.objects.filter(is_active=True, is_public=True).order_by("order", "code")
     ]
     campus_links = [
         {
@@ -393,14 +393,14 @@ def home(request):
         "school", "cycle", "diploma_awarded"
     )
     schools = list(
-        School.objects.filter(is_active=True)
+        School.objects.filter(is_active=True, is_public=True)
         .prefetch_related(
             Prefetch("programmes", queryset=public_programmes, to_attr="public_programmes")
         )
         .order_by("-is_featured", "order", "code")
     )
     formations_home = list(
-        public_programmes.order_by("-is_featured", "school__order", "title")[:6]
+        public_programmes.filter(school__code__in=['FATEC','ESGA'],campaign_published=True,cycle__name='Licence').order_by("school__order", "title")[:8]
     )
 
     values = list(Value.objects.filter(is_active=True).order_by("order")[:4])
@@ -433,7 +433,7 @@ def home(request):
             Prefetch(
                 "school_branches",
                 queryset=SchoolBranch.objects.filter(
-                    is_active=True, school__is_active=True
+                    is_active=True, school__is_active=True, school__is_public=True
                 ).select_related("school").order_by("school__order", "school__code"),
                 to_attr="active_school_branches",
             )

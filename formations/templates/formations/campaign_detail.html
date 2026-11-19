@@ -1,0 +1,41 @@
+{% extends "public/base.html" %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+.campaign-hero{padding:1.5rem 0 2rem}.campaign-title{font-size:clamp(1.75rem,6vw,3rem);line-height:1.15;overflow-wrap:anywhere}.campaign-apply{display:inline-flex;justify-content:center;align-items:center;min-height:48px;padding:.9rem 1.25rem;background:#f58220;color:#102a43;font-weight:700;max-width:100%;text-align:center}.campaign-copy{max-width:70ch;line-height:1.8}.campaign-copy p{margin-bottom:1rem}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="campaign-hero bg-ufhob-ivory border-b border-ufhob-border">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <a href="{% url 'core:school_detail' code=programme.school.code|lower %}" class="text-sm font-bold text-ufhob-primary">{{ programme.school.display_name }}</a>
+    <h1 class="campaign-title mt-3 font-bold text-ufhob-primary">{{ programme.title }}</h1>
+    <p class="mt-3 font-semibold text-ufhob-secondary-dark">{{ programme.registration_notice }}</p>
+    {% if programme.admissions_open %}<a href="{{ apply_url }}" class="campaign-apply mt-4">Candidater à cette formation</a>{% endif %}
+    <p class="mt-4 text-ufhob-muted">{{ programme.short_description }}</p>
+    <p class="mt-3 text-sm text-ufhob-primary">{{ programme.delivery_modes }}</p>
+    {% if catalogue_scoped %}<p class="mt-3 text-sm text-ufhob-primary">{{ programme.cycle.name }} · {{ programme.duration_years }} ans · {{ programme.diploma_awarded.name }}</p>{% endif %}
+  </div>
+</section>
+<section class="bg-white py-10 sm:py-14">
+  <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+    <h2 class="text-2xl font-bold text-ufhob-primary">Présentation</h2>
+    <div class="campaign-copy mt-5 text-ufhob-muted">{{ programme.description|striptags|linebreaks }}</div>
+    <h2 class="mt-8 text-2xl font-bold text-ufhob-primary">Débouchés professionnels</h2>
+    <ul class="mt-4 space-y-3 text-ufhob-muted">{% for career in career_points %}<li>• {{ career }}</li>{% endfor %}</ul>
+    {% if catalogue_scoped %}
+    <h2 class="mt-8 text-2xl font-bold text-ufhob-primary">Dossier de candidature</h2>
+    <ul class="mt-4 space-y-3">{% for document in required_documents %}<li>{{ document.name }}</li>{% endfor %}</ul>
+    {% for tab in practical_tabs %}{% for section in tab.sections.all %}<p class="mt-5 campaign-copy">{{ section.content }}</p>{% endfor %}{% endfor %}
+    {% endif %}
+    {% if programme.admissions_open %}<a href="{{ apply_url }}" class="campaign-apply mt-8">Candidater à cette formation</a>{% endif %}
+    <p class="mt-6"><a href="{% url 'formations:list' %}?school={{ programme.school.code|lower }}" class="font-semibold text-ufhob-primary">Voir les autres formations →</a></p>
+  </div>
+</section>
+{% if catalogue_scoped %}
+{% if programme.cycle.name != 'Master' %}<p class="mx-auto max-w-ufhob-container px-4 py-4">Échéancier communiqué — caractère annuel des montants à confirmer.</p>{% endif %}
+{% include 'formations/fragments/_scoped_fees.html' %}
+{% endif %}
+{% endblock %}

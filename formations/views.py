@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.db.models import Prefetch, Count, Q
 from django.core.paginator import Paginator
 from django_htmx.middleware import HtmxDetails
+from django.templatetags.static import static
 from branches.models import Branch
 from core.models import School, Testimonial
 
@@ -16,10 +17,14 @@ from .models import (
 # LISTE DES FORMATIONS (SCHOOL-DRIVEN)
 # ==================================================
 def formation_list(request):
-    schools = School.objects.filter(is_active=True).order_by("order", "code")
+    from .fatec_esga import grouped_programmes, public_catalogue_context
+    schools = School.objects.filter(is_active=True, is_public=True).order_by("order", "code")
 
     school_token = (request.GET.get("school") or "").strip()
     active_school = None
+    if school_token and School.objects.filter(is_public=False, code__iexact=school_token).exists():
+        from django.shortcuts import redirect
+        return redirect("formations:list")
     if school_token:
         active_school = get_object_or_404(School.objects.filter(
             is_active=True, code__iexact=school_token
@@ -41,6 +46,7 @@ def formation_list(request):
         "active_school": active_school,
         "programmes": programmes,
         "programme_count": programme_count,
+        "domain_groups": grouped_programmes(programmes) if active_school and active_school.code in ("FATEC", "ESGA") else [],
     }
 
     if request.htmx:
@@ -62,7 +68,22 @@ import json  # ← AJOUTE EN HAUT DU FICHIER
 # ==================================================
 # DÉTAIL D'UNE FORMATION
 # ==================================================
-def formation_detail(request, slug):
+def formation_detail(request, slug, school_code=None):
+    from admissions.tracking import admission_url, capture_tracking
+    from .fatec_esga import canonical_slug, public_catalogue_context
+    from django.shortcuts import redirect
+
+    resolved=canonical_slug(slug)
+    if resolved != slug:
+        target=get_object_or_404(Programme.objects.public().select_related('school'),slug=resolved)
+        suffix='?'+request.GET.urlencode() if request.GET else ''
+        return redirect(target.get_absolute_url()+suffix, permanent=True)
+
+    # Formation d'une école masquée côté public : retour au catalogue, sans 404.
+    if Programme.objects.filter(slug=slug, school__is_public=False).exists():
+        return redirect("formations:list")
+
+    capture_tracking(request)
     programme = get_object_or_404(
         Programme.objects.public()
         .select_related(
@@ -84,7 +105,9 @@ def formation_detail(request, slug):
         ),
         slug=slug
     )
-
+    if school_code and (not programme.school_id or programme.school.code.lower() != school_code.lower()):
+        from django.http import Http404
+        raise Http404("Cette formation n'appartient pas à cette école.")
     programme_years = programme.years.all()
 
     # Documents requis
@@ -119,7 +142,7 @@ def formation_detail(request, slug):
     # légitimement rester non tarifé dans le référentiel institutionnel.
     complete_pricing = (
         {year.year_number for year in programme_years}
-        == set(range(1, programme.duration_years + 1))
+        == set(range(1, (programme.duration_years or 0) + 1))
         and all(item["fees"] for item in years_with_totals)
     )
     if not complete_pricing:
@@ -130,7 +153,7 @@ def formation_detail(request, slug):
     )
 
     # Déterminer le type de cycle pour affichage conditionnel
-    cycle_name = programme.cycle.name.lower()
+    cycle_name = programme.cycle.name.lower() if programme.cycle_id else ""
     cycle_type = next(
         (name for name in ("primaire", "secondaire", "licence", "master") if name in cycle_name),
         "autre",
@@ -214,6 +237,26 @@ def formation_detail(request, slug):
         "main_branch": main_branch,
         "campuses": campuses,
     }
+    from django.conf import settings
+    if programme.school_id and programme.school.code == 'ESMED' and 'ESMED' in settings.PUBLIC_FEES_SCHOOL_CODES:
+        # Tableau année par année : inscription / en cours d'année / total.
+        context['annual_fee_rows'] = [
+            {
+                'year_number': item['year'].year_number,
+                'registration': sum(f.amount for f in item['fees'] if f.label.casefold() == 'inscription'),
+                'during_year': sum(f.amount for f in item['fees'] if f.label.casefold() != 'inscription'),
+                'total': item['year_total'],
+            }
+            for item in years_with_totals
+            if item['fees'] and item['year'].year_number <= (programme.duration_years or 0)
+        ]
+    if programme.school_id and programme.school.code in ('FATEC', 'ESGA'):
+        context.update(public_catalogue_context())
+        context['catalogue_scoped'] = True
+        context['apply_url'] = admission_url(request, programme)
+        context['practical_tabs'] = programme.tabs.filter(slug='conditions-catalogue', is_active=True).prefetch_related('sections')
+        if programme.cycle.name != 'Master':
+            context['years_with_totals'] = [item for item in years_with_totals if item['year'].year_number == 1]
     return render(
         request,
         "formations/detail.html",

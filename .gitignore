@@ -121,3 +121,6 @@ coverage/
 /Capt*.png
 *.pem
 *.key
+
+# Livraisons et artefacts locaux, jamais en production
+assets_ufhob_mission2/

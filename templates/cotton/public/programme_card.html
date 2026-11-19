@@ -6,11 +6,13 @@
       {{ programme.title }}
     </h3>
     <p class="mt-1 text-sm font-semibold uppercase tracking-wider text-ufhob-secondary-dark">
-      {% if programme.diploma_awarded %}{{ programme.diploma_awarded.name }}{% else %}{{ programme.cycle }}{% endif %}
+      {% if programme.diploma_awarded %}{{ programme.diploma_awarded.name }}{% else %}{{ programme.cycle.name }}{% endif %}
     </p>
+    {% if not hide_description %}
     <p class="mt-4 text-sm leading-relaxed text-ufhob-muted">
       {{ programme.description|striptags|default:programme.short_description|truncatewords:24 }}
     </p>
+    {% endif %}
     <dl class="mt-5 space-y-2 text-sm">
       {% if programme.school %}
       <div class="flex justify-between gap-3">
@@ -27,14 +29,14 @@
       {% if programme.diploma_awarded %}
       <div class="flex justify-between">
         <dt class="text-ufhob-muted">Cycle</dt>
-        <dd class="font-semibold text-ufhob-primary">{{ programme.cycle }}</dd>
+        <dd class="font-semibold text-ufhob-primary">{{ programme.cycle.name }}</dd>
       </div>
       {% endif %}
     </dl>
-    <div class="mt-auto flex items-center gap-6 pt-6">
+    <div class="mt-auto flex flex-wrap items-center gap-6 pt-6">
       <a href="{{ programme.get_absolute_url }}" class="public-text-link text-sm text-ufhob-primary">Découvrir la formation <span aria-hidden="true">→</span></a>
       {% if programme.admissions_open %}
-      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="public-text-link text-sm text-ufhob-primary">Candidater <span aria-hidden="true">→</span></a>
+      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" style="background:#f58220;color:#102a43;padding:.75rem 1rem;display:inline-flex;min-height:44px;align-items:center;font-weight:700" class="public-text-link text-sm text-ufhob-primary">Candidater <span aria-hidden="true">→</span></a>
       {% endif %}
     </div>
   </div>

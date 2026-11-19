@@ -12,10 +12,11 @@
       {{ programme.title }}
     </h1>
     <p class="mt-2 text-lg text-ufhob-muted">{{ programme.diploma_awarded.name }}</p>
+    {% if catalogue_scoped %}<p class="mt-2 text-ufhob-muted">{{ programme.registration_notice }}</p><p class="mt-2 text-ufhob-muted">{{ programme.delivery_modes }}</p>{% endif %}
     <div class="mt-6 flex flex-wrap items-center gap-4">
       <a href="{% url 'formations:list' %}{% if programme.school %}?school={{ programme.school.code|lower }}{% endif %}" class="text-sm font-semibold text-ufhob-primary hover:underline">Retour aux formations</a>
       {% if can_apply %}
-      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="bg-ufhob-accent px-6 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-accent/80">Candidater</a>
+      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="bg-ufhob-accent px-6 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-accent/80">{% if catalogue_scoped %}Candidater à cette formation{% else %}Candidater{% endif %}</a>
       {% endif %}
     </div>
   </div>
@@ -159,7 +160,14 @@
   </div>
 </section>
 
-{% include "formations/fragments/_fees.html" %}
+{% if catalogue_scoped %}
+{% include 'formations/fragments/_scoped_fees.html' %}
+<section class="bg-white py-12"><div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
+<h2 class="text-2xl font-bold text-ufhob-primary">Conditions</h2>
+{% for tab in practical_tabs %}{% for section in tab.sections.all %}<p class="mt-4 text-ufhob-muted">{{ section.content }}</p>{% endfor %}{% endfor %}
+</div></section>
+{% elif annual_fee_rows %}{% include 'formations/fragments/_annual_fees_table.html' %}
+{% elif public_fees_enabled %}{% include 'formations/fragments/_fees.html' %}{% endif %}
 
 <section class="border-t border-ufhob-border bg-white py-12 sm:py-16">
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
@@ -189,7 +197,7 @@
     <p class="text-sm font-semibold uppercase tracking-wider text-white/70">Prêt à rejoindre cette formation ?</p>
     <h2 class="mt-2 text-2xl font-bold text-white">{{ programme.title }}</h2>
     <p class="mt-1 text-white/80">{% if programme.school %}{{ programme.school.short_name }}{% else %}UFHOB{% endif %}</p>
-    <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="mt-6 inline-block bg-ufhob-accent px-8 py-3 text-sm font-bold text-ufhob-primary">Candidater</a>
+    <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="mt-6 inline-block bg-ufhob-accent px-8 py-3 text-sm font-bold text-ufhob-primary">{% if catalogue_scoped %}Candidater à cette formation{% else %}Candidater{% endif %}</a>
   </div>
 </section>
 {% endif %}

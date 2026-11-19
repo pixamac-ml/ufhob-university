@@ -23,6 +23,8 @@
         x-data="admissionTunnelData()"
         @submit.prevent="submitForm($event)">
     {% csrf_token %}
+    {% for key, value in campaign_tracking.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <p class="px-4 py-3 text-sm font-semibold text-ufhob-primary" x-show="formData.formation" aria-live="polite">Formation présélectionnée : <span x-text="formData.formation"></span></p>
 
     <input type="hidden" name="last_name" x-model="formData.last_name">
     <input type="hidden" name="first_name" x-model="formData.first_name">

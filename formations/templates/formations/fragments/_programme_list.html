@@ -32,6 +32,17 @@
     </div>
 
     {% if programmes %}
+      {% if domain_groups %}
+      {% for domain in domain_groups %}
+      <article class="mb-8">
+        <h3 class="text-xl font-bold text-ufhob-primary">{{ domain.name }}</h3>
+        {% if domain.description %}<div class="mt-3 text-sm leading-relaxed text-ufhob-muted">{{ domain.description|striptags|linebreaks }}</div>{% endif %}
+        <div class="mt-5 grid gap-5 md:grid-cols-3">
+        {% for programme in domain.programmes %}<c-public.programme_card :programme="programme" hide_description="true" />{% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+      {% else %}
       {% regroup programmes by cycle as cycle_groups %}
       {% for group in cycle_groups %}
       <div class="{% if not forloop.first %}mt-10 border-t border-ufhob-border/60 pt-10{% endif %}">
@@ -57,6 +68,7 @@
         </div>
       </div>
       {% endfor %}
+      {% endif %}
     {% else %}
     <div class="py-6">
       <c-public.empty_state title="{{ active_school.short_name }} ne propose actuellement aucune formation publique." text="Sélectionnez une autre école ci-dessus pour découvrir ses programmes." />

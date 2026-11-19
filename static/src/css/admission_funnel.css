@@ -33,8 +33,8 @@
 .tunnel-scroll { flex: 1; min-width: 0; overflow: visible; }
 .tunnel-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 28px; border-top: 1px solid var(--funnel-line); margin-top: 28px; flex-wrap: wrap; }
 .tunnel-btn-next, .tunnel-btn-prev { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 12px 20px; font-size: 13px; font-weight: 700; border: 1px solid var(--funnel-ink); transition: background-color 200ms ease, color 200ms ease, transform 200ms ease; }
-.tunnel-btn-next { background: var(--funnel-ink); color: white; margin-left: auto; }
-.tunnel-btn-next:hover { background: rgb(var(--ufhob-primary-hover-rgb)); }
+.tunnel-btn-next { background: #f58220; border-color: #f58220; color: #102a43; margin-left: auto; }
+.tunnel-btn-next:hover { background: #f58220; filter: brightness(.95); }
 .tunnel-btn-prev { background: transparent; color: var(--funnel-ink); }
 .tunnel-btn-prev:hover { background: rgb(var(--ufhob-primary-soft-rgb)); }
 .tunnel-btn-next:hover, .tunnel-btn-prev:hover { transform: translateY(-1px); }

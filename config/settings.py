@@ -418,8 +418,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ==================================================
 
 EMAIL_LOGO_PATH = os.getenv("EMAIL_LOGO_PATH", "static/images/students/logo-ubhob.png")
-# Publication gate only; phone values remain centralized in Institution.phone.
-PUBLIC_CONTACT_PHONES_CONFIRMED = os.getenv("PUBLIC_CONTACT_PHONES_CONFIRMED", "false").lower() in {"1", "true", "yes"}
+PUBLIC_CAMPAIGN_PHONE = os.getenv("PUBLIC_CAMPAIGN_PHONE", "+223 76 88 24 79")
+PUBLIC_WHATSAPP_URL = os.getenv("PUBLIC_WHATSAPP_URL", "https://wa.me/22376882479")
+# Coordonnées publiques valides (campagne 2026-2027) : source unique du site.
+PUBLIC_WEBSITE_URL = os.getenv("PUBLIC_WEBSITE_URL", "https://www.ufhob-mali.ml").rstrip("/")
+PUBLIC_SOCIAL_HANDLE = os.getenv("PUBLIC_SOCIAL_HANDLE", "@ufhob_officiel")
+# Aucune adresse e-mail publique tant qu'une adresse sur le domaine actuel n'est pas validée.
+PUBLIC_CONTACT_EMAIL = os.getenv("PUBLIC_CONTACT_EMAIL", "")
+SCHOOL_CONTACT_PHONES = {code: os.getenv(f"{code}_CONTACT_PHONE", "") for code in ("ESGA", "FATEC", "ESMED")}
+# Historical fees remain stored; publication requires a separate institutional decision.
+PUBLIC_FEES_ENABLED = False
+# Exception validée par la direction : frais publics pour ces écoles uniquement.
+PUBLIC_FEES_SCHOOL_CODES = ("ESMED", "FATEC", "ESGA")
 
 if BASE_URL and BASE_URL not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(BASE_URL)

@@ -1,5 +1,5 @@
-# Template for an existing Linux Nginx host. Replace the domain, application
-# path and certificate paths. Keep the ASGI port reachable only on loopback.
+# UFHOB ufhob-mali.ml : installer seulement APRES obtention du certificat.
+# Daphne reste accessible uniquement en boucle locale.
 map $http_upgrade $ufhob_connection_upgrade {
     default upgrade;
     '' close;
@@ -7,18 +7,20 @@ map $http_upgrade $ufhob_connection_upgrade {
 
 server {
     listen 80;
-    server_name ufhob.example.com;
+    listen [::]:80;
+    server_name ufhob-mali.ml;
     location ^~ /.well-known/acme-challenge/ {
         root /var/lib/ufhob/acme;
     }
-    location / { return 301 https://ufhob.example.com$request_uri; }
+    location / { return 301 https://ufhob-mali.ml$request_uri; }
 }
 
 server {
     listen 443 ssl;
-    server_name ufhob.example.com;
-    ssl_certificate /etc/letsencrypt/live/ufhob.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/ufhob.example.com/privkey.pem;
+    listen [::]:443 ssl;
+    server_name ufhob-mali.ml;
+    ssl_certificate /etc/letsencrypt/live/ufhob-mali.ml/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ufhob-mali.ml/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     client_max_body_size 50m;
 

@@ -2,7 +2,7 @@ from collections import defaultdict
 from urllib.parse import urlencode
 
 from django.db.models import Prefetch, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
@@ -28,14 +28,31 @@ from .models import (
 )
 
 
+def _hidden_school_code(code):
+    """Vrai si le code désigne une école active masquée côté public (accents ignorés)."""
+    from unidecode import unidecode
+    wanted = unidecode(code).upper()
+    return any(
+        unidecode(hidden).upper() == wanted
+        for hidden in School.objects.filter(is_public=False).values_list("code", flat=True)
+    )
+
+
 def school_detail(request, code):
+    if _hidden_school_code(code):
+        return redirect("formations:list")
+    if code.upper() in ('FATEC','ESGA'):
+        from formations.fatec_esga import grouped_programmes, public_catalogue_context
+        school=get_object_or_404(School,code__iexact=code,is_active=True)
+        programmes=Programme.objects.public().filter(school=school).select_related('school','cycle','filiere','diploma_awarded')
+        return render(request,'formations/scoped_catalogue.html',{'catalogue_schools':[{'school':school,'domains':grouped_programmes(programmes)}],**public_catalogue_context()})
     public_programmes = (
         Programme.objects.public()
         .select_related("school", "cycle", "diploma_awarded", "filiere")
         .order_by("cycle__min_duration_years", "cycle__name", "title")
     )
     school = get_object_or_404(
-        School.objects.filter(is_active=True)
+        School.objects.filter(is_active=True, is_public=True)
         .select_related("institution")
         .prefetch_related(
             Prefetch("programmes", queryset=public_programmes, to_attr="public_programmes"),
@@ -62,9 +79,9 @@ def school_detail(request, code):
         bucket["programmes"].append(programme)
     programmes_by_cycle = sorted(
         grouped.values(),
-        key=lambda bucket: (bucket["cycle"].min_duration_years, bucket["cycle"].name),
+        key=lambda bucket: (bucket["cycle"].min_duration_years, bucket["cycle"].name) if bucket["cycle"] else (0, ""),
     )
-    cycles = [bucket["cycle"] for bucket in programmes_by_cycle]
+    cycles = [bucket["cycle"] for bucket in programmes_by_cycle if bucket["cycle"]]
 
     # Domaines enseignés, dérivés des filières réelles des programmes.
     domain_names = []
@@ -141,7 +158,7 @@ def campus_detail(request, slug):
         Branch.objects.filter(is_active=True).prefetch_related(
             Prefetch(
                 "school_branches",
-                queryset=SchoolBranch.objects.filter(is_active=True, school__is_active=True)
+                queryset=SchoolBranch.objects.filter(is_active=True, school__is_active=True, school__is_public=True)
                 .select_related("school")
                 .order_by("school__order", "school__code"),
                 to_attr="active_school_branches",
@@ -203,7 +220,7 @@ def university(request):
     ).order_by("order", "full_name")[:8]
 
     schools = (
-        School.objects.filter(is_active=True)
+        School.objects.filter(is_active=True, is_public=True)
         .select_related("institution")
         .prefetch_related(
             Prefetch(

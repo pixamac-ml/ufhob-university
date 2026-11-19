@@ -20,7 +20,7 @@
       <a href="{% url 'formations:list' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.namespace == 'formations' %}true{% else %}false{% endif %}">Formations</a>
       <a href="{% url 'core:campus_life' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'campus_life' %}true{% else %}false{% endif %}">Vie universitaire</a>
       <a href="{% url 'core:research_innovation' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'research_innovation' %}true{% else %}false{% endif %}">Recherche & Innovation</a>
-      <a href="{% url 'news:list' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.namespace == 'news' %}true{% else %}false{% endif %}">Actualités</a>
+      {% if public_has_news %}<a href="{% url 'news:list' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.namespace == 'news' %}true{% else %}false{% endif %}">Actualités</a>{% endif %}
       <a href="{% url 'core:contact' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-medium 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'contact' %}true{% else %}false{% endif %}">Contact</a>
     </div>
     <div class="ml-auto hidden items-center gap-2 md:flex xl:ml-1 2xl:ml-2"><a href="{% url 'admissions:admission_tunnel' %}" class="public-action whitespace-nowrap bg-ufhob-accent px-3 py-2.5 text-[13px] font-bold text-ufhob-primary shadow-soft 2xl:px-4 2xl:text-sm">Candidater <span aria-hidden="true">→</span></a><a href="{% url 'login' %}" class="public-action whitespace-nowrap border border-white/30 px-3 py-2.5 text-[13px] font-semibold hover:bg-white/10 2xl:px-4 2xl:text-sm">Connexion</a></div>
@@ -33,7 +33,7 @@
       <a href="{% url 'formations:list' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Formations</a>
       <a href="{% url 'core:campus_life' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Vie universitaire</a>
       <a href="{% url 'core:research_innovation' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Recherche & Innovation</a>
-      <a href="{% url 'news:list' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Actualités</a>
+      {% if public_has_news %}<a href="{% url 'news:list' %}" @click="menuOpen=false" class="rounded-ufhob-sm px-3 py-2.5">Actualités</a>{% endif %}
       <a href="{% url 'core:contact' %}" class="rounded-ufhob-sm px-3 py-2.5">Contact</a>
       <div class="mt-2 grid grid-cols-2 gap-2"><a href="{% url 'admissions:admission_tunnel' %}" class="rounded-ufhob-sm bg-ufhob-accent px-3 py-3 text-center font-bold text-ufhob-primary">Candidater</a><a href="{% url 'login' %}" class="rounded-ufhob-sm border border-white/30 px-3 py-3 text-center font-semibold">Connexion</a></div>
     </div>

@@ -5,9 +5,9 @@
 <div class="funnel-options">
 {% for formation in formation_cards %}
 <article class="funnel-programme" :aria-selected="formData.formation_slug === '{{ formation.slug|escapejs }}'">
-  <p class="funnel-programme-meta">{{ formation.cycle }} · {{ formation.diploma }}</p>
+  {% if formation.cycle or formation.diploma %}<p class="funnel-programme-meta">{{ formation.cycle }}{% if formation.diploma %} · {{ formation.diploma }}{% endif %}</p>{% endif %}
   <h3>{{ formation.title }}</h3>
-  <p class="funnel-programme-meta">{{ formation.duration_years }} an{{ formation.duration_years|pluralize }}</p>
+  {% if formation.duration_years %}<p class="funnel-programme-meta">{{ formation.duration_years }} an{{ formation.duration_years|pluralize }}</p>{% endif %}
   <div class="funnel-programme-actions">
     <button type="button" :aria-pressed="formData.formation_slug === '{{ formation.slug|escapejs }}'"
       @click="selectProgramme('{{ formation.slug|escapejs }}', '{{ formation.title|escapejs }}')"

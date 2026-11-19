@@ -8,7 +8,7 @@ if [[ $# -eq 0 || ! -r "$env_file" ]]; then
     exit 2
 fi
 case "$1" in
-    check|showmigrations|makemigrations|migrate|collectstatic) ;;
+    check|showmigrations|makemigrations|migrate|collectstatic|initialiser_catalogue_ufhob|charger_catalogue_fatec_esga|charger_identite_ecoles|charger_frais_esmed|masquer_esfe_public|masquer_ecole_public) ;;
     *) echo 'Commande non autorisee par cet outil de deploiement.' >&2; exit 2 ;;
 esac
 # Fichier de confiance root:ufhob, syntaxe KEY='valeur', compatible systemd.

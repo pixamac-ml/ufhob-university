@@ -8,6 +8,7 @@ from formations.models import Programme, RequiredDocument
 
 
 class Candidature(models.Model):
+    campaign_tracking = models.JSONField(default=dict, blank=True, verbose_name="Origine publicitaire (UTM)")
     def clean(self):
         super().clean()
         from formations.availability import validate_offering_change

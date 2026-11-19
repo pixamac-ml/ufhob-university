@@ -180,7 +180,7 @@ class ProgrammeAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
             "fields": ("title", "slug", "school", "cycle", "filiere", "diploma_awarded")
         }),
         ("Durée & statut", {
-            "fields": ("duration_years", "is_active", "is_featured")
+            "fields": ("duration_years", "is_active", "is_featured", "campaign_published", "delivery_modes", "registration_notice")
         }),
         ("Présentation générale", {
             "fields": ("short_description", "description")

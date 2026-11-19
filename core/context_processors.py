@@ -8,6 +8,7 @@ from formations.models import Programme
 from core.models import Institution, LegalPage, School, SiteConfiguration
 from core.branding import get_branding_assets
 from core.public_contact import get_public_contact, get_public_social_links
+from news.models import News
 
 
 PUBLISHED_LEGAL_LINKS = (
@@ -42,6 +43,9 @@ def _absolute_media_url(path: str) -> str:
 
 
 def seo_defaults(request):
+    from admissions.tracking import capture_tracking
+    # Requêtes sans session (RequestFactory, rendus hors middleware) : pas d'attribution.
+    campaign_tracking = capture_tracking(request) if hasattr(request, "session") else {}
     site_name = "UFHOB"
     default_description = (
         "UFHOB - Universite privee engagee dans la formation, la recherche, "
@@ -54,7 +58,7 @@ def seo_defaults(request):
         institution = Institution.objects.filter(is_active=True).first()
         site_config = SiteConfiguration.objects.first()
         public_schools = list(
-            School.objects.filter(is_active=True)
+            School.objects.filter(is_active=True, is_public=True)
             .only("id", "code", "short_name", "official_name", "order")
             .order_by("order", "code")
         )
@@ -82,11 +86,14 @@ def seo_defaults(request):
         "url": settings.BASE_URL,
     }
 
+    public_contact = get_public_contact(institution)
+    if public_contact["website"]:
+        organization_schema["url"] = public_contact["website"]
+    if public_contact["email"]:
+        organization_schema["email"] = public_contact["email"]
+    if public_contact["phones"]:
+        organization_schema["telephone"] = [phone["href"][4:] for phone in public_contact["phones"]]
     if institution:
-        organization_schema["email"] = institution.email
-        phones = get_public_contact(institution)["phones"]
-        if phones:
-            organization_schema["telephone"] = [phone["href"][4:] for phone in phones]
         organization_schema["address"] = {
             "@type": "PostalAddress",
             "streetAddress": institution.address,
@@ -105,7 +112,12 @@ def seo_defaults(request):
     }
 
     social_links = get_public_social_links(site_config)
+    try:
+        has_published_news = News.objects.filter(status="published").exists()
+    except (ProgrammingError, OperationalError):
+        has_published_news = False
     return {
+        "public_has_news": has_published_news,
         "seo_site_name": site_name,
         "seo_default_description": default_description,
         "seo_default_image": default_image,
@@ -114,9 +126,11 @@ def seo_defaults(request):
         "organization_schema_json": json.dumps(organization_schema, ensure_ascii=True),
         "website_schema_json": json.dumps(website_schema, ensure_ascii=True),
         "public_institution": institution,
-        "public_contact": get_public_contact(institution),
+        "public_contact": public_contact,
         "public_social_links": social_links,
-        "public_whatsapp_url": next((link["url"] for link in social_links if link["label"] == "WhatsApp"), ""),
+        "public_whatsapp_url": settings.PUBLIC_WHATSAPP_URL,
+        "campaign_tracking": campaign_tracking,
+        "public_fees_enabled": settings.PUBLIC_FEES_ENABLED,
         "public_site_logo_url": site_config.site_logo.url if site_config and site_config.site_logo else "",
         "public_site_configuration": site_config,
         "public_schools": public_schools,

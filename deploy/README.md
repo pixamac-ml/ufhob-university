@@ -11,7 +11,8 @@ Résultats de la mission : [AUDIT_2026-11-14.md](AUDIT_2026-11-14.md).
 
 Cible exclusivement UFHOB : `/srv/ufhob`, `ufhob_db`, rôle `ufhob_app`,
 `ufhob.service`, Daphne `config.asgi:application` sur `127.0.0.1:8002`.
-Le domaine et les secrets de production restent à renseigner.
+Domaine confirmé : **ufhob-mali.ml**. Les secrets de production restent à renseigner.
+Procédure ciblée : [HOSTINGER_UFHOB.md](HOSTINGER_UFHOB.md).
 
 Fichiers disponibles :
 

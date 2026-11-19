@@ -69,12 +69,14 @@ class CandidatureAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     autocomplete_fields = ("programme",)
 
     readonly_fields = (
+        "campaign_tracking",
         "submitted_at",
         "reviewed_at",
         "updated_at",
     )
 
     fieldsets = (
+        ("Origine publicitaire", {"fields": ("campaign_tracking",)}),
         ("Programme académique", {
             "fields": (
                 "programme",
