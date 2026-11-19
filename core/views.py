@@ -133,7 +133,7 @@ def sitemap(request):
             "url": reverse("core:school_detail", kwargs={"code": school.code.lower()}),
             "description": school.official_name or "Composante académique UFHOB.",
         }
-        for school in School.objects.filter(is_active=True, is_public=True).order_by("order", "code")
+        for school in School.objects.public().order_by("order", "code")
     ]
     campus_links = [
         {
@@ -181,7 +181,7 @@ def sitemap(request):
             ]),
         },
         {
-            "title": "Informations legales",
+            "title": "Informations légales",
             "icon": "fa-solid fa-scale-balanced",
             "links": [
                 {"label": link["label"], "url": link["url"], "description": "Document publié par l’université."}
@@ -193,12 +193,12 @@ def sitemap(request):
     sitemap_stats = [
         {"label": "Formations actives", "value": Programme.objects.public().count()},
         {"label": "Annexes actives", "value": Branch.objects.filter(is_active=True).count()},
-        {"label": "Actualites publiees", "value": News.objects.filter(status="published").count()},
-        {"label": "Sessions de resultats", "value": ResultSession.objects.filter(is_published=True).count()},
+        {"label": "Actualités publiées", "value": News.objects.filter(status="published").count()},
+        {"label": "Sessions de résultats", "value": ResultSession.objects.filter(is_published=True).count()},
     ]
 
     context = {
-        "page_title": "Plan du site",
+        "page_title": "Plan du site | UFHOB-Mali",
         "meta_description": "Plan du site UFHOB-Mali : formations, campus, recherche, actualités et pages légales.",
         "og_type": "website",
         "hero_title": "Plan du site UFHOB-Mali",
@@ -224,7 +224,7 @@ def robots_txt(request):
             "Allow: /",
         ])
 
-    lines.append(f"Sitemap: {settings.BASE_URL}/sitemap.xml")
+    lines.append(f"Sitemap: {settings.PUBLIC_WEBSITE_URL}/sitemap.xml")
     return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
 
 
@@ -393,7 +393,7 @@ def home(request):
         "school", "cycle", "diploma_awarded"
     )
     schools = list(
-        School.objects.filter(is_active=True, is_public=True)
+        School.objects.public()
         .prefetch_related(
             Prefetch("programmes", queryset=public_programmes, to_attr="public_programmes")
         )
@@ -433,7 +433,7 @@ def home(request):
             Prefetch(
                 "school_branches",
                 queryset=SchoolBranch.objects.filter(
-                    is_active=True, school__is_active=True, school__is_public=True
+                    is_active=True, school__in=School.objects.public()
                 ).select_related("school").order_by("school__order", "school__code"),
                 to_attr="active_school_branches",
             )
@@ -450,6 +450,7 @@ def home(request):
             "description": home_hero_subtitle,
             "media_type": "image",
             "image": home_hero_image_url or static("images/hero-bg.jpg"),
+            "hide_legacy_signage": not home_hero_image_url,
             "video_webm": "",
             "video_mp4": "",
             "poster": home_hero_image_url or static("images/hero-bg.jpg"),
@@ -631,7 +632,7 @@ def contact_view(request):
         {
             "form": form,
             "branches": Branch.objects.filter(is_active=True).order_by("name"),
-            "page_title": "Contact | UFHOB",
+            "page_title": "Contact | UFHOB-Mali | Moribabougou, Bamako",
             **get_institution_context(),
         }
     )

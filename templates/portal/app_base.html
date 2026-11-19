@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static component_tags %}
+{% block charts_script %}<script defer src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>{% endblock %}
 
 {% block public_navbar %}{% endblock %}
 {% block public_floating_widget %}{% endblock %}

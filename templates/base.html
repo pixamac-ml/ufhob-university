@@ -7,8 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="htmx-config" content='{"historyCacheSize": 0}'>
 
-  <title>{% block title %}{% firstof page_title seo_site_name "ESFé" %}{% endblock %}</title>
-  <meta name="description" content="{% firstof meta_description seo_default_description "ESFé" %}">
+  <title>{% block title %}{% firstof page_title seo_site_name "UFHOB-Mali" %}{% endblock %}</title>
+  <meta name="description" content="{% firstof meta_description seo_default_description "UFHOB-Mali" %}">
   <meta name="robots" content="{{ meta_robots }}">
   <meta name="author" content="{{ seo_site_name }}">
   {% if canonical_url %}
@@ -16,8 +16,8 @@
   {% endif %}
 
   <meta property="og:type" content="{{ og_type|default:'website' }}">
-  <meta property="og:title" content="{% firstof meta_og_title page_title seo_site_name "ESFé" %}">
-  <meta property="og:description" content="{% firstof meta_og_description meta_description seo_default_description "ESFé" %}">
+  <meta property="og:title" content="{% firstof meta_og_title page_title seo_site_name "UFHOB-Mali" %}">
+  <meta property="og:description" content="{% firstof meta_og_description meta_description seo_default_description "UFHOB-Mali" %}">
   <meta property="og:url" content="{{ canonical_url }}">
   {% if og_image_url or seo_default_image %}
   <meta property="og:image" content="{{ og_image_url|default:seo_default_image }}">
@@ -25,8 +25,8 @@
   <meta property="og:locale" content="fr_ML">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% firstof meta_twitter_title meta_og_title seo_site_name "ESFé" %}">
-  <meta name="twitter:description" content="{% firstof meta_twitter_description meta_description seo_default_description "ESFé" %}">
+  <meta name="twitter:title" content="{% firstof meta_twitter_title meta_og_title page_title seo_site_name "UFHOB-Mali" %}">
+  <meta name="twitter:description" content="{% firstof meta_twitter_description meta_description seo_default_description "UFHOB-Mali" %}">
   {% if og_image_url or seo_default_image %}
   <meta name="twitter:image" content="{{ og_image_url|default:seo_default_image }}">
   {% endif %}
@@ -37,6 +37,12 @@
   {% if website_schema_json %}
   <script type="application/ld+json">{{ website_schema_json|safe }}</script>
   {% endif %}
+
+  <link rel="icon" href="{% static 'images/institution/favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'images/institution/apple-touch-icon.png' %}" sizes="180x180">
+  <meta property="og:site_name" content="UFHOB-Mali">
+  {% if programme_schema_json %}<script type="application/ld+json">{{ programme_schema_json|safe }}</script>{% endif %}
+  {% include "public/partials/meta_pixel.html" %}
 
   <!-- STYLES -->
   {% block main_stylesheet %}<link rel="stylesheet" href="{% static 'public/css/main.css' %}">{% endblock %}
@@ -281,7 +287,7 @@ main {
   <script defer src="{% static 'vendor/alpinejs/alpine-intersect.min.js' %}"></script>
   <script defer src="{% static 'vendor/alpinejs/alpine.min.js' %}"></script>
   <script defer src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
-  <script defer src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+  {% block charts_script %}{% endblock %}
   <script defer src="{% static 'src/js/ui_core/index.js' %}"></script>
 
   <!-- Alpine optimistic component (for templates using x-data="optimistic(...)") -->

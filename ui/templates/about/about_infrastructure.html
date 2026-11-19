@@ -26,10 +26,10 @@
 
                 <!-- Image -->
                 <div class="aspect-{% if forloop.first %}video{% else %}square{% endif %} overflow-hidden">
-                    <img src="{{ infra.image.url }}"
+                    {% if infra.image %}<img src="{{ infra.image.url }}"
                          alt="{{ infra.name }}"
                          class="w-full h-full object-cover
-                                transform group-hover:scale-110 transition-transform duration-700">
+                                transform group-hover:scale-110 transition-transform duration-700">{% endif %}
                 </div>
 
                 <!-- Overlay -->

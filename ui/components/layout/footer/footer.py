@@ -24,7 +24,7 @@ class Footer(component.Component):
                 "title": "Explorer",
                 "links": [
                     {"label": "Accueil", "url": self._safe_reverse("core:home")},
-                    {"label": "A propos", "url": self._safe_reverse("core:about")},
+                    {"label": "À propos", "url": self._safe_reverse("core:about")},
                     {"label": "Contact", "url": self._safe_reverse("core:contact")},
                     {"label": "Plan du site", "url": self._safe_reverse("core:sitemap")},
                 ],
@@ -41,18 +41,18 @@ class Footer(component.Component):
             {
                 "title": "Ressources",
                 "links": [
-                    {"label": "Actualites", "url": self._safe_reverse("news:list")},
-                    {"label": "Resultats", "url": self._safe_reverse("news:result_list")},
+                    {"label": "Actualités", "url": self._safe_reverse("news:list")},
+                    {"label": "Résultats", "url": self._safe_reverse("news:result_list")},
                     {"label": "Galeries", "url": self._safe_reverse("news:event_list")},
-                    {"label": "Memoires", "url": self._safe_reverse("memoires:liste")},
+                    {"label": "Mémoires", "url": self._safe_reverse("memoires:liste")},
                 ],
             },
             {
                 "title": "Admission",
                 "links": [
-                    {"label": "Demarrer ma candidature", "url": self._safe_reverse("admissions:admission_tunnel")},
-                    {"label": "Calendrier des rentrees", "url": self._safe_reverse("news:event_list")},
-                    {"label": "Parler a un conseiller", "url": self._safe_reverse("core:contact")},
+                    {"label": "Démarrer ma candidature", "url": self._safe_reverse("admissions:admission_tunnel")},
+                    {"label": "Calendrier des rentrées", "url": self._safe_reverse("news:event_list")},
+                    {"label": "Parler à un conseiller", "url": self._safe_reverse("core:contact")},
                 ],
             },
         ]
@@ -67,7 +67,7 @@ class Footer(component.Component):
         return "".join(ch for ch in (phone or "") if ch.isdigit())
 
     def _default_social_links(self, phone: str = ""):
-        wa_phone = self._normalize_phone_for_wa(phone) or "22370000000"
+        wa_phone = self._normalize_phone_for_wa(phone) or "22376882479"
         return [
             {"label": "Facebook", "url": "#", "icon": "facebook"},
             {"label": "Instagram", "url": "#", "icon": "instagram"},
@@ -90,7 +90,7 @@ class Footer(component.Component):
     def _default_stats():
         try:
             return [
-                {"label": "Formations", "value": Programme.objects.filter(is_active=True).count()},
+                {"label": "Formations", "value": Programme.objects.public().count()},
                 {"label": "Campus", "value": Branch.objects.filter(is_active=True).count()},
             ]
         except (ProgrammingError, OperationalError):
@@ -99,7 +99,7 @@ class Footer(component.Component):
     def get_context_data(
             self,
             # Identité
-            site_name: str = "ESFé",
+            site_name: str = "UFHOB-Mali",
             site_slogan: str = "Excellence • Innovation • Engagement",
             site_description: str = "",
             logo_url: str = None,
@@ -143,8 +143,8 @@ class Footer(component.Component):
             stats = self._default_stats()
         if cta is None:
             cta = {
-                "title": "Pret a rejoindre ESFé ?",
-                "description": "Nos equipes vous accompagnent de la candidature jusqu'a l'inscription finale.",
+                "title": "Prêt à rejoindre UFHOB-Mali ?",
+                "description": "Nos équipes vous accompagnent de la candidature jusqu'à l'inscription finale.",
                 "button_label": "Candidater maintenant",
                 "button_url": self._safe_reverse("admissions:admission_tunnel"),
             }

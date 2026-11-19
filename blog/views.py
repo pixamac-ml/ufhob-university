@@ -152,6 +152,8 @@ def article_detail(request, slug):
     # Contexte final
     # ==========================
     context = {
+        "page_title": f"{article.title} | UFHOB-Mali",
+        "meta_description": article.get_meta_description(),
         "article": article,
         "visible_comments": visible_comments,
         "hidden_comments": hidden_comments,

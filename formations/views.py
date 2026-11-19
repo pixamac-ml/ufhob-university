@@ -18,17 +18,16 @@ from .models import (
 # ==================================================
 def formation_list(request):
     from .fatec_esga import grouped_programmes, public_catalogue_context
-    schools = School.objects.filter(is_active=True, is_public=True).order_by("order", "code")
+    schools = School.objects.public().order_by("order", "code")
 
     school_token = (request.GET.get("school") or "").strip()
     active_school = None
-    if school_token and School.objects.filter(is_public=False, code__iexact=school_token).exists():
+    from core.public_visibility import school_code_is_hidden
+    if school_token and school_code_is_hidden(school_token):
         from django.shortcuts import redirect
         return redirect("formations:list")
     if school_token:
-        active_school = get_object_or_404(School.objects.filter(
-            is_active=True, code__iexact=school_token
-        ))
+        active_school = get_object_or_404(School.objects.public().filter(code__iexact=school_token))
     if not active_school:
         active_school = schools.first()
 
@@ -42,6 +41,8 @@ def formation_list(request):
     programme_count = programmes.count()
 
     context = {
+        "page_title": "Formations DUT, Licence et Master | UFHOB-Mali | Bamako, Moribabougou",
+        "meta_description": "Découvrez les formations DUT, Licence et Master de FATEC et ESGA à UFHOB-Mali, campus de Moribabougou près de Bamako. Candidatez en ligne.",
         "schools": schools,
         "active_school": active_school,
         "programmes": programmes,
@@ -80,7 +81,7 @@ def formation_detail(request, slug, school_code=None):
         return redirect(target.get_absolute_url()+suffix, permanent=True)
 
     # Formation d'une école masquée côté public : retour au catalogue, sans 404.
-    if Programme.objects.filter(slug=slug, school__is_public=False).exists():
+    if Programme.objects.filter(slug=slug).exclude(school__in=School.objects.public()).exclude(school__isnull=True).exists():
         return redirect("formations:list")
 
     capture_tracking(request)
@@ -211,12 +212,15 @@ def formation_detail(request, slug, school_code=None):
     effective_og_image = programme.effective_og_image
     og_image_url = request.build_absolute_uri(effective_og_image.url) if effective_og_image else None
 
+    from core.seo import programme_schema
+    degree = programme.cycle.name if programme.cycle_id else ""
+    programme_label = programme.title if degree.casefold() in programme.title.casefold() else f"{degree} — {programme.title}"
     context = {
+        "programme_schema_json": programme_schema(programme),
+        "pixel_content_name": programme.title,
         "programme": programme,
-        "page_title": f"{programme.title} | UFHOB",
-        "meta_description": programme.effective_meta_description,
-        "meta_og_title": programme.effective_meta_title,
-        "meta_og_description": programme.effective_meta_description,
+        "page_title": f"{programme_label} | UFHOB-Mali | Bamako, Moribabougou",
+        "meta_description": f"{programme_label} à UFHOB-Mali, campus de Moribabougou près de Bamako : programme, conditions d’admission et candidature en ligne.",
         "og_image_url": og_image_url,
         "og_type": "article",
         "programme_years": programme_years,

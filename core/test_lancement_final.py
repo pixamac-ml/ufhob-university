@@ -49,19 +49,16 @@ class LancementFinalTests(TestCase):
         call_command("charger_frais_esmed", stdout=out)
         self.assertIn("aucun changement", out.getvalue())
 
-    def test_esmed_page_shows_annual_fee_table(self):
+    def test_esmed_fees_are_preserved_but_page_is_hidden(self):
         call_command("charger_frais_esmed", stdout=StringIO())
         dentaire = Programme.objects.get(school=self.esmed, title="Chirurgie dentaire")
         response = self.client.get(dentaire.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "data-annual-fees")
-        self.assertContains(response, "data-cursus-year=", count=6)
-        self.assertContains(response, "1 100 000")
-        self.assertContains(response, "1 000 000")
-        self.assertContains(response, "2 100 000")
+        self.assertRedirects(response, "/formations/", fetch_redirect_response=False)
+        self.assertEqual(dentaire.years.count(), 6)
+        self.assertEqual(sum(f.amount for f in Fee.objects.filter(programme_year__programme=dentaire)), 6 * 2_100_000)
 
     def test_masquer_esfe_public_hides_and_redirects_without_deleting(self):
-        self.assertContains(self.client.get("/formations/"), "ESFé Sup")
+        self.assertNotContains(self.client.get("/formations/"), "ESFé Sup")
         call_command("masquer_esfe_public", stdout=StringIO())
         self.esfe.refresh_from_db(); self.master_esfe.refresh_from_db()
         self.assertFalse(self.esfe.is_public)

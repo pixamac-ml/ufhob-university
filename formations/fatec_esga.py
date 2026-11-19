@@ -26,6 +26,5 @@ def grouped_programmes(programmes):
 
 
 def public_catalogue_context():
-    import json
-    return {'public_contact': {'phones':[{'label':'+223 76 88 24 79','href':'tel:+22376882479'}], 'website':'https://www.ufhob-mali.ml','website_label':'www.ufhob-mali.ml','email':'','address':''},
-        'public_social_links': [], 'organization_schema_json':json.dumps({'@context':'https://schema.org','@type':'EducationalOrganization','name':'UFHOB-Mali','url':'https://www.ufhob-mali.ml'})}
+    # Contacts, branding and JSON-LD come from the shared public context.
+    return {}

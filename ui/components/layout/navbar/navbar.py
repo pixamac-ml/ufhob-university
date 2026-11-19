@@ -21,7 +21,7 @@ class Navbar(component.Component):
             .prefetch_related(
                 Prefetch(
                     "programmes",
-                    queryset=Programme.objects.filter(is_active=True)
+                    queryset=Programme.objects.public()
                 )
             )
             .order_by("min_duration_years")

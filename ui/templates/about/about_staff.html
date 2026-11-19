@@ -38,9 +38,9 @@
                         <div class="relative w-32 h-32 mx-auto mb-6">
                             <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-secondary-500
                                         rounded-full transform group-hover:scale-110 transition-transform duration-500"></div>
-                            <img src="{{ person.photo.url }}"
+                            {% if person.photo %}<img src="{{ person.photo.url }}"
                                  alt="{{ person.full_name }}"
-                                 class="relative w-full h-full rounded-full object-cover border-4 border-white shadow-lg">
+                                 class="relative w-full h-full rounded-full object-cover border-4 border-white shadow-lg">{% endif %}
                         </div>
 
                         <!-- Infos -->
@@ -104,9 +104,9 @@
                                 ring-2 ring-gray-200 group-hover:ring-primary-500
                                 transform group-hover:scale-105
                                 transition-all duration-300">
-                        <img src="{{ person.photo.url }}"
+                        {% if person.photo %}<img src="{{ person.photo.url }}"
                              alt="{{ person.full_name }}"
-                             class="w-full h-full object-cover">
+                             class="w-full h-full object-cover">{% endif %}
                     </div>
 
                     <h4 class="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">

@@ -84,11 +84,12 @@ class ProgrammeQuerySet(models.QuerySet):
     """Lecture canonique du catalogue institutionnel selon son état public."""
 
     def public(self):
+        from core.models import School
         return self.filter(
             is_active=True, is_public=True, is_archived=False,
             filiere__is_active=True,
         ).filter(models.Q(cycle__isnull=True) | models.Q(cycle__is_active=True)).filter(
-            models.Q(school__isnull=True) | models.Q(school__is_active=True, school__is_public=True))
+            models.Q(school__isnull=True) | models.Q(school__in=School.objects.public()))
 
     def accepting_admissions(self):
         return self.public().filter(admissions_open=True)

@@ -22,10 +22,12 @@ class AboutHero(component.Component):
         cta_text=None,
         cta_url=None,
     ):
-        if not image:
-            image = static("images/hero-default.jpg")
+        image_is_logo = not image
+        if image_is_logo:
+            image = static("images/institution/ufhob-logo.webp")
 
         return {
+            "image_is_logo": image_is_logo,
             "title": title,
             "subtitle": subtitle,
             "label": label,

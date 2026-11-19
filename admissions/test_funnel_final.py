@@ -41,7 +41,7 @@ class FinalFunnelTests(BaseTests):
         self.assertEqual(Candidature.objects.get().status, "submitted")
 
     def test_dynamic_doctorat_preselection_and_school_campuses(self):
-        school = School.objects.create(institution=self.school.institution, code="ESMED", short_name="ESMED")
+        school = School.objects.create(institution=self.school.institution, code="TEST", short_name="École de test")
         SchoolBranch.objects.create(school=school, branch=self.branch)
         cycle = Cycle.objects.create(name="Doctorat", slug="doctorat", min_duration_years=6, max_duration_years=8)
         self.programme.school = school
@@ -51,10 +51,21 @@ class FinalFunnelTests(BaseTests):
         state = json.loads(response.context["initial_form_json"])
         self.assertEqual(state["current_level"], "doctorat")
         self.assertEqual(state["formation_slug"], self.programme.slug)
-        self.assertEqual(state["school_code"], "ESMED")
+        self.assertEqual(state["school_code"], "TEST")
         self.assertEqual(response.context["initial_step"], 1)
-        response = self.client.get(reverse("admissions:step3_cycles"), {"school_code": "ESMED", "branch_id": self.branch.pk})
+        response = self.client.get(reverse("admissions:step3_cycles"), {"school_code": "TEST", "branch_id": self.branch.pk})
         self.assertEqual([row["slug"] for row in response.context["cycles"]], ["doctorat"])
+
+    @override_settings(META_PIXEL_ID="123456789")
+    def test_lead_only_after_success_and_once_with_utm_preserved(self):
+        self.client.get(self.url, {"utm_source": "test-campaign"})
+        invalid = self.client.post(self.url, self._valid_payload(email=""))
+        self.assertNotContains(invalid, "fbq('track', 'Lead')")
+        response = self.client.post(self.url, self._valid_payload(), follow=True)
+        self.assertContains(response, "fbq('track', 'Lead')", count=1)
+        self.assertEqual(Candidature.objects.get().campaign_tracking["utm_source"], "test-campaign")
+        refreshed = self.client.get(response.redirect_chain[-1][0])
+        self.assertNotContains(refreshed, "fbq('track', 'Lead')")
 
     def test_forged_school_programme_and_inactive_pair_rejected(self):
         other = School.objects.create(institution=self.school.institution, code="ESGA", short_name="ESGA")

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from django.templatetags.static import static
 
 
-CURRENT_LOGO_FALLBACK = "images/students/logo-ubhob.png"
+CURRENT_LOGO_FALLBACK = "images/institution/ufhob-logo.webp"
 
 
 @dataclass(frozen=True)
@@ -42,5 +42,5 @@ def get_branding_assets(site_configuration=None) -> BrandingAssets:
         logo_mark=logo,
         email_logo=logo,
         document_logo=logo,
-        favicon=fallback,
+        favicon=static("images/institution/favicon.ico"),
     )

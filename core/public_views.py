@@ -29,13 +29,8 @@ from .models import (
 
 
 def _hidden_school_code(code):
-    """Vrai si le code désigne une école active masquée côté public (accents ignorés)."""
-    from unidecode import unidecode
-    wanted = unidecode(code).upper()
-    return any(
-        unidecode(hidden).upper() == wanted
-        for hidden in School.objects.filter(is_public=False).values_list("code", flat=True)
-    )
+    from .public_visibility import school_code_is_hidden
+    return school_code_is_hidden(code)
 
 
 def school_detail(request, code):
@@ -43,16 +38,21 @@ def school_detail(request, code):
         return redirect("formations:list")
     if code.upper() in ('FATEC','ESGA'):
         from formations.fatec_esga import grouped_programmes, public_catalogue_context
-        school=get_object_or_404(School,code__iexact=code,is_active=True)
+        school=get_object_or_404(School.objects.public(),code__iexact=code)
         programmes=Programme.objects.public().filter(school=school).select_related('school','cycle','filiere','diploma_awarded')
-        return render(request,'formations/scoped_catalogue.html',{'catalogue_schools':[{'school':school,'domains':grouped_programmes(programmes)}],**public_catalogue_context()})
+        return render(request, 'formations/scoped_catalogue.html', {
+            'page_title': f'{school.display_name} | UFHOB-Mali | Bamako, Moribabougou',
+            'meta_description': f'Découvrez les formations de {school.display_name} à UFHOB-Mali, campus de Moribabougou près de Bamako. Consultez les filières et candidatez en ligne.',
+            'catalogue_schools': [{'school': school, 'domains': grouped_programmes(programmes)}],
+            **public_catalogue_context(),
+        })
     public_programmes = (
         Programme.objects.public()
         .select_related("school", "cycle", "diploma_awarded", "filiere")
         .order_by("cycle__min_duration_years", "cycle__name", "title")
     )
     school = get_object_or_404(
-        School.objects.filter(is_active=True, is_public=True)
+        School.objects.public()
         .select_related("institution")
         .prefetch_related(
             Prefetch("programmes", queryset=public_programmes, to_attr="public_programmes"),
@@ -129,8 +129,8 @@ def school_detail(request, code):
             "school_cta_text": school.cta_text or "Choisissez un programme et un campus compatible dans le parcours de candidature UFHOB.",
             "school_cta_button_text": school.cta_button_text or "Candidater",
             "school_cta_button_url": school.cta_button_url or default_cta_url,
-            "page_title": f"{school.display_name} | UFHOB",
-            "meta_description": school.description or f"Decouvrez {school.display_name}, ses formations et ses campus au sein de l'UFHOB.",
+            "page_title": f"{school.display_name} | UFHOB-Mali | Bamako, Moribabougou",
+            "meta_description": school.description or f"Découvrez {school.display_name}, ses formations et ses campus à UFHOB-Mali, Bamako et Moribabougou.",
         },
     )
 
@@ -158,7 +158,7 @@ def campus_detail(request, slug):
         Branch.objects.filter(is_active=True).prefetch_related(
             Prefetch(
                 "school_branches",
-                queryset=SchoolBranch.objects.filter(is_active=True, school__is_active=True, school__is_public=True)
+                queryset=SchoolBranch.objects.filter(is_active=True, school__in=School.objects.public())
                 .select_related("school")
                 .order_by("school__order", "school__code"),
                 to_attr="active_school_branches",
@@ -220,7 +220,7 @@ def university(request):
     ).order_by("order", "full_name")[:8]
 
     schools = (
-        School.objects.filter(is_active=True, is_public=True)
+        School.objects.public()
         .select_related("institution")
         .prefetch_related(
             Prefetch(

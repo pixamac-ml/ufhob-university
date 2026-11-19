@@ -148,7 +148,7 @@ def _initial_tunnel_state(request):
         cycle_filter = "all"
 
     school_token = (request.GET.get("school") or request.GET.get("school_code") or "").strip()
-    school = School.objects.filter(is_active=True, is_public=True, code__iexact=school_token).first() if school_token else None
+    school = School.objects.public().filter(code__iexact=school_token).first() if school_token else None
 
     branch_token = (
         request.GET.get("branch")
@@ -284,7 +284,7 @@ def admission_tunnel(request):
     documents_deferred = request.POST.get("documents_deferred") == "on"
     branches = Branch.objects.filter(is_active=True, accepts_online_registration=True).order_by("name")
     schools = list(
-        School.objects.filter(is_active=True, is_public=True)
+        School.objects.public()
         .prefetch_related(
             Prefetch(
                 "school_branches",
@@ -404,7 +404,7 @@ def admission_tunnel(request):
 
         school = None
         if form_data["school_code"]:
-            school = School.objects.filter(is_active=True, is_public=True, code__iexact=form_data["school_code"]).first()
+            school = School.objects.public().filter(code__iexact=form_data["school_code"]).first()
             if not school:
                 backend_errors["school_code"] = "L'ecole selectionnee n'est plus disponible."
             else:
@@ -506,7 +506,8 @@ def admission_tunnel(request):
                             file=uploaded_file,
                         )
 
-                messages.success(request, "Votre candidature a ete enregistree avec succes.")
+                request.session["pixel_lead_candidature"] = candidature.pk
+                messages.success(request, "Votre candidature a été enregistrée avec succès.")
                 if wants_json:
                     return JsonResponse({"ok": True, "redirect": tracked_redirect_url(request, reverse("admissions:done", args=[candidature.pk]))})
                 return redirect(tracked_redirect_url(request, reverse("admissions:done", args=[candidature.pk])))
@@ -610,7 +611,7 @@ def admission_step3_campuses(request):
     campuses = []
 
     if school_code:
-        school = School.objects.filter(is_active=True, is_public=True, code__iexact=school_code).first()
+        school = School.objects.public().filter(code__iexact=school_code).first()
 
     if school:
         campuses = _build_school_campus_cards(school)
@@ -663,7 +664,10 @@ def admission_step3_cycles(request):
 
 def admission_done(request, candidature_id):
     candidature = get_object_or_404(Candidature.objects.select_related("programme", "programme__school", "branch"), id=candidature_id)
-    return render(request, "admissions/done.html", {"candidature": candidature})
+    pixel_lead = request.session.get("pixel_lead_candidature") == candidature.pk
+    if pixel_lead:
+        del request.session["pixel_lead_candidature"]
+    return render(request, "admissions/done.html", {"candidature": candidature, "pixel_lead": pixel_lead})
 
 
 def apply_to_programme(request, slug):

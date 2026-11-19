@@ -1102,11 +1102,21 @@ class StatusHistory(models.Model):
 # ÉCOLE (SCHOOL)
 # ==========================================================
 
+class SchoolQuerySet(models.QuerySet):
+    def public(self):
+        # Campaign exclusions apply even when legacy publication flags are stale.
+        return self.filter(is_active=True, is_public=True).exclude(
+            code__iregex=r"^(esmed|esf[eéèê]|esf[eéèê]?[ _-]*sup)$"
+        ).exclude(short_name__iregex=r"^(esmed|esf[eéèê]?[ _-]*sup)$")
+
+
 class School(models.Model):
     """
     École ou faculté au sein de l'institution (UFHOB).
     Exemples : ESMED, ESGA, FATEC.
     """
+
+    objects = SchoolQuerySet.as_manager()
 
     institution = models.ForeignKey(
         Institution,

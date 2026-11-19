@@ -46,10 +46,10 @@ def seo_defaults(request):
     from admissions.tracking import capture_tracking
     # Requêtes sans session (RequestFactory, rendus hors middleware) : pas d'attribution.
     campaign_tracking = capture_tracking(request) if hasattr(request, "session") else {}
-    site_name = "UFHOB"
+    site_name = "UFHOB-Mali"
     default_description = (
-        "UFHOB - Universite privee engagee dans la formation, la recherche, "
-        "l'innovation et l'accompagnement des etudiants."
+        "UFHOB-Mali — Université privée engagée dans la formation, la recherche, "
+        "l'innovation et l'accompagnement des étudiants."
     )
     default_image = ""
     public_schools = []
@@ -58,7 +58,7 @@ def seo_defaults(request):
         institution = Institution.objects.filter(is_active=True).first()
         site_config = SiteConfiguration.objects.first()
         public_schools = list(
-            School.objects.filter(is_active=True, is_public=True)
+            School.objects.public()
             .only("id", "code", "short_name", "official_name", "order")
             .order_by("order", "code")
         )
@@ -67,10 +67,10 @@ def seo_defaults(request):
         site_config = None
 
     if institution:
-        site_name = institution.short_name or institution.name or site_name
+        site_name = "UFHOB-Mali"
         default_description = (
             f"{institution.name} - Formation universitaire, recherche, innovation "
-            "et engagement au service des communautes."
+            "et engagement au service des communautés."
         )
 
     if site_config and site_config.site_logo:
@@ -81,9 +81,10 @@ def seo_defaults(request):
 
     organization_schema = {
         "@context": "https://schema.org",
-        "@type": "EducationalOrganization",
-        "name": site_name,
-        "url": settings.BASE_URL,
+        "@type": "CollegeOrUniversity",
+        "name": "Université Privée Félix Houphouët Boigny Mali",
+        "alternateName": "UFHOB-Mali",
+        "url": settings.PUBLIC_WEBSITE_URL,
     }
 
     public_contact = get_public_contact(institution)
@@ -101,14 +102,16 @@ def seo_defaults(request):
             "addressCountry": institution.country,
         }
 
-    if default_image:
-        organization_schema["logo"] = default_image
+    from django.templatetags.static import static
+    organization_schema["logo"] = settings.PUBLIC_WEBSITE_URL + static("images/institution/ufhob-logo.webp")
+    organization_schema["telephone"] = "+223 76 88 24 79"
+    organization_schema["address"] = {"@type": "PostalAddress", "streetAddress": "Campus de Moribabougou", "addressLocality": "Moribabougou", "addressCountry": "ML"}
 
     website_schema = {
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": site_name,
-        "url": settings.BASE_URL,
+        "url": settings.PUBLIC_WEBSITE_URL,
     }
 
     social_links = get_public_social_links(site_config)
@@ -116,6 +119,7 @@ def seo_defaults(request):
         has_published_news = News.objects.filter(status="published").exists()
     except (ProgrammingError, OperationalError):
         has_published_news = False
+    from core.seo import public_metadata, schema_json
     return {
         "public_has_news": has_published_news,
         "seo_site_name": site_name,
@@ -123,15 +127,15 @@ def seo_defaults(request):
         "seo_default_image": default_image,
         "canonical_url": canonical_url,
         "meta_robots": robots_value,
-        "organization_schema_json": json.dumps(organization_schema, ensure_ascii=True),
-        "website_schema_json": json.dumps(website_schema, ensure_ascii=True),
+        "organization_schema_json": schema_json(organization_schema) if request.path == "/" else "",
+        "website_schema_json": schema_json(website_schema),
         "public_institution": institution,
         "public_contact": public_contact,
         "public_social_links": social_links,
         "public_whatsapp_url": settings.PUBLIC_WHATSAPP_URL,
         "campaign_tracking": campaign_tracking,
         "public_fees_enabled": settings.PUBLIC_FEES_ENABLED,
-        "public_site_logo_url": site_config.site_logo.url if site_config and site_config.site_logo else "",
+        "public_site_logo_url": static("images/institution/ufhob-logo.webp"),
         "public_site_configuration": site_config,
         "public_schools": public_schools,
         "public_footer": {
@@ -141,6 +145,7 @@ def seo_defaults(request):
             "programme_count": Programme.objects.public().count(),
             "campus_count": Branch.objects.filter(is_active=True).count(),
         },
+        **public_metadata(request),
     }
 
 

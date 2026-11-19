@@ -46,6 +46,7 @@
               src="{{ slide.image }}"
               alt=""
               class="absolute inset-0 block h-full min-h-full w-full min-w-full max-w-none object-cover"
+              {% if slide.hide_legacy_signage %}style="object-position: left bottom; transform: scale(3.3); transform-origin: left bottom"{% endif %}
               {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
             >
           {% endif %}

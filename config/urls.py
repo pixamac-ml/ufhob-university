@@ -43,7 +43,7 @@ urlpatterns = [
         private_legacy_message_media_denied,
         name="private_legacy_message_media_denied",
     ),
-    path("favicon.ico", lambda request: HttpResponse(status=204), name="favicon_ico"),
+    path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "images/institution/favicon.ico", permanent=False), name="favicon_ico"),
     path("admin/", admin.site.urls),
     path("surveillance/general/", surveillance_general_api_view, name="surveillance_general_api"),
     path("accounts/", include("accounts.urls")),

@@ -577,3 +577,6 @@ if DEBUG:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
+
+# Optional public campaign pixel. Empty means no Meta code is rendered.
+META_PIXEL_ID = os.getenv("META_PIXEL_ID", "").strip()

@@ -6,6 +6,7 @@
 {% block public_footer %}{% endblock %}
 {% block public_cookie_consent %}{% endblock %}
 {% load static %}
+{% block charts_script %}<script defer src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>{% endblock %}
 {% block main_stylesheet %}<link rel="stylesheet" href="{% static 'app/css/main.css' %}">{% endblock %}
 {% block extra_head %}
   {{ block.super }}

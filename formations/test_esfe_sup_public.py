@@ -60,38 +60,26 @@ class ESFePublicContentTests(TestCase):
 
     def test_public_pages_order_amounts_and_other_schools(self):
         install_public_content(apply=True)
-        for url in ('/universite/', '/ecoles/ESFÉ/'):
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
-            self.assertContains(response, 'ESFé Sup')
-        school_page = self.client.get('/ecoles/ESFÉ/')
-        self.assertContains(school_page, 'Moribabougou')
-        self.assertNotContains(school_page, 'src=""')
-        self.assertEqual(len(school_page.context['programmes']), 7)
-        self.assertFalse(school_page.context['school_can_apply'])
+        response = self.client.get('/universite/')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'ESFé Sup')
+        self.assertRedirects(self.client.get('/ecoles/ESFÉ/'), '/formations/', fetch_redirect_response=False)
         for item in self.source['programmes']:
             p = Programme.objects.get(pk=item['id'])
-            response = self.client.get(p.get_absolute_url())
-            self.assertEqual(response.status_code, 200)
-            html = response.content.decode()
-            self.assertLess(html.index('1re année'), html.index('2e année'))
-            self.assertLess(html.index('data-cursus-year="1"'), html.index('data-cursus-year="2"'))
-            self.assertEqual([x['year'].year_number for x in response.context['years_with_totals']], [1,2])
-            self.assertEqual([[f.label for f in x['fees']] for x in response.context['years_with_totals']], [['Inscription','Janvier','Mars']]*2)
-            for term in ('Objectifs', 'Compétences développées', 'Débouchés', 'Frais de formation', '410 000 F CFA', '200 000 F CFA', '810 000 F CFA', 'Moribabougou'):
-                self.assertContains(response, term)
-            if p.pk >= 55:
-                for amount in ('600 000 F CFA','300 000 F CFA','1 200 000 F CFA'):
-                    self.assertContains(response, amount)
-            self.assertContains(response, '<h1', html=False)
-            self.assertContains(response, p.title)
-            self.assertFalse(response.context['can_apply'])
+            self.assertRedirects(self.client.get(p.get_absolute_url()), '/formations/', fetch_redirect_response=False)
+            self.assertFalse(p.admissions_open)
+            self.assertEqual(list(p.years.order_by('year_number').values_list('year_number', flat=True)), [1, 2])
+            self.assertEqual(p.years.get(year_number=1).fees.count(), 3)
+            self.assertEqual(p.years.get(year_number=2).fees.count(), 3)
         for p in self.others:
             p.refresh_from_db()
             self.assertEqual(p.description, 'Texte existant')
             response = self.client.get(p.get_absolute_url())
+            if p.school.code == 'ESMED':
+                self.assertRedirects(response, '/formations/', fetch_redirect_response=False)
+                continue
             self.assertEqual(response.status_code,200)
-            self.assertContains(response, '123 456 F CFA')
+            self.assertEqual(p.years.get(year_number=1).fees.get().amount, 123456)
             self.assertNotContains(response,'810 000 F CFA')
             self.assertNotContains(response,'1 200 000 F CFA')
         self.assertEqual(Fee.objects.exclude(programme_year__programme__school=self.school).count(), 3)
