@@ -234,7 +234,11 @@ class InstitutionalReferenceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["total_programme_cost"])
         self.assertIsNone(response.context["average_year_cost"])
-        self.assertContains(response, "Tarif à confirmer")
+        self.assertNotContains(response, "Tarif à confirmer")
+        self.assertContains(response, programme.title)
+        # Le rendu n'affiche plus de tarif provisoire ; les frais historiques
+        # restent contrôlés sans inventer un total pour un M2 non renseigné.
+        self.assertEqual(response.context["years_with_totals"][0]["year_total"], 810000)
         self.assertFalse(response.context["can_apply"])
 
     def test_later_master_tariffs_can_be_configured_without_bootstrap_erasing_them(self):
@@ -250,7 +254,8 @@ class InstitutionalReferenceTests(TestCase):
         response = self.client.get(reverse("formations:detail", args=[primary.slug]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["cycle_type"], "primaire")
-        self.assertContains(response, "DEF ou BEPC")
+        self.assertNotContains(response, "DEF ou BEPC")
+        self.assertContains(response, primary.title)
         licence = Programme.objects.get(title="Nutrition", cycle__name="Cycle Licence")
         response = self.client.get(reverse("formations:detail", args=[licence.slug]))
         self.assertEqual(response.context["total_programme_cost"], 1020000)
