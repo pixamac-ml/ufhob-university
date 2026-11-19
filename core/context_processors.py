@@ -82,8 +82,8 @@ def seo_defaults(request):
     organization_schema = {
         "@context": "https://schema.org",
         "@type": "CollegeOrUniversity",
-        "name": "Université Privée Félix Houphouët Boigny Mali",
-        "alternateName": "UFHOB-Mali",
+        "name": "Université Privée Félix Houphouët Boigny – Mali (UFHOB-Mali)",
+        "alternateName": ["UFHOB", "UFHOB-Mali", "Université Félix Houphouët Boigny Mali"],
         "url": settings.PUBLIC_WEBSITE_URL,
     }
 
@@ -105,7 +105,9 @@ def seo_defaults(request):
     from django.templatetags.static import static
     organization_schema["logo"] = settings.PUBLIC_WEBSITE_URL + static("images/institution/ufhob-logo.webp")
     organization_schema["telephone"] = "+223 76 88 24 79"
-    organization_schema["address"] = {"@type": "PostalAddress", "streetAddress": "Campus de Moribabougou", "addressLocality": "Moribabougou", "addressCountry": "ML"}
+    organization_schema["address"] = {"@type": "PostalAddress", "streetAddress": "Campus de Moribabougou", "addressLocality": "Moribabougou", "addressRegion": "Koulikoro", "addressCountry": "ML"}
+    organization_schema["areaServed"] = {"@type": "Country", "name": "Mali"}
+    organization_schema["sameAs"] = [link["url"] for link in get_public_social_links(None) if link["key"] != "linkedin"]
 
     website_schema = {
         "@context": "https://schema.org",

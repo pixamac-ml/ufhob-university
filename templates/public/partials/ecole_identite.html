@@ -1,4 +1,4 @@
 {% load school_identity %}
 {# Logo et description de l'école (ajout autorisé). Aucun autre changement de présentation. #}
-{% with logo=school|school_logo_url %}{% if logo %}<img src="{{ logo }}" alt="Logo {{ school.display_name }}" class="mt-6 h-20 w-auto max-w-[14rem] bg-white object-contain p-2" width="224" height="80">{% endif %}{% endwith %}
+{% with logo=school|school_logo_url %}{% if logo %}<img src="{{ logo }}" alt="Logo {{ school.display_name }}" class="mt-6 h-20 w-auto max-w-[14rem] bg-white object-contain p-2" width="224" height="80" loading="lazy">{% endif %}{% endwith %}
 {% if school.description %}<p class="mt-5 max-w-3xl text-base leading-7 text-ufhob-text">{{ school.description }}</p>{% endif %}

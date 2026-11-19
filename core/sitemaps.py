@@ -25,6 +25,7 @@ class StaticViewSitemap(CanonicalSitemap):
         items = [
             "core:home",
             "core:about",
+            "core:faq",
             "core:contact",
             "core:sitemap",
             "formations:list",

@@ -61,7 +61,9 @@ def get_public_social_links(configuration):
     """URL issues de SiteConfiguration ; une URL vide ou fictive masque l'icône."""
     links = []
     for key, label, icon in SOCIAL_NETWORKS:
-        value = (getattr(configuration, f"{key}_url", "") or "").strip()
+        configured = getattr(settings, f"SOCIAL_{key.upper()}_URL", None)
+        value = (configured if configured is not None else getattr(configuration, f"{key}_url", "")) or ""
+        value = value.strip()
         parsed = urlsplit(value)
         if parsed.scheme in {"http", "https"} and parsed.hostname and parsed.hostname not in {
             "example.com", "www.example.com", "example.org", "localhost",

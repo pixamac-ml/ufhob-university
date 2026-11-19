@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load public_content %}
 {% load component_tags static %}
 
 {% block title %}{{ page_title }}{% endblock %}
@@ -155,13 +156,13 @@
              alt="{{ article.title }}"
              class="w-full h-full object-cover"
              loading="eager"
-             decoding="async">
+             decoding="async" width="1200" height="800">
         {% else %}
         <img src="{% static 'images/students/logo-ubhob.png' %}"
              alt="Image par défaut"
              class="w-full h-full object-cover"
              loading="lazy"
-             decoding="async">
+             decoding="async" width="400" height="393">
         {% endif %}
       </div>
 
@@ -170,7 +171,7 @@
                       prose-headings:text-gray-900 prose-headings:font-semibold
                       prose-a:text-primary-600 prose-a:no-underline hover:prose-a:underline
                       prose-img:rounded-xl prose-img:shadow-lg">
-        {{ article.content|safe }}
+        {{ article.content|public_image_attributes:public_brand_name|safe }}
       </article>
 
       <!-- SHARE -->

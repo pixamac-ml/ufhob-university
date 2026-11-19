@@ -19,7 +19,7 @@
 
   {# ============================ HERO ============================ #}
   <section class="relative isolate overflow-hidden bg-ufhob-primary text-white">
-    {% if hero_image_url %}<img src="{{ hero_image_url }}" alt="" class="absolute inset-0 -z-20 h-full w-full object-cover" fetchpriority="high">{% endif %}
+    {% if hero_image_url %}<img src="{{ hero_image_url }}" alt="{{ school.display_name }} - UFHOB-Mali" class="absolute inset-0 -z-20 h-full w-full object-cover" fetchpriority="high" width="1200" height="800">{% endif %}
     <div class="absolute inset-0 -z-10 bg-gradient-to-r from-ufhob-primary via-ufhob-primary/85 to-ufhob-primary/40"></div>
     <div class="absolute inset-0 -z-10 bg-gradient-to-t from-ufhob-primary/90 via-transparent to-ufhob-primary/30"></div>
 
@@ -36,7 +36,7 @@
           </h1>
           {% if school.official_name %}<p class="mt-4 max-w-3xl text-lg font-semibold text-white">{{ school.official_name }}</p>{% endif %}
           <p class="mt-6 max-w-2xl text-base leading-7 text-white/80 sm:text-lg sm:leading-8">
-            {% if school.description %}{{ school.description }}{% else %}Découvrez les formations, les parcours et les implantations de cette composante académique de l’UFHOB.{% endif %}
+            {% if school.description %}{{ school.description }}{% else %}Découvrez les formations, les parcours et les implantations de cette composante académique de l’UFHOB-Mali.{% endif %}
           </p>
           <div class="mt-8 flex flex-col gap-3 sm:flex-row">
             <a href="#programmes" class="inline-flex items-center justify-center bg-ufhob-accent px-6 py-3.5 font-bold text-ufhob-primary transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Découvrir les formations</a>
@@ -46,10 +46,10 @@
 
         <div class="hidden lg:block" data-aos="fade-up">
           {% if school.logo %}
-          <img src="{{ school.logo.url }}" alt="Logo {{ school.short_name }}" class="h-28 w-28 border border-white/20 bg-white object-contain p-3 shadow-premium">
+          <img src="{{ school.logo.url }}" alt="Logo {{ school.short_name }}" class="h-28 w-28 border border-white/20 bg-white object-contain p-3 shadow-premium" width="400" height="393" loading="lazy">
           {% else %}
           {% firstof public_site_logo_url branding.logo_full as school_fallback_logo %}
-          <img src="{{ school_fallback_logo }}" alt="Logo UFHOB" class="h-28 w-28 border border-white/20 bg-white object-contain p-3 shadow-premium">
+          <img src="{{ school_fallback_logo }}" alt="Logo UFHOB-Mali" class="h-28 w-28 border border-white/20 bg-white object-contain p-3 shadow-premium" width="400" height="393" loading="lazy">
           {% endif %}
         </div>
       </div>
@@ -76,7 +76,7 @@
     <div class="mx-auto grid max-w-ufhob-container items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1.1fr_.9fr] lg:px-8">
       <div data-aos="fade-up">
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Présentation</p>
-        <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">Une composante académique de l’UFHOB</h2>
+        <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">Une composante académique de l’UFHOB-Mali</h2>
         {% if school.detailed_description %}
         <div class="prose mt-6 max-w-none text-ufhob-muted">{{ school.detailed_description|linebreaks }}</div>
         {% elif school.description %}
@@ -95,7 +95,7 @@
         </div>
       </div>
       <div class="school-media relative" data-aos="fade-up">
-        {% if hero_image_url %}<img src="{{ hero_image_url }}" alt="{{ school.short_name }}" class="aspect-[4/3] w-full object-cover" loading="lazy">{% else %}<div class="flex aspect-[4/3] items-center justify-center bg-ufhob-primary p-8">{% firstof public_site_logo_url branding.logo_full as presentation_logo %}<img src="{{ presentation_logo }}" alt="Logo UFHOB" class="h-32 w-auto max-w-full object-contain"></div>{% endif %}
+        {% if hero_image_url %}<img src="{{ hero_image_url }}" alt="{{ school.short_name }}" class="aspect-[4/3] w-full object-cover" loading="lazy" width="1200" height="800">{% else %}<div class="flex aspect-[4/3] items-center justify-center bg-ufhob-primary p-8">{% firstof public_site_logo_url branding.logo_full as presentation_logo %}<img src="{{ presentation_logo }}" alt="Logo UFHOB-Mali" class="h-32 w-auto max-w-full object-contain" width="400" height="393" loading="lazy"></div>{% endif %}
         <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ufhob-primary/80 to-transparent px-5 pb-4 pt-16">
           <p class="text-xs font-bold tracking-[0.18em] text-ufhob-secondary">{{ school.display_name }}</p>
           <p class="mt-1 text-sm font-semibold text-white">{{ school.display_name }}</p>

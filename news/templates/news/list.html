@@ -1,7 +1,7 @@
 {% extends "public/base.html" %}
 {% load static %}
 
-{% block title %}Actualités & événements | UFHOB{% endblock %}
+{% block title %}Actualités & événements | UFHOB-Mali{% endblock %}
 
 {% block content %}
 {% if featured_news %}
@@ -28,7 +28,7 @@
            class="news-editorial-hero__slide">
     <div class="news-editorial-hero__media" aria-hidden="true">
       {% if item.image %}
-        <img src="{{ item.image.url }}" alt="" {% if not forloop.first %}loading="lazy"{% endif %}>
+        <img src="{{ item.image.url }}" alt="Illustration : {{ article.title|default:item.title|default:"UFHOB-Mali" }}" {% if not forloop.first %}loading="lazy"{% endif %} width="1200" height="800">
       {% else %}
         <div class="news-editorial-hero__fallback"></div>
       {% endif %}
@@ -100,9 +100,9 @@
   <div class="news-editorial-hero__grain" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto flex min-h-[30rem] max-w-ufhob-container items-end px-4 pb-16 pt-28 sm:min-h-[34rem] sm:px-6 sm:pb-20 lg:px-8">
     <div class="max-w-3xl text-white">
-      <p class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary"><span class="news-editorial-hero__eyebrow-mark" aria-hidden="true"></span>UFHOB · Actualités & événements</p>
+      <p class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary"><span class="news-editorial-hero__eyebrow-mark" aria-hidden="true"></span>UFHOB-Mali · Actualités & événements</p>
       <h1 class="mt-5 text-4xl font-bold leading-tight tracking-[-0.03em] text-white sm:text-6xl">La vie de l’université, au fil des publications.</h1>
-      <p class="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">Retrouvez ici les communications, les rendez-vous et les temps forts qui font vivre la communauté UFHOB.</p>
+      <p class="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">Retrouvez ici les communications, les rendez-vous et les temps forts qui font vivre la communauté UFHOB-Mali.</p>
       <p class="mt-8 border-l border-ufhob-secondary/70 pl-4 text-sm font-medium text-white/65">Les prochaines actualités seront publiées dans cet espace éditorial.</p>
     </div>
   </div>
@@ -126,7 +126,7 @@
       <div class="flex flex-col gap-7 border-b border-ufhob-border pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Publications récentes</p>
-          <h2 id="news-list-heading" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">L’actualité de l’UFHOB</h2>
+          <h2 id="news-list-heading" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">L’actualité de l’UFHOB-Mali</h2>
           <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Une sélection de communications et d’informations publiées par l’université.</p>
         </div>
         <p class="text-sm font-medium text-ufhob-muted"><span class="font-bold text-ufhob-primary">{{ page_obj.paginator.count }}</span> publication{{ page_obj.paginator.count|pluralize }}</p>
@@ -165,7 +165,7 @@
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Agenda universitaire</p>
           <h2 id="agenda-heading" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">Les temps forts de l’université</h2>
-          <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Rencontres, activités et événements publiés dans l’agenda UFHOB.</p>
+          <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Rencontres, activités et événements publiés dans l’agenda UFHOB-Mali.</p>
         </div>
         <a href="{% url 'news:event_list' %}?mode=events" class="news-text-link">Voir tout l’agenda <span aria-hidden="true">→</span></a>
       </div>

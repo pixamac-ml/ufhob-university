@@ -1,7 +1,7 @@
 <section class="relative overflow-hidden text-white">
     {% if background_image %}
     <div class="absolute inset-0">
-        <img src="{{ background_image }}" alt="Fond hero à propos" class="h-full w-full object-cover" loading="lazy">
+        <img src="{{ background_image }}" alt="Fond hero à propos" class="h-full w-full object-cover" loading="lazy" width="1200" height="800">
         <div class="absolute inset-0" style="background: linear-gradient(135deg, rgba(14, 39, 55, 0.18) 0%, rgba(22, 59, 83, 0.14) 48%, rgba(29, 181, 176, 0.10) 100%);"></div>
     </div>
     {% else %}
@@ -45,7 +45,7 @@
                 <div class="rounded-md overflow-hidden shadow-lg border border-white/15">
                     <img src="{{ image }}"
                          alt="{{ title|default:'A propos ESFé' }}"
-                         class="w-full h-56 sm:h-72 lg:h-[420px] {% if image_is_logo %}object-contain bg-white{% else %}object-cover{% endif %}">
+                         class="w-full h-56 sm:h-72 lg:h-[420px] {% if image_is_logo %}object-contain bg-white{% else %}object-cover{% endif %}" width="400" height="393" loading="lazy">
                 </div>
             </div>
             {% endif %}

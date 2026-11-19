@@ -1,16 +1,16 @@
 {% extends "public/base.html" %}
 
-{% block title %}{{ event.title }} | UFHOB{% endblock %}
+{% block title %}{{ event.title }} | UFHOB-Mali{% endblock %}
 
 {% block content %}
 <header class="news-detail-hero news-detail-hero--event">
-  {% if event.cover_image %}<img src="{{ event.cover_image.url }}" alt="" class="news-detail-hero__image">{% endif %}
+  {% if event.cover_image %}<img src="{{ event.cover_image.url }}" alt="Illustration : {{ article.title|default:item.title|default:"UFHOB-Mali" }}" class="news-detail-hero__image" width="1200" height="800" loading="lazy">{% endif %}
   <div class="news-detail-hero__veil" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto flex min-h-[30rem] max-w-ufhob-container items-end px-4 pb-16 pt-28 sm:min-h-[36rem] sm:px-6 sm:pb-20 lg:px-8">
     <div class="max-w-4xl text-white">
       <a href="{% url 'news:event_list' %}?mode=events" class="news-back-link">← <span>Retour à l’agenda</span></a>
       <div class="mt-9 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-bold uppercase tracking-[0.16em] text-white/75">
-        <span class="text-ufhob-secondary">{% if event.event_type %}{{ event.event_type.name }}{% else %}Événement UFHOB{% endif %}</span>
+        <span class="text-ufhob-secondary">{% if event.event_type %}{{ event.event_type.name }}{% else %}Événement UFHOB-Mali{% endif %}</span>
         <span aria-hidden="true" class="text-white/40">·</span>
         <time datetime="{{ event.event_date|date:'Y-m-d' }}">{{ event.event_date|date:'d M Y' }}</time>
       </div>
@@ -26,7 +26,7 @@
       {% if event.description %}
       <div class="news-article-reading">
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Présentation</p>
-        <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary">Un temps fort de la vie UFHOB</h2>
+        <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary">Un temps fort de la vie UFHOB-Mali</h2>
         <div class="news-article-content mt-7"><p>{{ event.description|linebreaksbr }}</p></div>
       </div>
       {% endif %}
@@ -36,7 +36,7 @@
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Galerie</p>
         <h2 id="event-gallery-title" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary">Images de l’événement</h2>
         <div class="mt-7 grid grid-cols-2 gap-4 md:grid-cols-3">
-          {% for photo in images %}<figure class="news-article-gallery-item"><img src="{% if photo.image %}{{ photo.image.url }}{% elif photo.thumbnail %}{{ photo.thumbnail.url }}{% endif %}" alt="{{ photo.caption|default:event.title }}" loading="lazy">{% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}</figure>{% endfor %}
+          {% for photo in images %}<figure class="news-article-gallery-item"><img src="{% if photo.image %}{{ photo.image.url }}{% elif photo.thumbnail %}{{ photo.thumbnail.url }}{% endif %}" alt="{{ photo.caption|default:event.title }}" loading="lazy" width="1200" height="800">{% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}</figure>{% endfor %}
         </div>
       </section>
       {% endif %}
@@ -62,7 +62,7 @@
           {% if event.start_time %}<div><dt class="text-white/55">Heure</dt><dd class="mt-1 font-bold text-white">{{ event.start_time|time:"H:i" }}{% if event.end_time %} – {{ event.end_time|time:"H:i" }}{% endif %}</dd></div>{% endif %}
           {% if event.venue %}<div><dt class="text-white/55">Lieu</dt><dd class="mt-1 font-bold text-white">{{ event.venue }}</dd></div>{% endif %}
           {% if event.organizer %}<div><dt class="text-white/55">Organisé par</dt><dd class="mt-1 font-bold text-white">{{ event.organizer }}</dd></div>{% endif %}
-          <div><dt class="text-white/55">Type</dt><dd class="mt-1 font-bold text-white">{% if event.event_type %}{{ event.event_type.name }}{% else %}Événement UFHOB{% endif %}</dd></div>
+          <div><dt class="text-white/55">Type</dt><dd class="mt-1 font-bold text-white">{% if event.event_type %}{{ event.event_type.name }}{% else %}Événement UFHOB-Mali{% endif %}</dd></div>
           {% if images %}<div><dt class="text-white/55">Photographies</dt><dd class="mt-1 font-bold text-white">{{ images|length }}</dd></div>{% endif %}
           {% if videos %}<div><dt class="text-white/55">Vidéos</dt><dd class="mt-1 font-bold text-white">{{ videos|length }}</dd></div>{% endif %}
         </dl>
@@ -77,7 +77,7 @@
 <section class="bg-white py-16 sm:py-20" aria-labelledby="related-events-title">
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">À découvrir également</p>
-    <h2 id="related-events-title" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">D’autres rendez-vous UFHOB</h2>
+    <h2 id="related-events-title" class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">D’autres rendez-vous UFHOB-Mali</h2>
     <div class="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for related_event in related_events %}<c-public.event_card :event="related_event" />{% endfor %}</div>
   </div>
 </section>

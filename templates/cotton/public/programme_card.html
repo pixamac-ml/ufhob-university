@@ -1,6 +1,6 @@
 {% load static %}
 <article class="public-editorial-card flex h-full flex-col overflow-hidden border border-ufhob-border bg-white">
-  {% if programme.illustration %}<img src="{{ programme.illustration.url }}" alt="{{ programme.title }}" class="h-44 w-full object-cover" loading="lazy">{% endif %}
+  {% if programme.illustration %}<img src="{{ programme.illustration.url }}" alt="{{ programme.title }}" class="h-44 w-full object-cover" loading="lazy" width="1200" height="800">{% endif %}
   <div class="flex flex-1 flex-col p-6">
     <h3 class="text-xl font-bold text-ufhob-primary">
       {{ programme.title }}

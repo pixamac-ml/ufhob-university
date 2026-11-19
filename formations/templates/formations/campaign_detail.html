@@ -12,6 +12,7 @@
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
     <a href="{% url 'core:school_detail' code=programme.school.code|lower %}" class="text-sm font-bold text-ufhob-primary">{{ programme.school.display_name }}</a>
     <h1 class="campaign-title mt-3 font-bold text-ufhob-primary">{{ programme.title }}</h1>
+    <p class="mt-4 max-w-3xl leading-7 text-ufhob-muted">{{ programme_intro }}</p>
     <p class="mt-3 font-semibold text-ufhob-secondary-dark">{{ programme.registration_notice }}</p>
     {% if programme.admissions_open %}<a href="{{ apply_url }}" class="campaign-apply mt-4">Candidater à cette formation</a>{% endif %}
     <p class="mt-4 text-ufhob-muted">{{ programme.short_description }}</p>

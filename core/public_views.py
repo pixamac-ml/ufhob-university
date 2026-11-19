@@ -34,6 +34,9 @@ def _hidden_school_code(code):
 
 
 def school_detail(request, code):
+    from .seo import breadcrumb_schema
+    def school_breadcrumbs(school):
+        return breadcrumb_schema([("Accueil", reverse("core:home")), (school.display_name, reverse("core:school_detail", kwargs={"code": school.code.lower()}))])
     if _hidden_school_code(code):
         return redirect("formations:list")
     if code.upper() in ('FATEC','ESGA'):
@@ -42,6 +45,7 @@ def school_detail(request, code):
         programmes=Programme.objects.public().filter(school=school).select_related('school','cycle','filiere','diploma_awarded')
         return render(request, 'formations/scoped_catalogue.html', {
             'page_title': f'{school.display_name} | UFHOB-Mali | Bamako, Moribabougou',
+            'breadcrumb_schema_json': school_breadcrumbs(school),
             'meta_description': f'Découvrez les formations de {school.display_name} à UFHOB-Mali, campus de Moribabougou près de Bamako. Consultez les filières et candidatez en ligne.',
             'catalogue_schools': [{'school': school, 'domains': grouped_programmes(programmes)}],
             **public_catalogue_context(),
@@ -115,6 +119,7 @@ def school_detail(request, code):
         "public/school_detail.html",
         {
             "school": school,
+            "breadcrumb_schema_json": school_breadcrumbs(school),
             "programmes": programmes,
             "programmes_by_cycle": programmes_by_cycle,
             "cycles": cycles,

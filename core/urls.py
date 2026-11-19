@@ -5,6 +5,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 from . import views
 from . import public_views
+from .public_faq import faq
 from memoires import views as memoire_views
 
 
@@ -18,6 +19,7 @@ urlpatterns = [
 
     path("", views.home, name="home"),
     path("apropos/", views.about, name="about"),
+    path("faq/", faq, name="faq"),
     path("universite/", public_views.university, name="university"),
     path("contact/", views.contact_view, name="contact"),
     # School codes are configurable institutional data and may contain accents.

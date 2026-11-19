@@ -18,7 +18,7 @@
 
                 {% if program.image %}
                 <img src="{{ program.image.url }}"
-                     class="h-48 w-full object-cover">
+                     class="h-48 w-full object-cover" alt="Illustration : {{ article.title|default:item.title|default:"UFHOB-Mali" }}" width="1200" height="800" loading="lazy">
                 {% endif %}
 
                 <div class="p-6">

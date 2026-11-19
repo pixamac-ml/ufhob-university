@@ -580,3 +580,8 @@ if DEBUG:
 
 # Optional public campaign pixel. Empty means no Meta code is rendered.
 META_PIXEL_ID = os.getenv("META_PIXEL_ID", "").strip()
+GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+SOCIAL_FACEBOOK_URL = os.getenv("SOCIAL_FACEBOOK_URL", "").strip()
+SOCIAL_INSTAGRAM_URL = os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/ufhob_mali/").strip()
+SOCIAL_TIKTOK_URL = os.getenv("SOCIAL_TIKTOK_URL", "").strip()
+SOCIAL_YOUTUBE_URL = os.getenv("SOCIAL_YOUTUBE_URL", "").strip()

@@ -19,13 +19,13 @@
 {% comment %} ================================ HERO ================================ {% endcomment %}
 <section id="ecole" class="about-anchor">
 {% if site_configuration and site_configuration.about_hero_image %}
-    {% component "about_hero" title="À propos de l’UFHOB-Mali" subtitle="L’Université Privée Félix Houphouët Boigny Mali accompagne les étudiants dans leur projet universitaire et professionnel." label="Notre université" image=site_configuration.about_hero_image.url background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
+    {% component "about_hero" title=public_brand_name subtitle=public_brand_intro label="Notre université" image=site_configuration.about_hero_image.url background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
     {% endcomponent %}
 {% elif presentation and presentation.hero_image %}
-    {% component "about_hero" title="À propos de l’UFHOB-Mali" subtitle="L’Université Privée Félix Houphouët Boigny Mali accompagne les étudiants dans leur projet universitaire et professionnel." label="Notre université" image=presentation.hero_image.url background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
+    {% component "about_hero" title=public_brand_name subtitle=public_brand_intro label="Notre université" image=presentation.hero_image.url background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
     {% endcomponent %}
 {% else %}
-    {% component "about_hero" title="À propos de l’UFHOB-Mali" subtitle="L’Université Privée Félix Houphouët Boigny Mali accompagne les étudiants dans leur projet universitaire et professionnel." label="Notre université" image="" background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
+    {% component "about_hero" title=public_brand_name subtitle=public_brand_intro label="Notre université" image="" background_image=about_hero_background_url cta_text="Découvrir les formations" cta_url="/formations/" %}
     {% endcomponent %}
 {% endif %}
 </section>

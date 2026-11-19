@@ -196,7 +196,7 @@ def formation_detail(request, slug, school_code=None):
         .exclude(pk=programme.pk)
         .filter(school=programme.school)
         .select_related("school", "cycle", "diploma_awarded")
-        .order_by("-is_featured", "title")[:3]
+        .order_by("-is_featured", "title")
     )
 
     campuses = Branch.objects.filter(is_active=True)
@@ -212,11 +212,13 @@ def formation_detail(request, slug, school_code=None):
     effective_og_image = programme.effective_og_image
     og_image_url = request.build_absolute_uri(effective_og_image.url) if effective_og_image else None
 
-    from core.seo import programme_schema
+    from core.seo import programme_schema, programme_introduction, programme_breadcrumbs
     degree = programme.cycle.name if programme.cycle_id else ""
     programme_label = programme.title if degree.casefold() in programme.title.casefold() else f"{degree} — {programme.title}"
     context = {
         "programme_schema_json": programme_schema(programme),
+        "programme_intro": programme_introduction(programme),
+        "breadcrumb_schema_json": programme_breadcrumbs(programme),
         "pixel_content_name": programme.title,
         "programme": programme,
         "page_title": f"{programme_label} | UFHOB-Mali | Bamako, Moribabougou",

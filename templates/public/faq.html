@@ -1,0 +1,7 @@
+{% extends "public/base.html" %}
+{% block content %}
+<c-public.page_hero eyebrow="Informations pratiques" title="Questions fréquentes sur l’UFHOB-Mali" text="Campus, formations et candidature : retrouvez les informations du site officiel." />
+<section class="bg-white py-12"><div class="mx-auto max-w-4xl px-6">
+{% for item in faq_items %}<article class="border-b border-ufhob-border py-6"><h2 class="text-xl font-bold text-ufhob-primary">{{ item.question }}</h2><p class="mt-3 leading-7 text-ufhob-muted">{{ item.answer }}</p><a href="{% url item.url_name %}" class="mt-3 inline-block font-semibold text-ufhob-primary underline">{% if item.url_name == 'formations:list' %}Consulter les formations{% elif item.url_name == 'core:contact' %}Contacter UFHOB-Mali{% else %}Candidater en ligne{% endif %}</a></article>{% endfor %}
+</div></section>
+{% endblock %}

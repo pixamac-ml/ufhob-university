@@ -12,7 +12,7 @@
 
         {% if program.image %}
         <img src="{{ program.image.url }}"
-             class="rounded-xl shadow mb-8">
+             class="rounded-xl shadow mb-8" alt="Illustration : {{ article.title|default:item.title|default:"UFHOB-Mali" }}" width="1200" height="800" loading="lazy">
         {% endif %}
 
         <div class="prose max-w-none mb-12">

@@ -1,6 +1,6 @@
 {% load static %}
 <article class="news-editorial-card public-editorial-card group">
-  <a href="{{ item.get_absolute_url }}" class="news-editorial-card__media">{% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.titre }}" loading="lazy">{% endif %}</a>
+  <a href="{{ item.get_absolute_url }}" class="news-editorial-card__media">{% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.titre }}" loading="lazy" width="1200" height="800">{% endif %}</a>
   <div class="flex flex-1 flex-col p-5 sm:p-6">
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-bold uppercase tracking-[0.12em] text-ufhob-muted"><span class="text-ufhob-secondary-dark">{{ item.categorie.nom }}</span><span aria-hidden="true">·</span><time datetime="{{ item.published_at|date:'c' }}">{{ item.published_at|date:'d M Y' }}</time>{% if item.is_important %}<span class="news-status-badge news-status-badge--important">Important</span>{% endif %}{% if item.is_urgent %}<span class="news-status-badge news-status-badge--urgent">Urgent</span>{% endif %}</div>
     <h3 class="mt-4 line-clamp-2 text-xl font-bold leading-snug text-ufhob-primary sm:text-2xl"><a href="{{ item.get_absolute_url }}" class="transition-colors hover:text-ufhob-secondary-dark">{{ item.titre }}</a></h3>

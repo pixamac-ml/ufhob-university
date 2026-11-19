@@ -151,6 +151,7 @@ def sitemap(request):
                 _sitemap_link("Accueil", "core:home", "Vue d'ensemble et actualites principales."),
                 _sitemap_link("Présentation", "core:university", "Projet institutionnel, rectorat et administration."),
                 _sitemap_link("Campus", "core:campus_life", "Campus et implantations universitaires."),
+                _sitemap_link("Questions fréquentes", "core:faq", "Campus, formations et candidature."),
                 _sitemap_link("Contact", "core:contact", "Coordonnees et formulaire de contact."),
                 _sitemap_link("Plan du site", "core:sitemap", "Structure complete des pages publiques."),
             ]),
@@ -343,21 +344,14 @@ def about(request):
 # ==========================================================
 
 def home(request):
+    from .public_brand import BRAND_NAME, BRAND_INTRO
     institution = Institution.objects.filter(is_active=True).first()
     presentation = InstitutionPresentation.objects.first()
     site_configuration = get_site_configuration_safe()
     home_hero_image_url = site_configuration.home_hero_image.url if site_configuration and site_configuration.home_hero_image else ""
     site_logo_url = site_configuration.site_logo.url if site_configuration and site_configuration.site_logo else ""
-    home_hero_title = (
-        site_configuration.home_hero_title
-        if site_configuration and site_configuration.home_hero_title
-        else "Université Privée Félix Houphouët-Boigny du Mali"
-    )
-    home_hero_subtitle = (
-        site_configuration.home_hero_subtitle
-        if site_configuration and site_configuration.home_hero_subtitle
-        else "Une université d’excellence académique, d’innovation scientifique et d’engagement citoyen."
-    )
+    home_hero_title = BRAND_NAME
+    home_hero_subtitle = BRAND_INTRO
     governance_title = (
         site_configuration.governance_title
         if site_configuration and site_configuration.governance_title
@@ -445,7 +439,7 @@ def home(request):
     hero_slides = [
         {
             "id": "university",
-            "eyebrow": "Université · UFHOB",
+            "eyebrow": "Université · UFHOB-Mali",
             "title": home_hero_title,
             "description": home_hero_subtitle,
             "media_type": "image",
@@ -481,6 +475,7 @@ def home(request):
         "research_text": research_text,
         "schools": schools,
         "formations_home": formations_home,
+        "all_public_programmes": public_programmes.order_by("school__order", "title"),
         "values": values,
         "latest_news": latest_news,
         "latest_events": latest_events,
@@ -647,13 +642,15 @@ def custom_404(request, exception):
 
     formations_home = (
         Programme.objects
-        .filter(is_active=True)
+        .public()
         .select_related("cycle")
         .order_by("cycle__min_duration_years")[:3]
     )
 
     context = {
         "error_code": 404,
+        "page_title": "Page introuvable | UFHOB-Mali",
+        "meta_robots": "noindex, follow",
         "error_title": "Page introuvable",
         "error_message": "La page demandée n'existe pas ou a été déplacée.",
         "formations_home": formations_home,

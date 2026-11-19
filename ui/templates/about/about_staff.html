@@ -40,7 +40,7 @@
                                         rounded-full transform group-hover:scale-110 transition-transform duration-500"></div>
                             {% if person.photo %}<img src="{{ person.photo.url }}"
                                  alt="{{ person.full_name }}"
-                                 class="relative w-full h-full rounded-full object-cover border-4 border-white shadow-lg">{% endif %}
+                                 class="relative w-full h-full rounded-full object-cover border-4 border-white shadow-lg" width="1200" height="800" loading="lazy">{% endif %}
                         </div>
 
                         <!-- Infos -->
@@ -106,7 +106,7 @@
                                 transition-all duration-300">
                         {% if person.photo %}<img src="{{ person.photo.url }}"
                              alt="{{ person.full_name }}"
-                             class="w-full h-full object-cover">{% endif %}
+                             class="w-full h-full object-cover" width="1200" height="800" loading="lazy">{% endif %}
                     </div>
 
                     <h4 class="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">

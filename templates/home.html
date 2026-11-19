@@ -1,11 +1,8 @@
 {% extends "public/base.html" %}
 {% load static %}
+{% load public_content %}
 
 {% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_head %}
-<meta name="description" content="Découvrez l'Université Privée Félix Houphouët-Boigny du Mali, ses écoles, ses formations, ses campus et son engagement pour la recherche et l'innovation.">
-{% endblock %}
 
 {% block public_navbar %}<c-public.navbar :schools="schools" logo_url="{{ site_logo_url }}" reveal_after_hero="true" />{% endblock %}
 {% block public_floating_widget %}{{ block.super }}{% endblock %}
@@ -16,16 +13,17 @@
 <section id="universite" class="bg-white py-16 sm:py-20 lg:py-24">
   <div class="mx-auto grid max-w-ufhob-container items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8">
     <div>
-      <c-public.section-header eyebrow="L’université" title="{{ presentation.about_title|default:'Une formation exigeante, ouverte sur les défis de notre temps' }}" text="Découvrez le projet institutionnel, la vision et la mission de l’UFHOB." />
+      <c-public.section-header eyebrow="L’université" title="{{ presentation.about_title|default:'Une formation exigeante, ouverte sur les défis de notre temps' }}" text="Découvrez le projet institutionnel, la vision et la mission de l’UFHOB-Mali." />
       <div class="mt-6 max-w-2xl text-base leading-7 text-ufhob-muted">
-        {% if presentation.about_text %}{{ presentation.about_text|safe|truncatewords_html:75 }}{% else %}<p>L’Université Privée Félix Houphouët-Boigny du Mali associe rigueur académique, pertinence pratique, innovation et engagement communautaire. Elle accompagne chaque étudiant dans le développement de ses compétences, de sa créativité et de son esprit d’initiative.</p>{% endif %}
+        <p>{{ public_brand_intro }}</p>
+        {% if presentation.about_text %}{{ presentation.about_text|truncatewords_html:75|public_image_attributes:public_brand_name|safe }}{% endif %}
       </div>
       <a href="{% url 'core:university' %}" class="mt-7 inline-flex items-center gap-2 rounded-ufhob-sm border border-ufhob-primary px-5 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-primary hover:text-white">Découvrir l’université <span aria-hidden="true">→</span></a>
     </div>
     {% if presentation.about_image or site_configuration.home_about_image %}
     <div class="relative">
       <div class="absolute -inset-4 -z-0 rounded-ufhob-lg bg-ufhob-secondary-soft"></div>
-      <img src="{% if presentation.about_image %}{{ presentation.about_image.url }}{% elif site_configuration.home_about_image %}{{ site_configuration.home_about_image.url }}{% endif %}" alt="Campus de l’UFHOB-Mali" class="relative h-[360px] w-full rounded-ufhob-lg object-cover shadow-premium sm:h-[440px]" loading="lazy">
+      <img src="{% if presentation.about_image %}{{ presentation.about_image.url }}{% elif site_configuration.home_about_image %}{{ site_configuration.home_about_image.url }}{% endif %}" alt="Campus de l’UFHOB-Mali" class="relative h-[360px] w-full rounded-ufhob-lg object-cover shadow-premium sm:h-[440px]" loading="lazy" width="1200" height="800">
       <div class="absolute -bottom-5 left-5 right-5 rounded-ufhob-md bg-ufhob-primary p-5 text-white shadow-premium sm:left-auto sm:w-72"><p class="text-xs font-bold uppercase tracking-[0.18em] text-ufhob-secondary">Notre signature</p><p class="mt-1 text-lg font-bold">Demain, c’est aujourd’hui</p></div>
     </div>
     {% else %}
@@ -55,7 +53,7 @@
 {% if director_message %}
 <section id="mot-direction" class="bg-ufhob-primary py-16 text-white sm:py-20">
   <div class="mx-auto grid max-w-ufhob-container items-center gap-8 px-4 sm:px-6 lg:grid-cols-[220px_1fr] lg:px-8">
-    {% if director_message.photo %}<img src="{{ director_message.photo.url }}" alt="{{ director_message.full_name }}" class="h-64 w-full rounded-ufhob-lg object-cover" loading="lazy">{% endif %}
+    {% if director_message.photo %}<img src="{{ director_message.photo.url }}" alt="{{ director_message.full_name }}" class="h-64 w-full rounded-ufhob-lg object-cover" loading="lazy" width="1200" height="800">{% endif %}
     <div>
       <p class="text-xs font-bold uppercase tracking-[0.2em] text-white/75">Mot du {{ director_message.position }}</p>
       <h2 class="mt-3 text-3xl font-bold text-white sm:text-4xl">{{ director_message.title }}</h2>
@@ -93,7 +91,7 @@
 {% endif %}
 
 <section id="recherche" class="relative isolate overflow-hidden bg-ufhob-primary py-16 text-white sm:py-20 lg:py-24">
-  {% if site_configuration.research_image %}<img src="{% if site_configuration.research_image %}{{ site_configuration.research_image.url }}{% endif %}" alt="Recherche et innovation à l’UFHOB" class="absolute inset-0 -z-20 h-full w-full object-cover" loading="lazy">{% endif %}<div class="absolute inset-0 -z-10 bg-ufhob-primary/90"></div>
+  {% if site_configuration.research_image %}<img src="{% if site_configuration.research_image %}{{ site_configuration.research_image.url }}{% endif %}" alt="Recherche et innovation à l’UFHOB-Mali" class="absolute inset-0 -z-20 h-full w-full object-cover" loading="lazy" width="1200" height="800">{% endif %}<div class="absolute inset-0 -z-10 bg-ufhob-primary/90"></div>
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8"><div class="max-w-3xl"><p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary">Recherche & innovation</p><h2 class="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl">{{ research_title }}</h2><p class="mt-5 text-lg leading-8 text-white/75">{{ research_text }}</p><a href="{% url 'core:research_innovation' %}" class="mt-7 inline-flex border border-white/50 px-5 py-3 text-sm font-bold text-white hover:bg-white hover:text-ufhob-primary">Découvrir la recherche</a></div></div>
 </section>
 
@@ -108,7 +106,7 @@
 
 <section id="vie-universitaire" class="bg-white py-16 sm:py-20 lg:py-24">
   <div class="mx-auto grid max-w-ufhob-container items-center gap-10 px-4 sm:px-6 {% if site_configuration.campus_life_image_1 or site_configuration.campus_life_image_2 %}lg:grid-cols-2{% endif %} lg:px-8">
-    {% if site_configuration.campus_life_image_1 or site_configuration.campus_life_image_2 %}<div class="grid grid-cols-2 gap-4">{% if site_configuration.campus_life_image_1 %}<img src="{{ site_configuration.campus_life_image_1.url }}" alt="Vie universitaire" class="h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy">{% endif %}{% if site_configuration.campus_life_image_2 %}<img src="{{ site_configuration.campus_life_image_2.url }}" alt="Apprentissage et activités étudiantes" class="mt-8 h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy">{% endif %}</div>{% endif %}
+    {% if site_configuration.campus_life_image_1 or site_configuration.campus_life_image_2 %}<div class="grid grid-cols-2 gap-4">{% if site_configuration.campus_life_image_1 %}<img src="{{ site_configuration.campus_life_image_1.url }}" alt="Vie universitaire" class="h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy" width="1200" height="800">{% endif %}{% if site_configuration.campus_life_image_2 %}<img src="{{ site_configuration.campus_life_image_2.url }}" alt="Apprentissage et activités étudiantes" class="mt-8 h-72 w-full rounded-ufhob-lg object-cover shadow-soft" loading="lazy" width="1200" height="800">{% endif %}</div>{% endif %}
     <div><c-public.section_header eyebrow="Vie universitaire" title="{{ campus_life_title }}" text="{{ campus_life_text }}" /><div class="mt-7 grid gap-3 text-sm text-ufhob-muted sm:grid-cols-2"><p class="rounded-ufhob-sm bg-ufhob-primary-soft p-4">Accompagnement pédagogique</p><p class="rounded-ufhob-sm bg-ufhob-ivory p-4">Ressources et documentation</p><p class="rounded-ufhob-sm bg-ufhob-ivory p-4">Engagement étudiant</p><p class="rounded-ufhob-sm bg-ufhob-primary-soft p-4">Activités scientifiques et culturelles</p></div></div>
   </div>
 </section>
@@ -117,14 +115,17 @@
 {% if latest_news or latest_events %}
 <section id="actualites" class="bg-ufhob-ivory py-16 sm:py-20 lg:py-24">
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
-    <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><c-public.section_header eyebrow="Actualités & événements" title="Ce qui fait vivre l’UFHOB" text="Les dernières informations publiées par l’université." />{% if latest_news %}<a href="{% url 'news:list' %}" class="shrink-0 text-sm font-bold text-ufhob-primary">Toutes les actualités →</a>{% endif %}</div>
+    <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><c-public.section_header eyebrow="Actualités & événements" title="Ce qui fait vivre l’UFHOB-Mali" text="Les dernières informations publiées par l’université." />{% if latest_news %}<a href="{% url 'news:list' %}" class="shrink-0 text-sm font-bold text-ufhob-primary">Toutes les actualités →</a>{% endif %}</div>
     {% if latest_news %}<div class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for item in latest_news %}<c-public.news_card :item="item" />{% endfor %}</div>{% endif %}
     {% if latest_events %}<div class="mt-10"><h3 class="text-xl font-bold text-ufhob-primary">Événements publiés</h3><div class="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{% for event in latest_events %}<c-public.event_card :event="event" />{% endfor %}</div></div>{% endif %}
   </div>
 </section>
 {% endif %}
 
-<c-public.cta title="{{ presentation.cta_title|default:'Construisez le monde de demain, aujourd’hui' }}" text="{{ presentation.cta_subtitle|default:'Explorez les formations de l’UFHOB et engagez la première étape de votre parcours universitaire.' }}" button_text="{{ presentation.cta_button_text }}" button_url="{{ presentation.cta_button_url }}" />
+<section class="bg-white py-12" aria-label="Toutes les écoles et filières"><div class="mx-auto max-w-ufhob-container px-6"><h2 class="text-2xl font-bold text-ufhob-primary">Écoles et filières de l’UFHOB-Mali</h2>
+<nav class="mt-5 flex flex-wrap gap-5" aria-label="Écoles publiques">{% for school in schools %}<a class="font-semibold underline" href="{% url 'core:school_detail' code=school.code|lower %}">{{ school.display_name }}</a>{% endfor %}</nav>
+<ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{% for programme in all_public_programmes %}<li><a class="text-ufhob-primary underline" href="{{ programme.get_absolute_url }}">{{ programme.title }}{% if programme.cycle_id %} — {{ programme.cycle.name }}{% endif %}</a></li>{% endfor %}</ul></div></section>
+<c-public.cta title="{{ presentation.cta_title|default:'Construisez le monde de demain, aujourd’hui' }}" text="{{ presentation.cta_subtitle|default:'Explorez les formations de l’UFHOB-Mali et engagez la première étape de votre parcours universitaire.' }}" button_text="{{ presentation.cta_button_text }}" button_url="{{ presentation.cta_button_url }}" />
 {% endblock %}
 
 {% block public_footer %}<c-public.footer logo_url="{{ site_logo_url }}" :institution="institution" :site_configuration="site_configuration" :public_legal_links="public_legal_links" />{% endblock %}

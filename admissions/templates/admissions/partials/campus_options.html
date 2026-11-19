@@ -16,7 +16,7 @@
           :class="String(formData.branch_id) === '{{ campus.id }}' ? 'border-ufhob-secondary bg-ufhob-primary-soft ring-1 ring-ufhob-secondary/30' : (errors.branch_id ? 'border-red-400' : 'border-ufhob-border hover:border-ufhob-secondary')"
           @click="selectCampus('{{ campus.id }}', '{{ campus.name|escapejs }}', '{{ campus.city|default:''|escapejs }}', '{{ campus.image_url|escapejs }}')" :aria-pressed="String(formData.branch_id) === '{{ campus.id }}'">
     <strong class='block text-ufhob-primary'>{{ campus.name }}</strong>
-    <span class='mt-1 block text-xs text-ufhob-muted'>{{ campus.city|default:'Campus UFHOB' }}</span>
+    <span class='mt-1 block text-xs text-ufhob-muted'>{{ campus.city|default:'Campus UFHOB-Mali' }}</span>
   </button>
   {% endfor %}
 </div>

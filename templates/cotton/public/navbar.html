@@ -2,10 +2,10 @@
 {% if reveal_after_hero %}<div x-data="publicNavbarVisibility()" x-init="init()" x-cloak :class="navVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'" class="fixed inset-x-0 top-0 z-[90] transform transition duration-500 ease-premium">{% endif %}
 <header x-data="{ menuOpen: false, schoolsOpen: false }" class="z-[90] border-b-2 border-ufhob-accent bg-ufhob-primary text-white shadow-soft {% if not reveal_after_hero %}sticky top-0{% endif %}">
   <nav class="mx-auto flex h-[4.5rem] max-w-ufhob-container items-center gap-3 px-4 sm:px-5 lg:px-6 xl:h-20 xl:gap-1 xl:px-6 2xl:gap-3 2xl:px-8" aria-label="Navigation principale">
-    <a href="{% url 'core:home' %}" class="flex shrink-0 items-center gap-3" aria-label="UFHOB — Université">
+    <a href="{% url 'core:home' %}" class="flex shrink-0 items-center gap-3" aria-label="UFHOB-Mali — Université">
       {% firstof logo_url branding.logo_full as active_logo %}
-      <img src="{{ active_logo }}" alt="Logo UFHOB" class="h-12 w-auto max-w-[9.5rem] object-contain xl:h-14">
-      <span class="hidden text-sm font-bold leading-tight sm:block">UFHOB<br><span class="font-normal text-white/70">Mali</span></span>
+      <img src="{{ active_logo }}" alt="Logo UFHOB-Mali" class="h-12 w-auto max-w-[9.5rem] object-contain xl:h-14" width="400" height="393" loading="eager">
+      <span class="hidden text-sm font-bold leading-tight sm:block">UFHOB-Mali<br><span class="font-normal text-white/70">Université privée</span></span>
     </a>
     <div class="ml-auto hidden min-w-0 items-center gap-0 xl:flex 2xl:gap-1">
       <a href="{% url 'core:university' %}" class="public-nav-item whitespace-nowrap px-2 py-2 text-[13px] font-semibold 2xl:px-3 2xl:text-sm" data-active="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'university' %}true{% else %}false{% endif %}">Université</a>

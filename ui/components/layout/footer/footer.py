@@ -26,6 +26,7 @@ class Footer(component.Component):
                     {"label": "Accueil", "url": self._safe_reverse("core:home")},
                     {"label": "À propos", "url": self._safe_reverse("core:about")},
                     {"label": "Contact", "url": self._safe_reverse("core:contact")},
+                    {"label": "Questions fréquentes", "url": self._safe_reverse("core:faq")},
                     {"label": "Plan du site", "url": self._safe_reverse("core:sitemap")},
                 ],
             },

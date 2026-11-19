@@ -1,15 +1,15 @@
 {% extends "public/base.html" %}
 
-{% block title %}Événements & galeries | UFHOB{% endblock %}
+{% block title %}Événements & galeries | UFHOB-Mali{% endblock %}
 
 {% block content %}
-<c-public.page_hero eyebrow="Vie universitaire" title="Événements & galeries" text="Retrouvez les rendez-vous, les rencontres et les images qui témoignent de la vie de l’UFHOB." />
+<c-public.page_hero eyebrow="Vie universitaire" title="Événements & galeries" text="Retrouvez les rendez-vous, les rencontres et les images qui témoignent de la vie de l’UFHOB-Mali." />
 
 <section class="bg-ufhob-ivory py-12 sm:py-16 lg:py-20">
   <div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
     <div class="flex flex-col gap-7 border-b border-ufhob-border pb-8 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Agenda UFHOB</p>
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-ufhob-secondary-dark">Agenda UFHOB-Mali</p>
         <h2 class="mt-3 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">Des moments à partager</h2>
         <p class="mt-3 max-w-2xl text-base leading-7 text-ufhob-muted">Consultez les événements publiés et explorez les images associées aux temps forts de l’université.</p>
       </div>
@@ -45,7 +45,7 @@
         {% for photo in photos %}
         <a href="{% url 'news:event_detail' photo.event.slug %}" class="news-photo-tile group">
           <div class="news-photo-tile__media">
-            {% if photo.thumbnail %}<img src="{{ photo.thumbnail.url }}" alt="{{ photo.caption|default:photo.event.title }}" loading="lazy">{% elif photo.image %}<img src="{{ photo.image.url }}" alt="{{ photo.caption|default:photo.event.title }}" loading="lazy">{% else %}<span aria-hidden="true">UFHOB</span>{% endif %}
+            {% if photo.thumbnail %}<img src="{{ photo.thumbnail.url }}" alt="{{ photo.caption|default:photo.event.title }}" loading="lazy" width="1200" height="800">{% elif photo.image %}<img src="{{ photo.image.url }}" alt="{{ photo.caption|default:photo.event.title }}" loading="lazy" width="1200" height="800">{% else %}<span aria-hidden="true">UFHOB-Mali</span>{% endif %}
           </div>
           <div class="p-4"><p class="line-clamp-2 text-sm font-bold leading-5 text-ufhob-primary">{{ photo.event.title }}</p><p class="mt-2 text-xs text-ufhob-muted">{{ photo.event.event_date|date:'d M Y' }}</p></div>
         </a>

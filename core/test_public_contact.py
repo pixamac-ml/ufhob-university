@@ -45,11 +45,13 @@ class PublicContactTests(SimpleTestCase):
         for obsolete in ("univ-fhb-mali.org", "76 37 88 66", "66.37.88.66", "provisoire"):
             self.assertNotIn(obsolete, html)
 
+    @override_settings(SOCIAL_FACEBOOK_URL="", SOCIAL_INSTAGRAM_URL="", SOCIAL_TIKTOK_URL="", SOCIAL_YOUTUBE_URL="")
     def test_empty_and_placeholder_social_links_are_hidden(self):
         self.assertEqual(get_public_social_links(None), [])
         config = SimpleNamespace(facebook_url="#", instagram_url="https://example.com/account", youtube_url="javascript:alert(1)")
         self.assertEqual(get_public_social_links(config), [])
 
+    @override_settings(SOCIAL_FACEBOOK_URL="https://www.facebook.com/ufhob", SOCIAL_INSTAGRAM_URL="")
     def test_configured_social_link_exposes_existing_icon(self):
         config = SimpleNamespace(facebook_url="https://www.facebook.com/ufhob", instagram_url="", tiktok_url="", youtube_url="", linkedin_url="")
         links = get_public_social_links(config)

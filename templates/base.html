@@ -5,6 +5,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
   <meta name="htmx-config" content='{"historyCacheSize": 0}'>
 
   <title>{% block title %}{% firstof page_title seo_site_name "UFHOB-Mali" %}{% endblock %}</title>
@@ -42,6 +43,8 @@
   <link rel="apple-touch-icon" href="{% static 'images/institution/apple-touch-icon.png' %}" sizes="180x180">
   <meta property="og:site_name" content="UFHOB-Mali">
   {% if programme_schema_json %}<script type="application/ld+json">{{ programme_schema_json|safe }}</script>{% endif %}
+  {% if breadcrumb_schema_json %}<script type="application/ld+json">{{ breadcrumb_schema_json|safe }}</script>{% endif %}
+  {% if faq_schema_json %}<script type="application/ld+json">{{ faq_schema_json|safe }}</script>{% endif %}
   {% include "public/partials/meta_pixel.html" %}
 
   <!-- STYLES -->

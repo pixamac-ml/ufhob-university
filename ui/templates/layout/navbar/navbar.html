@@ -9,7 +9,7 @@
     <a href="{% url 'core:home' %}" class="flex items-center flex-shrink-0">
       <img src="{% static 'images/institution/ufhob-logo.webp' %}"
            alt="UFHOB-Mali"
-           class="h-10 sm:h-12 w-auto hover:scale-105 transition">
+           class="h-10 sm:h-12 w-auto hover:scale-105 transition" width="400" height="393" loading="eager">
     </a>
 
 
@@ -257,7 +257,7 @@
           {% if user.profile.avatar %}
           <img src="{{ user.profile.avatar.url }}"
                alt="{{ user.username }}"
-               class="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30">
+               class="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/30" width="1200" height="800" loading="eager">
           {% else %}
           <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-secondary flex items-center justify-center text-white font-semibold text-sm border-2 border-white/30">
             {{ user.username|slice:":1"|upper }}
@@ -293,7 +293,7 @@
               {% if user.profile.avatar %}
               <img src="{{ user.profile.avatar.url }}"
                    alt="{{ user.username }}"
-                   class="w-12 h-12 rounded-full object-cover border-2 border-white/30">
+                   class="w-12 h-12 rounded-full object-cover border-2 border-white/30" width="1200" height="800" loading="eager">
               {% else %}
               <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">
                 {{ user.username|slice:":1"|upper }}
