@@ -40,7 +40,6 @@ from .dashboards.htmx_admissions import (
     create_inscription_htmx,
     get_candidature_detail_htmx,
     get_inscription_detail_htmx,
-    delete_candidature_htmx,
     candidatures_list_htmx,
     documents_list_htmx,
     refresh_admissions_stats_htmx,
@@ -251,11 +250,9 @@ urlpatterns = [
         create_inscription_htmx,
         name="create_inscription_htmx"
     ),
-    path(
-        "htmx/candidature/<int:candidature_id>/delete/",
-        delete_candidature_htmx,
-        name="delete_candidature_htmx"
-    ),
+    # T2 (R-C3) : l'ancienne suppression DÉFINITIVE est débranchée. La seule
+    # suppression autorisée est la suppression douce du cockpit gestionnaire
+    # (accounts:htmx_candidature_delete).
 
 
     # ==========================================================

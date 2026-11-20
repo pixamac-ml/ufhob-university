@@ -622,48 +622,9 @@ def get_inscription_detail_htmx(request, inscription_id):
 # SUPPRESSION CANDIDATURE
 # ==========================================================
 
-@require_POST
-@htmx_admissions_required
-def delete_candidature_htmx(request, candidature_id):
-    """
-    Supprime (soft delete) une candidature.
-    """
-
-    candidature = get_object_or_404(
-        get_base_queryset(request.user, "candidature"),
-        id=candidature_id
-    )
-
-    # Vérifier si pas d'inscription liée
-    if scoped(Inscription, user=request.user).filter(candidature=candidature).exists():
-        return HttpResponse(
-            "<div class='text-red-500'>Impossible de supprimer : inscription existante</div>",
-            status=400
-        )
-
-    try:
-        with transaction.atomic():
-            # Suppression définitive ou marquer comme supprimé si le champ existe
-            candidature.delete()
-
-        response = HttpResponse("")
-        response["HX-Trigger"] = json.dumps({
-            "candidatureDeleted": {
-                "id": candidature_id
-            },
-            "showToast": {
-                "message": f"Candidature supprimée",
-                "type": "warning"
-            }
-        })
-
-        return response
-
-    except Exception as e:
-        return HttpResponse(
-            f"<div class='text-red-500'>Erreur : {str(e)}</div>",
-            status=500
-        )
+# T2 (R-C3) : delete_candidature_htmx (suppression définitive) a été retirée.
+# Utiliser accounts.dashboards.htmx_candidatures.candidature_delete
+# (suppression douce, candidatures refusées seulement).
 
 
 # ==========================================================
