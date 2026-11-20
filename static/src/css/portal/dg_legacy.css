@@ -10,7 +10,7 @@
 [data-dg-dashboard] [data-ui-core="data-table"] th,
 [data-dg-dashboard] [data-ui-core="data-table"] td { padding: 1rem; line-height: 1.55; }
 [data-dg-dashboard] [data-ui-row-href] { cursor: pointer; }
-[data-dg-dashboard] [data-ui-row-href]:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+[data-dg-dashboard] [data-ui-row-href]:focus-visible { outline: 2px solid var(--ui-focus-color); outline-offset: -2px; }
 [data-dg-dashboard] #dg-overview-schools { min-width: 68rem; }
 @media (max-width: 1024px) {
   [data-dg-dashboard] [data-ui-core="content-grid"] { gap: 1rem; }

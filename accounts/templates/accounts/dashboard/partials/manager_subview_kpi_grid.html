@@ -2,7 +2,7 @@
 {% component "ui_core.content_grid" columns=4 %}
   {% fill "default" %}
     {% for card in manager_ui.stat_cards %}
-      {% component "ui_core.stat_card" label=card.label value=card.value unit=card.unit icon=card.icon tone=card.tone description=card.description compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label=card.label value=card.value unit=card.unit icon=card.icon tone=card.tone description=card.description compact=False %}{% endcomponent %}
     {% endfor %}
   {% endfill %}
 {% endcomponent %}

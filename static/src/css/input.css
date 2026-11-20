@@ -1371,3 +1371,23 @@
   @apply text-sm text-slate-800;
 }
 
+
+/* Manager cockpit: spacing only, confined to the certified UI Core shell. */
+[data-dashboard-key="manager"] #manager-dashboard-content > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.75rem;
+}
+[data-dashboard-key="manager"] #manager-dashboard-content .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+}
+[data-dashboard-key="manager"] #manager-dashboard-content [data-ui-core="stat-card"] {
+  min-height: 8.5rem;
+  padding: 1.25rem;
+}
+[data-dashboard-key="manager"] #manager-dashboard-content [data-ui-core="data-table"] th,
+[data-dashboard-key="manager"] #manager-dashboard-content [data-ui-core="data-table"] td {
+  padding: 1rem;
+  line-height: 1.6;
+}
+[data-dashboard-key="manager"] #manager-dashboard-content [data-ui-core="filter-bar"] {
+  padding: 1rem;
+}

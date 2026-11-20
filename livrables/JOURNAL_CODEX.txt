@@ -1,2 +1,2 @@
 2026-11-20 17:45 UTC | C1 | PARTIEL : pilotage par école, exports et présentation livrés ; accès super-admin au cockpit bloqué par le garde hors périmètre portal/views/views.py ; caisse non ventilée | 09fee62
-2026-11-20 17:48 UTC | C2 | EN COURS : groupes 1 à 3 archivés, 24 tests OK après chaque groupe ; it_dashboard_v2 conservé car import actif | dcffa37, 396c792, 06a67f4
+2026-11-20 17:48 UTC | C2 | TERMINÉ avec exception prudente : 21 fichiers archivés en 4 groupes, 24 tests par groupe OK (1 recette opt-in non lancée, 1 échec attendu C1) ; it_dashboard_v2 conservé car import actif | dcffa37, 396c792, 06a67f4, a5390d0
