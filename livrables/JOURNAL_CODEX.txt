@@ -1,1 +1,2 @@
 2026-11-20 17:45 UTC | C1 | PARTIEL : pilotage par école, exports et présentation livrés ; accès super-admin au cockpit bloqué par le garde hors périmètre portal/views/views.py ; caisse non ventilée | 09fee62
+2026-11-20 17:46 UTC | C2 | EN COURS : groupe 1 archivé, 24 tests OK (1 recette opt-in non lancée, 1 échec attendu C1) | dcffa37
