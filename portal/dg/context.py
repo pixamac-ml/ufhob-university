@@ -53,12 +53,12 @@ class DgDashboardContext:
 
     @property
     def school_ledgers_unavailable(self) -> bool:
-        """School-wide view: campus ledgers cannot be attributed to the school."""
-        return bool(self.selected_school and not self.selected_branch)
+        """A campus selection does not attribute legacy ledgers to a school."""
+        return bool(self.selected_school)
 
     @property
     def mixed_campus_finance(self) -> bool:
-        """School + campus: revenue is school-scoped, ledgers remain campus-level."""
+        """Compatibility flag for a school/campus selection, not a cash balance."""
         return bool(self.selected_school and self.selected_branch)
 
     def template_context(self):

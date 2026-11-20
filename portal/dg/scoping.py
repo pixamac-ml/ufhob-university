@@ -7,7 +7,7 @@ from functools import wraps
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.db.models.functions import Coalesce
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, Http404
 
 from accounts.access_context import get_request_access_context
 from accounts.scoping import access_scope, scope_queryset, scoped as shared_scoped, SCOPE_PATHS
@@ -31,7 +31,9 @@ def dg_navigation_scope(view):
     @wraps(view)
     def wrapped(request, *args, **kwargs):
         authorization = get_request_access_context(request)
-        if authorization.position not in {"executive_director", "deputy_executive_director"}:
+        if authorization.position in {"secretary", "branch_manager", "annex_manager"}:
+            raise Http404("Espace de direction indisponible.")
+        if authorization.position not in {"executive_director", "deputy_executive_director", "super_admin"}:
             raise PermissionDenied("Accès réservé à la Direction générale.")
         if not authorization.is_valid or authorization.scope != "GLOBAL":
             raise PermissionDenied("Le pilotage universitaire exige une affectation exécutive globale valide.")
@@ -45,6 +47,12 @@ def dg_navigation_scope(view):
         token = _navigation.set(navigation)
         try:
             with access_scope(reading):
+                if view.__name__ == "dg_export" and request.GET.get("kind") in {"school_summary", "school_bulletins"}:
+                    from .school_reports import export_school_summary
+                    if request.GET.get("kind") == "school_bulletins":
+                        from .school_reports import export_school_bulletins
+                        return export_school_bulletins(request, navigation)
+                    return export_school_summary(request, navigation)
                 return view(request, *args, **kwargs)
         finally:
             _navigation.reset(token)
@@ -102,13 +110,14 @@ def scoped(model, *, user=None, context=None):
         from students.models import Student
 
         return queryset.filter(student_id__in=scoped(Student).values("pk"))
-    # Campus ledgers have no School FK. They are readable when a concrete campus
-    # is selected (campus-level truth). A school-wide view must not invent a split:
-    # empty means non-attributable, never a fake zero.
-    if school and not navigation.selected_branch and label in {
+    # A selected campus does not make its ledger attributable to one school.
+    # Empty means non-attributable, never a fake zero.
+    if school and label in {
         "accounts.branchexpense", "accounts.branchmonthlyclosure",
         "accounts.branchcashmovement", "accounts.branchbanktransfer",
-        "portal.supportauditlog", "secretary.administrativedocument",
+        "portal.administrativedocument", "secretary.administrativedocument",
     }:
+        if any(field.name == "school" for field in model._meta.fields):
+            return queryset.filter(school=school, branch_id__in=navigation.scoped_branch_ids)
         return queryset.none()
     return queryset

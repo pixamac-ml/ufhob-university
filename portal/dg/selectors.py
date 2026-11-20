@@ -153,6 +153,12 @@ def get_dg_base_querysets(branch_ids, *, academic_year=None):
             candidature__branch_id__in=branch_ids,
             **{f"candidature__{key}": value for key, value in candidature_filters.items()},
         ),
+        "administrative_inscriptions": scoped(Inscription).filter(
+            is_archived=False,
+            candidature__is_deleted=False,
+            candidature__branch_id__in=branch_ids,
+            **{f"candidature__{key}": value for key, value in candidature_filters.items()},
+        ).exclude(status=Inscription.STATUS_CANCELLED),
         "candidatures": scoped(Candidature).filter(
             is_deleted=False,
             branch_id__in=branch_ids,

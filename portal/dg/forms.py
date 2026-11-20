@@ -18,8 +18,10 @@ from .scoping import current_navigation
 
 
 DG_RECRUITMENT_POSITION_CHOICES = [
-    (code, definition.label)
+    (code, "Directeur d’école" if code == "director_of_studies" else
+     "Gestionnaire" if code == "secretary" else definition.label)
     for code, definition in dg_assignable_positions().items()
+    if code not in {"finance_manager", "payment_agent", "admissions"}
 ]
 
 

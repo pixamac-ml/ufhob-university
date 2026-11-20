@@ -1,5 +1,5 @@
 {% load component_tags %}
-<tr id="{{ row.id }}" class="hover:bg-ui-surface-hover {% if row.selected %}bg-ui-selected{% endif %}">
+<tr id="{{ row.id }}" {% if row.href %}data-ui-row-href="{{ row.href }}" tabindex="0" aria-label="{{ row.label }}"{% endif %} class="hover:bg-ui-surface-hover {% if row.selected %}bg-ui-selected{% endif %}">
   {% if selectable %}<td class="px-4 {% if density == 'compact' %}py-2{% else %}py-3{% endif %}"><input type="checkbox" aria-label="Sélectionner {{ row.label|default:'la ligne' }}" class="rounded-ui-input border-ui-border text-ui-primary focus:ring-ui-focus"></td>{% endif %}
   {% for cell in row.cells %}
     <td class="max-w-sm px-4 {% if density == 'compact' %}py-2{% else %}py-3{% endif %} text-ui-text">

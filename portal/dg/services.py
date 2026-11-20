@@ -118,7 +118,7 @@ def _age_label(value):
 
 def _school_only_finance_scope():
     navigation = current_navigation()
-    return bool(navigation and navigation.selected_school and not navigation.selected_branch)
+    return bool(navigation and navigation.selected_school)
 
 
 def _performance_label(student_count, class_count, alert_count, balance):
@@ -1278,7 +1278,8 @@ def build_dg_staff_workspace(request):
     staff_page = Paginator(staff_queryset, 20).get_page(request.GET.get("page"))
     from accounts.position_registry import POSITION_REGISTRY
 
-    position_labels = {code: definition.label for code, definition in POSITION_REGISTRY.items()}
+    from .forms import DG_RECRUITMENT_POSITION_CHOICES
+    position_labels = dict(DG_RECRUITMENT_POSITION_CHOICES)
     table_rows = []
     for profile in staff_page.object_list:
         account_active = bool(profile.user.is_active)
@@ -1294,7 +1295,7 @@ def build_dg_staff_workspace(request):
                         "strong": True,
                     },
                     {"value": profile.user.email or "—"},
-                    {"value": profile.institutional_position_label},
+                    {"value": position_labels.get(getattr(getattr(profile.user, "institutional_profile", None), "position", profile.position), profile.institutional_position_label)},
                     {"value": getattr(getattr(profile.user, "institutional_profile", None), "school", None) or "Toutes les écoles"},
                     {"value": profile.branch.name if profile.branch_id else "Tous les campus du périmètre"},
                     {"value": getattr(getattr(profile.user, "institutional_profile", None), "scope_label", "Non défini")},
@@ -1345,7 +1346,7 @@ def build_dg_staff_workspace(request):
         if branch:
             active_filters.append(f"Campus : {branch.name}")
     if position:
-        active_filters.append(f"Fonction : {position_labels[position]}")
+        active_filters.append(f"Fonction : {position_labels.get(position, position)}")
     if employment_status:
         active_filters.append(f"Statut : {employment_labels[employment_status]}")
     if account_status:
@@ -1771,6 +1772,9 @@ def build_dg_overview_context(request, base_context_builder):
             "empty_list": [],
         }
     )
+    from .school_reports import summary_context
+    context.update(dg_context.template_context())
+    context.update(summary_context(dg_context))
     return context
 
 
@@ -2185,6 +2189,28 @@ def build_dg_section_context(request, section, base_context_builder):
             }
             for label, description, kind in exports
         ]
+    if section == "exports":
+        from urllib.parse import urlencode
+        navigation = resolve_dg_context(request)
+        scope = urlencode({"scope_school_id": navigation.selected_school_id,
+            "scope_branch_id": navigation.selected_branch_id,
+            "academic_year_id": navigation.academic_year.pk if navigation.academic_year else ""})
+        for row in context["export_rows"]:
+            for action in row["actions"]:
+                action["href"] += "&" + scope
+        context["export_rows"].insert(0, {
+            "id": "dg-export-school-summary", "label": "Synthèse par école",
+            "cells": [{"value": "Synthèse par école", "strong": True},
+                {"value": "Effectifs, candidatures, inscriptions, encaissements et impayés"}],
+            "actions": [{"label": label, "icon": "download", "href":
+                f'{export_url}?kind=school_summary&format={output_format}&{scope}'}
+                for label, output_format in (("Excel", "xlsx"), ("PDF", "pdf"))],
+        })
+        context["export_rows"].append({"id": "dg-export-school-bulletins", "label": "Bulletins publiés",
+            "cells": [{"value": "Bulletins publiés", "strong": True},
+                {"value": "PDF officiels de l’école, du campus et de l’année sélectionnés"}],
+            "actions": [{"label": "PDF (ZIP)", "icon": "download", "href":
+                f'{export_url}?kind=school_bulletins&format=zip&{scope}'}]})
     return context
 
 
@@ -3657,6 +3683,9 @@ def build_dg_backoffice_list_context(request, section, base_context_builder):
                 filters=[{"name": "filter_branch_id", "label": "Campus", "options": _dg_branch_filter_options(dg_context, branch_id)}], active_filters=["Campus sélectionné"] if branch_id else [], empty_title="Aucun diplôme", empty_message="Aucun dossier de diplôme n’est disponible dans ce contexte."))
         elif section == "documents":
             queryset = scoped(AdministrativeDocument).select_related("branch", "created_by").filter(branch_id__in=dg_context.scoped_branch_ids)
+            if dg_context.academic_year:
+                start, end = get_academic_year_datetime_bounds(dg_context.academic_year)
+                queryset = queryset.filter(created_at__gte=start, created_at__lt=end)
             if branch_id:
                 queryset = queryset.filter(branch_id=branch_id)
             context.update(_build_dg_model_list(

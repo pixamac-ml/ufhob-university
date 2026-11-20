@@ -713,5 +713,13 @@
     requestSection(params.get("section") || "overview", false, { domain: params.get("domain") || undefined });
   });
 
+  function activateSchoolRow(event) {
+    if (event.type === "keydown" && event.key !== "Enter") return;
+    const row = event.target.closest("#dg-overview-schools [data-ui-row-href]");
+    if (!row || event.target.closest("a, button, input, select")) return;
+    window.location.assign(row.dataset.uiRowHref);
+  }
+  document.body.addEventListener("click", activateSchoolRow);
+  document.body.addEventListener("keydown", activateSchoolRow);
   requestSection(workspace.dataset.dgInitialSection || "overview", false);
 })();

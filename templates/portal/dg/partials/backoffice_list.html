@@ -15,9 +15,17 @@
     {% endfill %}
   {% endcomponent %}
 
-  {% component "ui_core.filter_bar" filters=backoffice_filters action=backoffice_filter_action method="get" submit_label="Appliquer" reset_url=backoffice_filter_reset_url target="#executive-workspace" swap="innerHTML" trigger="submit" live_search_name="q" live_search_delay=350 density="compact" active_filters=backoffice_active_filters hidden_fields=backoffice_filter_hidden_fields %}{% endcomponent %}
+  {% if dg_school_finance %}
+    {% if dg_active_section == 'expenses' or dg_active_section == 'cash_movements' or dg_active_section == 'closures' or dg_active_section == 'bank_transfers' %}
+      {% component "ui_core.alert" title="Ventilation par école" message="Données de caisse par école bientôt disponibles. Les écritures du campus entier restent consultables dans le contexte universitaire." tone="info" %}{% endcomponent %}
+    {% endif %}
+  {% endif %}
+  {% if selected_school and dg_active_section == 'documents' %}
+    {% component "ui_core.alert" title="Documents par école" message="Les documents de campus sans rattachement à une école restent consultables dans le contexte universitaire." tone="info" %}{% endcomponent %}
+  {% endif %}
+  {% component "ui_core.filter_bar" filters=backoffice_filters action=backoffice_filter_action method="get" submit_label="Appliquer" reset_url=backoffice_filter_reset_url target="#executive-workspace" swap="innerHTML" trigger="submit" live_search_name="q" live_search_delay=350 density="comfortable" active_filters=backoffice_active_filters hidden_fields=backoffice_filter_hidden_fields %}{% endcomponent %}
 
-  {% component "ui_core.data_table" id="dg-backoffice-table" caption=backoffice_title headers=backoffice_headers rows=backoffice_rows result_count=backoffice_result_count page=backoffice_page page_count=backoffice_page_count density="compact" empty_title=backoffice_empty_title empty_message=backoffice_empty_message %}
+  {% component "ui_core.data_table" id="dg-backoffice-table" caption=backoffice_title headers=backoffice_headers rows=backoffice_rows result_count=backoffice_result_count page=backoffice_page page_count=backoffice_page_count density="comfortable" empty_title=backoffice_empty_title empty_message=backoffice_empty_message %}
     {% fill "footer" %}
       <nav class="flex items-center gap-2" aria-label="Pagination de {{ backoffice_title|lower }}">
         {% if backoffice_previous_url %}
