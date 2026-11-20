@@ -26,7 +26,8 @@
     </section>
     <p class="mt-5 text-xs text-ufhob-muted">La réception de votre candidature ne vaut pas décision d’admission. Votre dossier sera examiné par le service des admissions.</p>
   </div>
-  <div class="tunnel-nav">
+  <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+<div class="tunnel-nav">
     <button type="button" class="tunnel-btn-prev" :disabled="submitting" @click="goTo(3)">Retour</button>
     <button type="submit" class="tunnel-btn-next" :disabled="submitting" :aria-busy="submitting" x-text="submitting ? 'Envoi en cours…' : 'Envoyer ma candidature'">Envoyer ma candidature</button>
   </div>

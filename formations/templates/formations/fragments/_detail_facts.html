@@ -1,0 +1,6 @@
+<div class="formation-facts">
+  <div class="formation-chip"><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Durée<br><b>{{ programme.duration_years }} ans</b></span></div>
+  <div class="formation-chip"><i class="fa-solid fa-laptop" aria-hidden="true"></i><span>Présentiel<br><b>ou en ligne</b></span></div>
+  <div class="formation-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span>Rentrée<br><b>{% if admission_academic_year %}{{ admission_academic_year.start_date|date:"M Y" }}{% else %}À confirmer{% endif %}</b></span></div>
+  <div class="formation-chip"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>Campus<br><b>{% for campus in campuses %}{{ campus.name }}{% if not forloop.last %}, {% endif %}{% empty %}À confirmer{% endfor %}</b></span></div>
+</div>

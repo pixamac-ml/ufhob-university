@@ -10,10 +10,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="tunnel-hero-compact">
-  {% include "admissions/partials/hero_admission.html" %}
-</div>
-
 <section class="admission-shell w-full isolate" aria-label="Tunnel de découverte et de candidature">
   <form method="post"
         novalidate
@@ -23,7 +19,6 @@
         @submit.prevent="submitForm($event)">
     {% csrf_token %}
     {% for key, value in campaign_tracking.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
-    <p class="px-4 py-3 text-sm font-semibold text-ufhob-primary" x-show="formData.formation" aria-live="polite">Formation présélectionnée : <span x-text="formData.formation"></span></p>
 
     <input type="hidden" name="last_name" x-model="formData.last_name">
     <input type="hidden" name="first_name" x-model="formData.first_name">
@@ -46,31 +41,34 @@
     <input type="hidden" name="page" :value="programmePage">
     <input type="hidden" name="page_size" :value="programmePageSize">
 
-    <div class="tunnel-split">
-      <aside class="tunnel-media-pane" aria-label="Votre parcours UFHOB-Mali">
-        <div class="tunnel-identity">
-          <div><p class="tunnel-kicker">Université · Admissions</p><p class="tunnel-wordmark">UFHOB-Mali</p></div>
-          <h2>Construisez votre<br>parcours universitaire.</h2>
-          <p class="text-sm text-white/70">Un choix éclairé.<br>Un dossier préparé avec soin.</p>
-          <dl class="tunnel-destination">
-            <div><dt>École</dt><dd x-text="formData.school_name || 'À choisir'"></dd></div>
-            <div><dt>Campus</dt><dd x-text="formData.branch_name || 'À choisir'"></dd></div>
-            <div><dt>Programme</dt><dd x-text="formData.formation || 'À choisir'"></dd></div>
-          </dl>
-        </div>
-      </aside>
-      <div class="tunnel-form-pane">
+    <header class="tunnel-compact-header">
+      <div class="tunnel-header-line"><h1>Votre candidature</h1><button type="button" @click="startDiscovery()">Modifier</button></div>
+      <p class="tunnel-header-formation" x-text="formData.formation || 'Choisissez votre formation'"></p>
+      <div class="tunnel-progress-text"><span x-text="'Étape ' + step + ' sur 4 · ' + ['Identité', 'Coordonnées', 'Parcours', 'Vérification'][step - 1]"></span><span x-text="progressWidth() + ' %'"></span></div>
+      <div class="tunnel-progress" role="progressbar" aria-label="Avancement de la candidature" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressWidth()"><div :style="'width:' + progressWidth() + '%'"></div></div>
         <ol class="tunnel-stepper" aria-label="Étapes de candidature">
           <li :aria-current="step === 1 ? 'step' : null">01 · Identification</li>
           <li :aria-current="step === 2 ? 'step' : null">02 · Informations</li>
           <li :aria-current="step === 3 ? 'step' : null">03 · Parcours</li>
           <li :aria-current="step === 4 ? 'step' : null">04 · Vérification</li>
         </ol>
+    </header>
+    <div class="tunnel-split">
+      <aside class="tunnel-media-pane" aria-label="Votre formation">
+        <div class="tunnel-identity">
+          <h2 x-text="formData.formation || 'Votre parcours UFHOB-Mali'"></h2>
+          <p><span x-text="formData.school_name"></span><span x-show="formData.branch_name"> · <span x-text="formData.branch_name"></span></span></p>
+          <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+          <p class="tunnel-help">Besoin d'aide ? <a href="tel:+22376882479">+223 76 88 24 79</a></p>
+        </div>
+      </aside>
+      <div class="tunnel-form-pane">
         <p x-show="backendError" x-cloak role="alert" class="funnel-error mb-4" x-text="backendError"></p>
         <div x-show="step === 1" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step1.html" %}</div>
         <div x-show="step === 2" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step2.html" %}</div>
         <div x-show="step === 3" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step3.html" %}</div>
         <div x-show="step === 4" x-cloak x-transition.opacity.duration.200ms>{% include "admissions/partials/step4.html" %}</div>
+        <p class="tunnel-help">Besoin d'aide ? <a href="tel:+22376882479">+223 76 88 24 79</a></p>
       </div>
     </div>
   </form>

@@ -90,7 +90,8 @@ class BrandSeoTests(TestCase):
             intro = programme_introduction(programme)
             intros.append(intro)
             response = self.client.get(programme.get_absolute_url())
-            self.assertContains(response, intro)
+            self.assertContains(response, response.context["programme_intro_clean"])
+            self.assertNotIn("Compétences ou débouchés présentés", response.context["programme_intro_clean"])
             for word in (programme.title, programme.cycle.name, "UFHOB-Mali", "Bamako"):
                 self.assertIn(word, intro)
             schema = next(s for s in Document(response.content.decode()).schemas if s["@type"] == "BreadcrumbList")

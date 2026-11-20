@@ -263,6 +263,53 @@ def formation_detail(request, slug, school_code=None):
         context['practical_tabs'] = programme.tabs.filter(slug='conditions-catalogue', is_active=True).prefetch_related('sections')
         if programme.cycle.name != 'Master':
             context['years_with_totals'] = [item for item in years_with_totals if item['year'].year_number == 1]
+    # Presentation only: sibling levels share their existing School and Filiere.
+    from django.contrib.staticfiles import finders
+    from django.utils.html import strip_tags
+    from academics.services.academic_years import get_current_academic_year
+    from .fatec_esga import DOMAINS
+
+    sibling_levels = list(
+        Programme.objects.public().filter(
+            school_id=programme.school_id, filiere_id=programme.filiere_id, cycle__isnull=False
+        )
+        .select_related("cycle", "school").order_by("pk")
+    )
+    level_rank = {"dut": 0, "licence": 1, "master": 2}
+    by_cycle = {}
+    for sibling in sibling_levels:
+        key = sibling.cycle_id
+        if key not in by_cycle or sibling.pk == programme.pk:
+            by_cycle[key] = sibling
+    sibling_levels = sorted(by_cycle.values(), key=lambda item: level_rank.get(
+        item.cycle.slug if item.cycle_id else "", 9
+    ))
+    image_keys = {
+        "informatique-de-gestion": "informatique-gestion", "genie-logiciel": "genie-logiciel",
+        "reseau-et-telecommunication": "reseaux-telecoms", "audiovisuel-multimedia": "audiovisuel",
+        "finance-comptabilite": "finance-comptabilite",
+        "gestion-des-entreprises-et-administration": "gestion-entreprises",
+        "gestion-des-ressources-humaines": "rh", "marketing-communication": "marketing",
+    }
+    domain = next((base for code, title, base, alias in DOMAINS
+                   if code == getattr(programme.school, "code", "") and title == programme.filiere.name), "")
+    image_path = f"images/formations/{image_keys[domain]}.webp" if domain in image_keys else ""
+    intro = " ".join(strip_tags(programme.short_description or programme.description or "").split())
+    # Existing introductions sometimes start with the level; the tabs already identify it.
+    for prefix in (f"{degree} — ", f"{degree} - "):
+        if degree and intro.startswith(prefix):
+            intro = intro[len(prefix):]
+            break
+    practical_sections = [section for tab in context.get("practical_tabs", [])
+                          for section in tab.sections.all() if (section.content or "").strip()]
+    context.update({
+        "practical_sections": practical_sections,
+        "filiere_title": programme.filiere.name,
+        "sibling_levels": sibling_levels,
+        "formation_hero_url": static(image_path) if image_path and finders.find(image_path) else "",
+        "programme_intro_clean": intro,
+        "admission_academic_year": get_current_academic_year(),
+    })
     return render(
         request,
         "formations/detail.html",

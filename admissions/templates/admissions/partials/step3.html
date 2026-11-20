@@ -31,7 +31,8 @@
         </div>
         <p x-show='errors.school_code' x-cloak class='text-xs font-medium text-red-600' x-text='errors.school_code'></p>
       </div>
-      <div class='tunnel-nav'>
+      <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+<div class='tunnel-nav'>
         <button type='button' class='tunnel-btn-prev' @click='goTo(2)'>Retour</button>
         <button type='button' class='tunnel-btn-next' :disabled='!formData.school_code' :class='!formData.school_code ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.school_code) return; subStep='campus'; step3Phase='campus';">Continuer</button>
       </div>
@@ -50,7 +51,8 @@
         </div>
         <p x-show='errors.branch_id' x-cloak class='text-xs font-medium text-red-600' x-text='errors.branch_id'></p>
       </div>
-      <div class='tunnel-nav'>
+      <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+<div class='tunnel-nav'>
         <button type='button' class='tunnel-btn-prev' @click="subStep='school'; step3Phase='school'">Changer d'école</button>
         <button type='button' class='tunnel-btn-next' :disabled='!formData.branch_id' :class='!formData.branch_id ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.branch_id) return; subStep='cycle'; step3Phase='cycle';">Continuer</button>
       </div>
@@ -69,7 +71,8 @@
         </div>
         <p x-show='errors.current_level' x-cloak class='text-xs font-medium text-red-600' x-text='errors.current_level'></p>
       </div>
-      <div class='tunnel-nav'>
+      <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+<div class='tunnel-nav'>
         <button type='button' class='tunnel-btn-prev' @click="subStep='campus'; step3Phase='campus'">Retour au campus</button>
         <button type='button' class='tunnel-btn-next' :disabled='!formData.current_level' :class='!formData.current_level ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.current_level) return; subStep='program'; step3Phase='program';">Continuer</button>
       </div>
@@ -89,7 +92,8 @@
         </div>
         <p x-show='errors.formation_slug' x-cloak class='text-xs font-medium text-red-600' x-text='errors.formation_slug'></p>
       </div>
-      <div class='tunnel-nav'>
+      <div class="tunnel-reassurance"><i class="fa-solid fa-lock" aria-hidden="true"></i> Vos données restent confidentielles.<br>Aucun document demandé à cette étape.</div>
+<div class='tunnel-nav'>
         <button type='button' class='tunnel-btn-prev' @click="subStep='cycle'; step3Phase='cycle'">Retour au cycle</button>
         <button type='button' class='tunnel-btn-next' :disabled='!formData.formation_slug' :class='!formData.formation_slug ? "cursor-not-allowed opacity-40" : ""' @click="goTo(4)">Voir le récapitulatif</button>
       </div>
