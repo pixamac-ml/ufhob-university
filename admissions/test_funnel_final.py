@@ -19,26 +19,57 @@ class FinalFunnelTests(BaseTests):
     def test_classic_catalogue_and_detail_routes_remain_available(self):
         pass
 
-    def test_missing_documents_without_explicit_consent_are_blocked(self):
-        response = self.client.post(self.url, self._valid_payload(documents_deferred=""))
-        self.assertIn("documents", json.loads(response.context["backend_errors_json"]))
-        self.assertFalse(Candidature.objects.exists())
+    def test_no_file_or_deferral_is_required(self):
+        response = self.client.post(self.url, self._valid_payload(), HTTP_ACCEPT="application/json")
+        self.assertEqual(response.status_code, 200)
+        candidate = Candidature.objects.get()
+        self.assertEqual(candidate.status, "to_complete")
+        self.assertFalse(candidate.documents.exists())
+        self.assertNotIn("Engagement", candidate.completion_message)
 
-    def test_partial_upload_is_kept_with_incomplete_status(self):
-        document = self.programme.required_documents.first().document
-        payload = self._valid_payload()
-        payload[f"document_{document.pk}"] = SimpleUploadedFile("piece.pdf", b"%PDF-1.4 test", content_type="application/pdf")
-        self.assertEqual(self.client.post(self.url, payload).status_code, 302)
-        candidature = Candidature.objects.get()
-        self.assertEqual(candidature.status, "to_complete")
-        self.assertEqual(candidature.documents.count(), 1)
-
-    def test_complete_documents_are_submitted_without_deferral(self):
-        payload = self._valid_payload(documents_deferred="")
-        for link in self.programme.required_documents.all():
-            payload[f"document_{link.document_id}"] = SimpleUploadedFile("piece.pdf", b"%PDF-1.4 test")
-        self.assertEqual(self.client.post(self.url, payload).status_code, 302)
+    def test_no_mandatory_documents_is_submitted(self):
+        from formations.models import RequiredDocument
+        RequiredDocument.objects.update(is_mandatory=False)
+        response = self.client.post(self.url, self._valid_payload())
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(Candidature.objects.get().status, "submitted")
+        self.assertEqual(Candidature.objects.get().completion_message, "")
+
+    def test_every_upload_is_rejected_even_for_expected_type(self):
+        kind = self.programme.required_documents.first().document_id
+        for key in (f"document_{kind}", "unexpected"):
+            with self.subTest(key=key):
+                payload = self._valid_payload()
+                payload[key] = SimpleUploadedFile("piece.pdf", b"%PDF-1.4 test")
+                response = self.client.post(self.url, payload, HTTP_ACCEPT="application/json")
+                self.assertEqual(response.status_code, 422)
+                self.assertIn("documents", response.json()["errors"])
+                self.assertFalse(Candidature.objects.exists())
+
+    def test_fatec_and_esga_preselection_without_document_phase(self):
+        for code in ("FATEC", "ESGA"):
+            self.school.code = code
+            self.school.save()
+            response = self.client.get(self.url, {"formation": self.programme.slug, "school": code.lower(), "branch": self.branch.slug})
+            data = json.loads(response.context["initial_form_json"])
+            self.assertEqual(data["school_code"], code)
+            self.assertEqual(data["formation_slug"], self.programme.slug)
+            self.assertEqual(response.context["initial_step3_phase"], "program")
+            self.assertNotContains(response, 'type="file"')
+            self.assertNotContains(response, 'name="documents_deferred"')
+
+    def test_reception_and_email_copy_has_no_candidate_portal(self):
+        from django.template.loader import render_to_string
+        response = self.client.post(self.url, self._valid_payload(), follow=True)
+        candidate = Candidature.objects.get()
+        self.assertContains(response, candidate.reference)
+        self.assertContains(response, "+223 76 88 24 79")
+        for name in ("candidate_submitted", "candidate_to_complete", "missing_documents"):
+            html = render_to_string(f"emails/admissions/{name}.html", {"candidate_reference": candidate.reference})
+            self.assertIn(candidate.reference, html)
+            self.assertIn("+223 76 88 24 79", html)
+            self.assertNotIn("/candidature/", html)
+            self.assertNotIn("espace candidat", html.lower())
 
     def test_dynamic_doctorat_preselection_and_school_campuses(self):
         school = School.objects.create(institution=self.school.institution, code="TEST", short_name="École de test")
@@ -106,7 +137,7 @@ class FinalFunnelTests(BaseTests):
         response = self.client.post(self.url, self._valid_payload(), HTTP_ACCEPT="application/json")
         self.assertTrue(response.json()["ok"])
         self.assertIn("/done/", response.json()["redirect"])
-        self.assertContains(self.client.get(response.json()["redirect"]), "compléter")
+        self.assertContains(self.client.get(response.json()["redirect"]), "+223 76 88 24 79")
         response = self.client.post(self.url, self._valid_payload(), HTTP_ACCEPT="application/json")
         self.assertEqual(response.status_code, 422)
         self.assertEqual(Candidature.objects.count(), 1)

@@ -91,31 +91,7 @@
       </div>
       <div class='tunnel-nav'>
         <button type='button' class='tunnel-btn-prev' @click="subStep='cycle'; step3Phase='cycle'">Retour au cycle</button>
-        <button type='button' class='tunnel-btn-next' :disabled='!formData.formation_slug' :class='!formData.formation_slug ? "cursor-not-allowed opacity-40" : ""' @click="if (!formData.formation_slug) return; subStep='documents'; step3Phase='documents';">Continuer</button>
-      </div>
-    </div>
-
-    <div x-show="subStep === 'documents'" x-cloak class='flex h-full min-h-0 flex-col'>
-      <div class='tunnel-scroll space-y-5 pr-1'>
-        <div>
-          <p class='text-xs font-semibold uppercase tracking-[0.25em] text-ufhob-secondary-dark'>Documents</p>
-          <h2 class='mt-3 text-2xl font-extrabold leading-tight text-ufhob-primary md:text-3xl'>Ajoutez vos pièces justificatives.</h2>
-          <p class='mt-3 text-sm text-ufhob-muted'>Ajoutez les pièces demandées ou indiquez explicitement que vous les transmettrez plus tard.</p>
-        </div>
-        <div class='relative'>
-          <span id='step3-documents-loading' class='htmx-indicator htmx-loading-indicator'></span>
-          <div id='step3-documents-list' class='rounded-ufhob-md border border-dashed border-ufhob-border bg-white/80 p-4 text-sm text-ufhob-muted' hx-get='{% url 'admissions:admission_step3_documents' %}' hx-include="[name='formation_slug']" hx-sync="this:replace" hx-trigger='admission-step-3-documents from:body' hx-indicator='#step3-documents-loading' hx-swap='innerHTML'>{% if formData.formation_slug %}Chargement des documents...{% else %}Choisissez une formation pour afficher les documents requis.{% endif %}</div>
-        </div>
-        <p x-show='errors.documents' x-cloak data-field='documents' class='text-xs font-medium text-red-600' x-text='errors.documents'></p>
-        <label class="funnel-deferral" for="documents-deferred">
-          <input type="checkbox" id="documents-deferred" name="documents_deferred" x-model="documentsDeferred" @change="delete errors.documents">
-          <span>Je transmettrai les pièces manquantes ultérieurement.<small class="block mt-1 text-ufhob-muted">Le dossier restera à compléter jusqu’à réception des pièces obligatoires.</small></span>
-        </label>
-        <p class="text-xs text-ufhob-muted" x-show="filesNeedReselection" x-cloak>Après un rechargement, les fichiers doivent être sélectionnés de nouveau. Vos autres informations sont conservées.</p>
-      </div>
-      <div class='tunnel-nav'>
-        <button type='button' class='tunnel-btn-prev' @click="subStep='program'; step3Phase='program'">Retour au programme</button>
-        <button type='button' class='tunnel-btn-next' @click='if (!validateStep(3)) return; goTo(4)'>Voir le récapitulatif</button>
+        <button type='button' class='tunnel-btn-next' :disabled='!formData.formation_slug' :class='!formData.formation_slug ? "cursor-not-allowed opacity-40" : ""' @click="goTo(4)">Voir le récapitulatif</button>
       </div>
     </div>
 

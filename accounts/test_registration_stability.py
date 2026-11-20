@@ -27,6 +27,34 @@ class RegistrationStabilityTests(TestCase):
         _create_positioning_fee(self.programme, level="L1", amount=100000)
         self.client.force_login(self.manager)
 
+    def test_incomplete_candidate_can_be_accepted_and_enrolled_without_documents(self):
+        self.candidate.status = "to_complete"
+        self.candidate.save()
+        response = self.client.post(reverse("accounts:htmx_candidature_accept", args=[self.candidate.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.candidate.refresh_from_db()
+        self.assertEqual(self.candidate.status, "accepted")
+        self.assertFalse(self.candidate.documents.exists())
+        response = self.client.post(
+            reverse("accounts:htmx_inscription_create", args=[self.candidate.pk]),
+            {"academic_class": self.academic_class.pk, "academic_level": "L1"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Inscription.objects.get().academic_class, self.academic_class)
+
+    def test_legacy_admissions_can_analyse_and_accept_incomplete_candidate(self):
+        user = _create_user("legacy_admissions", branch=self.branch, position="admissions")
+        self.client.force_login(user)
+        self.candidate.status = "to_complete"
+        self.candidate.save()
+        for action in ("set_candidature_under_review_htmx", "approve_candidature_htmx"):
+            self.candidate.status = "to_complete"
+            self.candidate.save()
+            response = self.client.post(reverse("accounts:" + action, args=[self.candidate.pk]), HTTP_HX_REQUEST="true")
+            self.assertEqual(response.status_code, 200, response.content.decode())
+        self.candidate.refresh_from_db()
+        self.assertEqual(self.candidate.status, "accepted")
+
     def test_invalid_class_selection_returns_form_instead_of_server_error(self):
         url = reverse("accounts:htmx_inscription_create", args=[self.candidate.pk])
         for value in ("", "not-a-class", "-1", "999999999999999999999999999999999"):

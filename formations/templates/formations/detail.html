@@ -2,7 +2,23 @@
 {% load humanize %}
 {% load public_content %}
 
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+.programme-mobile-apply{display:none}
+@media(max-width:767px){
+  .programme-mobile-apply{display:block;position:fixed;bottom:0;left:0;right:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid rgb(var(--ufhob-border-rgb));box-shadow:0 -2px 8px #102a430d}
+  .programme-mobile-apply a{display:block;text-align:center;background:rgb(var(--ufhob-accent-rgb));color:rgb(var(--ufhob-primary-rgb));font-weight:700;font-size:14px;padding:12px 8px}
+  body:has(.programme-mobile-apply){padding-bottom:80px}
+  body:has(.programme-mobile-apply) .whatsapp-float{bottom:90px}
+}
+</style>
+{% endblock %}
+
 {% block content %}
+{% if can_apply %}<nav class="programme-mobile-apply" aria-label="Candidature à cette formation"><a href="{{ apply_url }}">Candidater à cette formation</a></nav>{% endif %}
+
 
 <section class="border-b border-ufhob-border bg-gradient-to-br from-ufhob-ivory to-ufhob-primary-soft/30">
   <div class="mx-auto max-w-ufhob-container px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -12,14 +28,12 @@
     <h1 class="mt-2 text-3xl font-bold leading-tight text-ufhob-primary sm:text-4xl">
       {{ programme.title }}
     </h1>
+    {% if can_apply %}<a href="{{ apply_url }}" class="mt-4 inline-block bg-ufhob-accent px-6 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-accent/80">Candidater</a>{% endif %}
     <p class="mt-4 max-w-3xl leading-7 text-ufhob-muted">{{ programme_intro }}</p>
     <p class="mt-2 text-lg text-ufhob-muted">{{ programme.diploma_awarded.name }}</p>
     {% if catalogue_scoped %}<p class="mt-2 text-ufhob-muted">{{ programme.registration_notice }}</p><p class="mt-2 text-ufhob-muted">{{ programme.delivery_modes }}</p>{% endif %}
     <div class="mt-6 flex flex-wrap items-center gap-4">
       <a href="{% url 'formations:list' %}{% if programme.school %}?school={{ programme.school.code|lower }}{% endif %}" class="text-sm font-semibold text-ufhob-primary hover:underline">Retour aux formations</a>
-      {% if can_apply %}
-      <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="bg-ufhob-accent px-6 py-3 text-sm font-bold text-ufhob-primary hover:bg-ufhob-accent/80">{% if catalogue_scoped %}Candidater à cette formation{% else %}Candidater{% endif %}</a>
-      {% endif %}
     </div>
   </div>
 </section>
@@ -199,7 +213,7 @@
     <p class="text-sm font-semibold uppercase tracking-wider text-white/70">Prêt à rejoindre cette formation ?</p>
     <h2 class="mt-2 text-2xl font-bold text-white">{{ programme.title }}</h2>
     <p class="mt-1 text-white/80">{% if programme.school %}{{ programme.school.short_name }}{% else %}UFHOB-Mali{% endif %}</p>
-    <a href="{% url 'admissions:admission_tunnel' %}?formation={{ programme.slug|urlencode }}{% if programme.school %}&school={{ programme.school.code|lower }}{% endif %}" class="mt-6 inline-block bg-ufhob-accent px-8 py-3 text-sm font-bold text-ufhob-primary">{% if catalogue_scoped %}Candidater à cette formation{% else %}Candidater{% endif %}</a>
+    <a href="{{ apply_url }}" class="mt-6 inline-block bg-ufhob-accent px-8 py-3 text-sm font-bold text-ufhob-primary">{% if catalogue_scoped %}Candidater à cette formation{% else %}Candidater{% endif %}</a>
   </div>
 </section>
 {% endif %}

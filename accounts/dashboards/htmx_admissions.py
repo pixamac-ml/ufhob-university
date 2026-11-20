@@ -99,7 +99,7 @@ def approve_candidature_htmx(request, candidature_id):
         id=candidature_id
     )
 
-    if candidature.status not in ["submitted", "under_review"]:
+    if candidature.status not in ["submitted", "under_review", "to_complete"]:
         return HttpResponse(
             "<div class='text-red-500'>Statut invalide pour approbation</div>",
             status=400
@@ -115,7 +115,7 @@ def approve_candidature_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"cand": candidature},
+            {"cand": candidature, "candidature": candidature},
             request=request
         )
 
@@ -170,7 +170,7 @@ def reject_candidature_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"cand": candidature},
+            {"cand": candidature, "candidature": candidature},
             request=request
         )
 
@@ -210,7 +210,7 @@ def set_candidature_under_review_htmx(request, candidature_id):
         id=candidature_id
     )
 
-    if candidature.status != "submitted":
+    if candidature.status not in ["submitted", "to_complete"]:
         return HttpResponse(
             "<div class='text-red-500'>Seules les candidatures soumises peuvent être mises en révision</div>",
             status=400
@@ -224,7 +224,7 @@ def set_candidature_under_review_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"cand": candidature},
+            {"cand": candidature, "candidature": candidature},
             request=request
         )
 
@@ -275,7 +275,7 @@ def set_candidature_to_complete_htmx(request, candidature_id):
 
         html = render_to_string(
             "accounts/dashboard/partials/candidature_row.html",
-            {"cand": candidature},
+            {"cand": candidature, "candidature": candidature},
             request=request
         )
 
@@ -555,10 +555,10 @@ def get_candidature_detail_htmx(request, candidature_id):
         pass
 
     # Permissions pour les boutons d'action
-    can_set_under_review = candidature.status == "submitted"
+    can_set_under_review = candidature.status in ["submitted", "to_complete"]
     can_request_completion = candidature.status in ["submitted", "under_review"]
-    can_approve = candidature.status in ["submitted", "under_review"]
-    can_reject = candidature.status in ["submitted", "under_review"]
+    can_approve = candidature.status in ["submitted", "under_review", "to_complete"]
+    can_reject = candidature.status in ["submitted", "under_review", "to_complete"]
     can_create_inscription = candidature.status == "accepted" and not has_inscription
 
     context = {

@@ -2,7 +2,6 @@
 
 import json
 import logging
-from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -28,9 +27,6 @@ from formations.fatec_esga import canonical_slug
 
 
 logger = logging.getLogger(__name__)
-
-TUNNEL_DOCUMENT_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
-TUNNEL_MAX_DOCUMENT_SIZE = 10 * 1024 * 1024
 
 
 def _programme_cycle_key(programme):
@@ -211,7 +207,7 @@ def _initial_tunnel_state(request):
     # A direct programme link preserves its destination without skipping identity.
 
     if school and branch and programme:
-        step3_phase = "documents"
+        step3_phase = "program"
     elif school and branch:
         step3_phase = "cycle"
     elif school:
@@ -237,7 +233,6 @@ def _tunnel_context(
     backend_error_step=1,
     backend_error_field="",
     restore_draft=False,
-    documents_deferred=False,
 ):
     return {
         "formation_cards": [],
@@ -253,7 +248,6 @@ def _tunnel_context(
         "backend_error_step": backend_error_step,
         "backend_error_field": backend_error_field,
         "restore_draft": restore_draft,
-        "documents_deferred": documents_deferred,
     }
 
 
@@ -270,7 +264,7 @@ def _first_tunnel_error(errors):
         "current_level": 3,
         "branch_id": 3,
         "formation_slug": 3,
-        "documents": 3,
+        "documents": 4,
     }
     for field_name, step_no in field_steps.items():
         if field_name in errors:
@@ -281,7 +275,6 @@ def _first_tunnel_error(errors):
 def admission_tunnel(request):
     campaign_tracking = capture_tracking(request)
     wants_json = request.headers.get("Accept", "").startswith("application/json")
-    documents_deferred = request.POST.get("documents_deferred") == "on"
     branches = Branch.objects.filter(is_active=True, accepts_online_registration=True).order_by("name")
     schools = list(
         School.objects.public()
@@ -329,7 +322,7 @@ def admission_tunnel(request):
         restore_draft = False
         initial_step = 4
         if form_data.get("school_code") and form_data.get("branch_id") and form_data.get("current_level") and form_data.get("formation_slug"):
-            initial_step3_phase = "documents"
+            initial_step3_phase = "program"
         elif form_data.get("school_code") and form_data.get("branch_id") and form_data.get("current_level"):
             initial_step3_phase = "program"
         elif form_data.get("school_code") and form_data.get("branch_id"):
@@ -449,29 +442,14 @@ def admission_tunnel(request):
             if email_in_use:
                 backend_errors["email"] = "Cette adresse email est deja utilisee pour cette formation cette annee."
 
-        uploaded_documents = []
         missing_documents = []
+        if request.FILES:
+            backend_errors["documents"] = "Les fichiers ne sont pas acceptés dans ce formulaire. Envoyez votre candidature sans pièce jointe."
         if not backend_errors:
-            programme_documents = list(programme.required_documents.select_related("document"))
-            allowed_file_keys = {f"document_{item.document_id}" for item in programme_documents}
-            if set(request.FILES) - allowed_file_keys:
-                backend_errors["documents"] = "Une pièce transmise ne correspond pas au programme sélectionné."
-            for programme_document in programme_documents:
-                file_key = f"document_{programme_document.document.id}"
-                uploaded_file = request.FILES.get(file_key)
-                if uploaded_file:
-                    extension = Path(uploaded_file.name).suffix.lower()
-                    if extension not in TUNNEL_DOCUMENT_EXTENSIONS:
-                        backend_errors["documents"] = "Un document utilise un format non autorise."
-                        break
-                    if uploaded_file.size > TUNNEL_MAX_DOCUMENT_SIZE:
-                        backend_errors["documents"] = "Chaque document doit peser au maximum 10 Mo."
-                        break
-                    uploaded_documents.append((programme_document.document, uploaded_file))
-                elif programme_document.document.is_mandatory:
-                    missing_documents.append(programme_document.document.name)
-            if missing_documents and not documents_deferred:
-                backend_errors.setdefault("documents", "Ajoutez les pièces obligatoires manquantes ou cochez « Je transmettrai les pièces manquantes ultérieurement ».")
+            missing_documents = list(
+                programme.required_documents.filter(document__is_mandatory=True)
+                .values_list("document__name", flat=True)
+            )
 
         if not backend_errors:
             entry_year = 4 if _programme_cycle_key(programme) == "master" else 1
@@ -493,18 +471,10 @@ def admission_tunnel(request):
                         country="Mali",
                         status="to_complete" if missing_documents else "submitted",
                         completion_message=(
-                            "Engagement du candidat : Je transmettrai les pièces manquantes ultérieurement. "
-                            + "Pièces à compléter : " + ", ".join(missing_documents)
-                        ) if documents_deferred else "",
+                            "Pièces à fournir ultérieurement : " + ", ".join(missing_documents)
+                        ) if missing_documents else "",
                         campaign_tracking=campaign_tracking,
                     )
-
-                    for document_type, uploaded_file in uploaded_documents:
-                        CandidatureDocument.objects.create(
-                            candidature=candidature,
-                            document_type=document_type,
-                            file=uploaded_file,
-                        )
 
                 request.session["pixel_lead_candidature"] = candidature.pk
                 messages.success(request, "Votre candidature a été enregistrée avec succès.")
@@ -515,7 +485,7 @@ def admission_tunnel(request):
                 backend_errors["email"] = "Cette adresse email est deja utilisee pour cette formation cette annee."
             except Exception:
                 logger.exception("Echec de creation d'une candidature depuis le tunnel")
-                backend_errors["documents"] = "Une erreur technique est survenue. Reessayez dans un instant."
+                backend_errors["formation_slug"] = "Une erreur technique est survenue. Reessayez dans un instant."
 
         if backend_errors:
             backend_error_field, backend_error_step, error_message = _first_tunnel_error(backend_errors)
@@ -529,7 +499,7 @@ def admission_tunnel(request):
                 elif backend_error_field == "current_level":
                     initial_step3_phase = "cycle"
                 elif backend_error_field == "documents":
-                    initial_step3_phase = "documents"
+                    initial_step3_phase = "program"
                 else:
                     initial_step3_phase = "program"
 
@@ -552,7 +522,6 @@ def admission_tunnel(request):
             backend_error_step=backend_error_step,
             backend_error_field=backend_error_field,
             restore_draft=restore_draft,
-            documents_deferred=documents_deferred,
         ),
     )
 
