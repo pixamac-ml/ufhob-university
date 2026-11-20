@@ -43,7 +43,7 @@ class Profile(models.Model):
         ("payment_agent", "Agent de paiement"),
         ("secretary", "Secretaire"),
         ("admissions", "Admissions"),
-        ("director_of_studies", "Directeur des etudes"),
+        ("director_of_studies", "Directeur d’école"),
         ("executive_director", "Direction executive"),
         ("deputy_executive_director", "Direction generale adjointe"),
         ("branch_manager", "Gestionnaire annexe"),

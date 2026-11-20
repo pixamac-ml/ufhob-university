@@ -44,7 +44,7 @@ def _ensure_approval_authority(approver, branch):
     position = get_user_position(approver)
     if not approver.is_superuser and position not in APPROVER_POSITIONS:
         raise GradeModificationError(
-            "Seul le Directeur des etudes ou la direction executive peut valider cette correction."
+            "Seul le Directeur d’école ou la direction executive peut valider cette correction."
         )
     scope = get_user_scope(approver)
     scoped_branch = scope.get("branch")
@@ -54,7 +54,7 @@ def _ensure_approval_authority(approver, branch):
 
 
 def _approvers_for_branch(branch):
-    """Directeur des etudes de l'annexe en priorite, sinon direction executive (toute annexe)."""
+    """Directeur d’école de l'annexe en priorite, sinon direction executive (toute annexe)."""
     director_ids = list(
         Profile.objects.select_related("user")
         .filter(position="director_of_studies", branch=branch, user__is_active=True)
@@ -70,7 +70,7 @@ def _approvers_for_branch(branch):
 
 
 def request_grade_modification(*, branch, ec_grade, session_type, requested_score, requested_by, reason=""):
-    """Cree la demande, genere l'OTP, et notifie le Directeur des Etudes. Ne modifie rien."""
+    """Cree la demande, genere l'OTP, et notifie le Directeur d’école. Ne modifie rien."""
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -78,7 +78,7 @@ def request_grade_modification(*, branch, ec_grade, session_type, requested_scor
     approvers = list(User.objects.filter(pk__in=approver_ids, is_active=True))
     if not approvers:
         raise GradeModificationError(
-            "Aucun Directeur des Etudes ou direction executive actif n'est configure pour valider "
+            "Aucun Directeur d’école ou direction executive actif n'est configure pour valider "
             "cette correction. Contactez l'administrateur du systeme."
         )
 

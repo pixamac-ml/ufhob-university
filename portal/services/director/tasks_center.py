@@ -1,4 +1,4 @@
-"""Centre de taches pedagogique du dashboard Directeur des Etudes.
+"""Centre de taches pedagogique du dashboard Directeur d’école.
 
 Agrege en une liste unique les points qui necessitent une action du
 directeur, pour eviter de naviguer manuellement entre les 12 sections du

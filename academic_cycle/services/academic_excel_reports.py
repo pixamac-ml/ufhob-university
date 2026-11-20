@@ -1,4 +1,4 @@
-"""Export Excel des rapports pedagogiques pour le Directeur des Etudes
+"""Export Excel des rapports pedagogiques pour le Directeur d’école
 (cf. CAHIER_DES_CHARGES_DIRECTEUR_ETUDES.md, 2.6). Reutilise le meme moteur
 de mise en forme que les rapports financiers du gestionnaire plutot que de
 le redupliquer.

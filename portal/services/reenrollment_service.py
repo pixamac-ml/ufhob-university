@@ -1122,7 +1122,7 @@ def validate_student_decision_finance(*, decision, actor):
     ).select_for_update(of=("self",)).get(pk=decision_pk)
     _assert_actor_branch_scope(actor=actor, branch=decision.source_enrollment.branch)
     if decision.workflow_status != StudentYearDecision.WORKFLOW_ACADEMIC_VALIDATED:
-        raise ValidationError("La decision doit d'abord etre validee par la direction des etudes.")
+        raise ValidationError("La decision doit d'abord etre validee par la direction de l’école.")
     _validate_decision_ready(decision)
     source_inscription = scoped(Inscription, user=actor).select_for_update().get(
         pk=decision.source_enrollment.inscription_id,

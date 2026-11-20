@@ -444,7 +444,7 @@ def it_notes_workflow_action(request):
             ACTION_SUBMIT_TO_DIRECTOR,
         }:
             return HttpResponseForbidden(
-                "La validation officielle et la publication des resultats relevent du Directeur des etudes."
+                "La validation officielle et la publication des resultats relevent du Directeur d’école."
             )
         apply_notes_workflow_action(
             actor=request.user,
@@ -457,7 +457,7 @@ def it_notes_workflow_action(request):
             "verifier_notes": "Controle termine: aucune note manquante bloquante.",
             "publier_session_normale": "Session normale publiee. Le rattrapage peut maintenant etre prepare.",
             "activer_rattrapage": "Rattrapage active. Seules les notes de rattrapage restent modifiables.",
-            ACTION_SUBMIT_TO_DIRECTOR: "Session technique cloturee et transmise au Directeur des etudes.",
+            ACTION_SUBMIT_TO_DIRECTOR: "Session technique cloturee et transmise au Directeur d’école.",
             "publier_resultats_finaux": "Resultats finaux publies. Les releves et exports sont deblocables.",
             "generer_decisions_annuelles": "Decisions annuelles generees avec bulletins.",
             "generer_bulletins": "Bulletins semestriels generes.",
@@ -516,7 +516,7 @@ def load_notes_workspace(request):
         )
     if not semester_has_active_ecs(semester):
         return HttpResponse(
-            '<div class="workflow-grid-placeholder">Cette maquette doit etre completee par le Directeur des etudes avant la saisie des notes.</div>',
+            '<div class="workflow-grid-placeholder">Cette maquette doit etre completee par le Directeur d’école avant la saisie des notes.</div>',
             status=409,
         )
     if semester.status == Semester.STATUS_DRAFT:
@@ -978,7 +978,7 @@ def it_export_notes_excel(request):
         return HttpResponseForbidden("Semestre obligatoire.")
     if not semester_has_active_ecs(selected_semester):
         return HttpResponse(
-            "Cette maquette doit etre completee par le Directeur des etudes avant l'export des notes.",
+            "Cette maquette doit etre completee par le Directeur d’école avant l'export des notes.",
             status=409,
         )
 

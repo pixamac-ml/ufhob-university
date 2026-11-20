@@ -841,7 +841,8 @@ class AcademicClass(models.Model):
         if errors:
             raise ValidationError(errors)
 
-    def save(self, *args, **kwargs):
+
+    def save(self, *args, **kwargs):
         self.clean()
         return super().save(*args, **kwargs)
 
@@ -1025,7 +1026,7 @@ class Semester(models.Model):
         (STATUS_NORMAL_ENTRY, "Saisie normale"),
         (STATUS_NORMAL_LOCKED, "Session normale terminee"),
         (STATUS_RETAKE_ENTRY, "Rattrapage"),
-        (STATUS_READY_FOR_DIRECTOR, "Transmis au Directeur des etudes"),
+        (STATUS_READY_FOR_DIRECTOR, "Transmis au Directeur d’école"),
         (STATUS_FINALIZED, "Finalise"),
         (STATUS_PUBLISHED, "Publie"),
     ]
@@ -1828,7 +1829,7 @@ class EvaluationRequirement(models.Model):
     SUBMISSION_CHOICES = [
         (SUBMISSION_DRAFT, "Brouillon"),
         (SUBMISSION_SUBMITTED, "Soumis au controle"),
-        (SUBMISSION_VALIDATED, "Valide par le Directeur des etudes"),
+        (SUBMISSION_VALIDATED, "Valide par le Directeur d’école"),
         (SUBMISSION_RETURNED, "A corriger"),
     ]
 

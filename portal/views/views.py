@@ -595,10 +595,10 @@ def _render_director_dashboard(request):
     context = {
         **_build_portal_context(
             request,
-            page_title="Dashboard Direction des Etudes",
+            page_title="Dashboard Direction de l’école",
             module_cards=["Pilotage academique", "Resultats", "Enseignants"],
         ),
-        "dashboard_kind": "Direction des etudes",
+        "dashboard_kind": "Direction de l’école",
         "quality_score": (workspace_context.get("quality") or {}).get("score", 0),
         "home_alerts_count": len(workspace_context.get("alerts") or []),
         "lesson_logs_count": len(workspace_context.get("recent_lesson_logs") or []),
@@ -617,8 +617,8 @@ def _render_director_dashboard(request):
             role=get_user_position(request.user) or "director_of_studies",
             key="director",
             page_title=context["page_title"],
-            title="Direction des Études",
-            subtitle="Direction des Études",
+            title="Direction de l’école",
+            subtitle="Pilotage académique de l’école",
             context_label=context.get("director_context_label") or "",
             user_name=request.user.get_full_name() or request.user.username,
             navigation=context.get("director_navigation") or [],
@@ -3252,7 +3252,7 @@ def director_timetable_event_action(request):
     if action == "delete":
         if event is None:
             return HttpResponseBadRequest("Séance introuvable.")
-        cancel_schedule_event(event, "Suppression depuis la grille du Directeur des études.", request.user)
+        cancel_schedule_event(event, "Suppression depuis la grille du Directeur d’école.", request.user)
         return _director_timetable_builder_response(
             request, branch=branch, academic_class=academic_class,
             toast={"level": "success", "message": "La séance a été retirée de cette semaine."}, close_drawer=True,
@@ -4775,7 +4775,7 @@ def director_results_confirm_otp(request):
     if request.method != "POST":
         return _deny_portal_access(request)
     return HttpResponse(
-        "La publication semestrielle est effectuee directement par le Directeur des etudes.",
+        "La publication semestrielle est effectuee directement par le Directeur d’école.",
         status=410,
     )
 
@@ -4885,7 +4885,7 @@ def director_bulletin_action(request):
             if branch is not None and semester.academic_class.branch_id != branch.id:
                 raise ValidationError("Action hors annexe refusee.")
             if not can_manage_bulletins(request.user, semester.academic_class):
-                raise ValidationError("Seul le Directeur des etudes peut delivrer les bulletins.")
+                raise ValidationError("Seul le Directeur d’école peut delivrer les bulletins.")
             bulletins = generate_semester_bulletins_for_class(
                 academic_class=semester.academic_class,
                 semester=semester,
@@ -4908,7 +4908,7 @@ def director_bulletin_action(request):
             if branch is not None and academic_class.branch_id != branch.id:
                 raise ValidationError("Action hors annexe refusee.")
             if not can_manage_bulletins(request.user, academic_class):
-                raise ValidationError("Seul le Directeur des etudes peut delivrer les bulletins.")
+                raise ValidationError("Seul le Directeur d’école peut delivrer les bulletins.")
             bulletins = generate_annual_bulletins_for_class(
                 academic_class=academic_class,
                 actor=request.user,
@@ -4922,7 +4922,7 @@ def director_bulletin_action(request):
             if branch is not None and enrollment.branch_id != branch.id:
                 raise ValidationError("Action hors annexe refusee.")
             if not can_manage_bulletins(request.user, enrollment.academic_class):
-                raise ValidationError("Seul le Directeur des etudes peut delivrer les bulletins.")
+                raise ValidationError("Seul le Directeur d’école peut delivrer les bulletins.")
             bulletin = generate_annual_bulletin(
                 enrollment=enrollment,
                 actor=request.user,
@@ -6465,7 +6465,7 @@ def teacher_portal(request):
                 notes=requirement.notes,
                 submit=submit,
             )
-            teacher_evaluation_toast = {"level": "success", "message": "Sujet transmis au Directeur des études."}
+            teacher_evaluation_toast = {"level": "success", "message": "Sujet transmis au Directeur d’école."}
         except ValidationError as exc:
             teacher_evaluation_toast = {"level": "error", "message": " ".join(exc.messages)}
 
@@ -6686,7 +6686,7 @@ def teacher_exam_studio(request):
                     teacher=request.user, branch=branch,
                     academic_class_id=int(class_id), ec_id=int(ec_id), **payload,
                 )
-            toast = {"level": "success", "message": "Sujet transmis au Directeur des etudes." if submit else "Brouillon Exam Studio enregistre."}
+            toast = {"level": "success", "message": "Sujet transmis au Directeur d’école." if submit else "Brouillon Exam Studio enregistre."}
         except (ValidationError, ValueError) as exc:
             message = " ".join(getattr(exc, "messages", [])) or str(exc)
             toast = {"level": "error", "message": message}

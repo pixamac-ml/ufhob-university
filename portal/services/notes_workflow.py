@@ -68,7 +68,7 @@ STATE_LABELS = {
     STATE_READY_TO_PUBLISH_NORMAL: "Session normale prete a publier",
     STATE_NORMAL_PUBLISHED: "Session normale publiee",
     STATE_RETAKE_IN_PROGRESS: "Rattrapage actif",
-    STATE_READY_FOR_DIRECTOR: "Transmis au Directeur des etudes",
+    STATE_READY_FOR_DIRECTOR: "Transmis au Directeur d’école",
     STATE_READY_TO_PUBLISH_FINAL: "Resultats finaux prets",
     STATE_FINAL_PUBLISHED: "Resultats finaux publies",
 }
@@ -239,7 +239,7 @@ def get_notes_state(*, academic_class, semester) -> NotesWorkflowState | None:
         STATE_READY_TO_PUBLISH_NORMAL: "Toutes les notes normales sont renseignees. La session normale peut etre publiee.",
         STATE_NORMAL_PUBLISHED: "La session normale est publiee. Le rattrapage peut maintenant etre prepare.",
         STATE_RETAKE_IN_PROGRESS: "Le rattrapage est actif. Les notes normales restent visibles et seules les notes de rattrapage doivent etre ajustees.",
-        STATE_READY_FOR_DIRECTOR: "La session technique est cloturee et transmise au Directeur des etudes pour controle, validation puis publication.",
+        STATE_READY_FOR_DIRECTOR: "La session technique est cloturee et transmise au Directeur d’école pour controle, validation puis publication.",
         STATE_READY_TO_PUBLISH_FINAL: "Le semestre est finalise et pret pour publication finale.",
         STATE_FINAL_PUBLISHED: "Les releves et exports finaux sont deblocables selon les regles du semestre.",
     }
@@ -308,7 +308,7 @@ def get_available_actions(*, state: NotesWorkflowState | None, audience: str | N
         # L'informaticien est l'operateur technique de la saisie : il peut
         # cloturer la session normale apres controle et preparer le
         # rattrapage. La validation officielle et la publication definitive
-        # restent exclusivement dans le workflow du Directeur des etudes.
+        # restent exclusivement dans le workflow du Directeur d’école.
         allowed = {
             ACTION_START,
             ACTION_CONTINUE,
@@ -338,7 +338,7 @@ def apply_notes_workflow_action(*, actor, academic_class, semester, action):
         ACTION_GENERATE_BULLETINS,
     }:
         raise ValidationError(
-            "Action reservee a la Direction des etudes via le workflow de validation et publication OTP."
+            "Action reservee a la Direction de l’école via le workflow de validation et publication OTP."
         )
 
     if action == ACTION_START:
@@ -416,7 +416,7 @@ def apply_notes_workflow_action(*, actor, academic_class, semester, action):
             branch=get_user_branch(actor),
             action_type=SupportAuditLog.ACTION_RESULTS_SENT,
             target_label=f"Transmission DE {academic_class.display_name} S{semester.number}",
-            details="Session technique cloturee et transmise au Directeur des etudes.",
+            details="Session technique cloturee et transmise au Directeur d’école.",
         )
         return
 

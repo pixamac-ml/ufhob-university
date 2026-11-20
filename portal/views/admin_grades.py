@@ -729,7 +729,7 @@ def save_grade_confirm_otp(request):
         return HttpResponseForbidden("Acces refuse.")
     if not is_approver:
         return HttpResponseForbidden(
-            "Seul le Directeur des etudes ou la direction executive peut valider cette correction."
+            "Seul le Directeur d’école ou la direction executive peut valider cette correction."
         )
 
     otp_request_id = request.POST.get("otp_request_id")
@@ -791,7 +791,7 @@ def publish_semester_view(request, enrollment_id, semester_id):
     # an auditable Director of Studies workflow and must not bypass
     # ``director_results_action``.
     return HttpResponseForbidden(
-        "La publication doit etre effectuee depuis le workflow du Directeur des etudes."
+        "La publication doit etre effectuee depuis le workflow du Directeur d’école."
     )
 
 

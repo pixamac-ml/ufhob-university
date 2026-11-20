@@ -238,7 +238,7 @@ def import_notes_file(*, actor, branch, academic_class, semester, file, session_
         raise ValidationError("Le semestre ne correspond pas a la classe.")
     if not semester_has_active_ecs(semester):
         raise ValidationError(
-            "Cette maquette doit etre completee par le Directeur des etudes avant la saisie ou l'import des notes."
+            "Cette maquette doit etre completee par le Directeur d’école avant la saisie ou l'import des notes."
         )
 
     session_type = (session_type or "normal").strip().lower()

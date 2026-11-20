@@ -121,7 +121,7 @@ def ec_grade_track_session_completeness(sender, instance, **kwargs):
 
 @receiver(post_save, sender=ECGrade)
 def ec_grade_notify_session_complete(sender, instance, created, **kwargs):
-    """Notifie le Directeur des Etudes de l'annexe quand la saisie d'une
+    """Notifie le Directeur d’école de l'annexe quand la saisie d'une
     session (normale ou rattrapage) vient de se terminer pour toute la classe."""
     try:
         semester = instance.ec.ue.semester

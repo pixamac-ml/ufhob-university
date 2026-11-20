@@ -66,7 +66,7 @@ class Command(BaseCommand):
         staff_data = [
             {
                 "full_name": "Dr Aissata Traore",
-                "position": "Directrice des etudes",
+                "position": "Directrice d’école",
                 "category": "direction",
                 "bio": "Coordination academique et qualite pedagogique.",
                 "email": "direction.etudes@esfe-mali.org",

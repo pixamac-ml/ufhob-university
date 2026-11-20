@@ -1,4 +1,4 @@
-"""Notifications pedagogiques pour le Directeur des Etudes (cf.
+"""Notifications pedagogiques pour le Directeur d’école (cf.
 CAHIER_DES_CHARGES_DIRECTEUR_ETUDES.md, 2.4). Suit le meme pattern que
 `academics/signals.py` (post_save -> NotificationService)."""
 from django.db.models.signals import post_save, pre_save

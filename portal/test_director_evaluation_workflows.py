@@ -64,7 +64,7 @@ class DirectorEvaluationWorkflowTests(TestCase):
             diploma_awarded=diploma,
             duration_years=3,
             short_description="Workflow des evaluations",
-            description="Donnees de test du Directeur des Etudes.",
+            description="Donnees de test du Directeur d’école.",
         )
         cls.academic_year = AcademicYear.objects.create(
             name="2026-2027",

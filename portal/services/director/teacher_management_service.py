@@ -141,7 +141,7 @@ def create_teacher_with_account(data, user) -> TeacherCreationResult:
     if branch is None:
         raise ValidationError("Aucune annexe n'est rattachee a ce compte directeur.")
     if getattr(getattr(user, "profile", None), "position", "") != "director_of_studies":
-        raise ValidationError("Seul le Directeur des etudes peut creer un enseignant.")
+        raise ValidationError("Seul le Directeur d’école peut creer un enseignant.")
 
     first_name = (data.get("first_name") or "").strip()
     last_name = (data.get("last_name") or "").strip()

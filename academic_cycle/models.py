@@ -747,7 +747,7 @@ class GradeModificationRequest(TimeStampedModel):
     la saisie normale n'est jamais bloquee par ce workflow. Il s'active
     uniquement quand un informaticien/gestionnaire tente de CORRIGER une
     note deja saisie dans une session (normale ou rattrapage) deja cloturee.
-    Un code OTP est alors envoye au Directeur des Etudes (ou a defaut a la
+    Un code OTP est alors envoye au Directeur d’école (ou a defaut a la
     direction executive) et la correction n'est appliquee qu'apres saisie du
     bon code, dans le delai imparti.
     """

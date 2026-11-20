@@ -2,7 +2,7 @@
     <div class="mb-4 flex items-start justify-between gap-4">
       <div>
         <p class="workflow-kicker">Session cloturee</p>
-        <h3 class="mt-1 text-lg font-black">Validation du Directeur des Etudes requise</h3>
+        <h3 class="mt-1 text-lg font-black">Validation du Directeur d’école requise</h3>
       </div>
       <button type="button" class="workflow-btn workflow-btn-secondary" onclick="window.dispatchEvent(new CustomEvent('ui-overlay-close', {detail: {id: 'it-dashboard-modal'}}))">
         <i data-lucide="x" class="h-4 w-4"></i>
@@ -11,7 +11,7 @@
 
     {% if otp_success %}
     <div class="workflow-toast workflow-toast-success">
-      Correction validee par le Directeur des Etudes et appliquee a la note.
+      Correction validee par le Directeur d’école et appliquee a la note.
     </div>
     {% elif otp_error %}
     <div class="workflow-toast workflow-toast-error">{{ otp_error }}</div>
@@ -20,7 +20,7 @@
     {% if otp_request_id and not otp_success %}
     <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
       {% if student_name %}
-      Un code de validation a ete envoye au Directeur des Etudes pour corriger la note de
+      Un code de validation a ete envoye au Directeur d’école pour corriger la note de
       <b>{{ student_name }}</b> en <b>{{ ec_title }}</b>.
       {% endif %}
       Saisissez le code recu ci-dessous (validite : {{ otp_validity_minutes|default:5 }} minutes).

@@ -93,7 +93,7 @@ REGISTRY_ROUTING_RULES = {
         "actions": ["Consulter agenda", "Valider creneau", "Envoyer confirmation"],
     },
     RegistryEntry.TYPE_DIPLOMA_WITHDRAWAL: {
-        "target_service": "Direction des etudes",
+        "target_service": "Direction de l’école",
         "priority": RegistryEntry.PRIORITY_HIGH,
         "workflow_code": "diploma_withdrawal",
         "actions": ["Verifier identite", "Verifier disponibilite", "Archiver signature"],
