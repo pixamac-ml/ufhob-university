@@ -1,0 +1,1 @@
+2026-11-20 17:45 UTC | C1 | PARTIEL : pilotage par école, exports et présentation livrés ; accès super-admin au cockpit bloqué par le garde hors périmètre portal/views/views.py ; caisse non ventilée | 09fee62
