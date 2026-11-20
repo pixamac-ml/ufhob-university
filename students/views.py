@@ -10,6 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from academics.models import AcademicClass, AcademicScheduleEvent
 from accounts.dashboards.helpers import get_user_branch
+from accounts.scoping import scoped_get_object_or_404
 from branches.models import Branch
 from students.models import Student
 from students.services.attendance_service import (
@@ -74,12 +75,12 @@ def mark_student_attendance_view(request):
     try:
         payload = _parse_json_body(request)
         branch = _resolve_branch(request, payload)
-        student = get_object_or_404(Student.objects.select_related("user", "inscription__candidature"), pk=payload.get("student_id"))
+        student = scoped_get_object_or_404(Student.objects.select_related("user", "inscription__candidature"), user=request.user, pk=payload.get("student_id"))
         schedule_event = get_object_or_404(
             AcademicScheduleEvent.objects.select_related("academic_class", "branch"),
             pk=payload.get("schedule_event_id"),
         )
-        academic_class = get_object_or_404(AcademicClass.objects.select_related("branch"), pk=payload.get("academic_class_id"))
+        academic_class = scoped_get_object_or_404(AcademicClass.objects.select_related("branch"), user=request.user, pk=payload.get("academic_class_id"))
         result = mark_student_attendance(
             student=student,
             academic_class=academic_class,
@@ -140,7 +141,7 @@ def mark_teacher_attendance_view(request):
 @require_GET
 def class_attendance_summary_view(request, class_id):
     try:
-        academic_class = get_object_or_404(AcademicClass.objects.select_related("branch"), pk=class_id)
+        academic_class = scoped_get_object_or_404(AcademicClass.objects.select_related("branch"), user=request.user, pk=class_id)
         summary_date = _parse_iso_date(request.GET.get("date"))
         user_branch = get_user_branch(request.user)
         if user_branch and academic_class.branch_id != user_branch.id:
@@ -153,7 +154,7 @@ def class_attendance_summary_view(request, class_id):
 @login_required
 @require_GET
 def student_attendance_history_view(request, student_id):
-    student = get_object_or_404(Student.objects.select_related("inscription__candidature__branch"), pk=student_id)
+    student = scoped_get_object_or_404(Student.objects.select_related("inscription__candidature__branch"), user=request.user, pk=student_id)
     user_branch = get_user_branch(request.user)
     student_branch = getattr(student.inscription.candidature, "branch", None)
     if user_branch and student_branch and user_branch.id != student_branch.id:

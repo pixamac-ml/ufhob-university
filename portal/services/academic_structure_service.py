@@ -17,6 +17,7 @@ from academics.services.programme_structure_service import (
 from formations.models import Programme
 from inscriptions.models import Inscription
 from students.models import Student
+from accounts.scoping import scoped
 
 
 def _group_programmes_by_cycle():
@@ -51,7 +52,7 @@ def build_academic_structure_context(*, branch, selected_class_id=None, student_
         section = "classes"
 
     classes_qs = (
-        AcademicClass.objects.select_related("programme", "academic_year", "branch")
+        scoped(AcademicClass).select_related("programme", "academic_year", "branch")
         .filter(branch=branch)
         .filter(is_archived=False)
         .order_by("-is_active", "programme__title", "level", "id")
@@ -77,7 +78,7 @@ def build_academic_structure_context(*, branch, selected_class_id=None, student_
             ec_count += sum(ue.ecs.count() for ue in semester_ues)
 
     unassigned_students = (
-        Student.objects.select_related("user", "inscription__candidature", "inscription__candidature__programme")
+        scoped(Student).select_related("user", "inscription__candidature", "inscription__candidature__programme")
         .filter(
             inscription__candidature__branch=branch,
             inscription__status__in=[Inscription.STATUS_PARTIAL, Inscription.STATUS_ACTIVE],
@@ -180,7 +181,7 @@ def save_academic_class(*, branch, class_id=None, programme_id=None, academic_ye
 
 
 def archive_academic_class(*, branch, class_id):
-    academic_class = AcademicClass.objects.filter(pk=class_id, branch=branch).first()
+    academic_class = scoped(AcademicClass).filter(pk=class_id, branch=branch).first()
     if academic_class is None:
         raise ValidationError("Classe introuvable.")
     academic_class.is_active = False
@@ -192,7 +193,7 @@ def archive_academic_class(*, branch, class_id):
 
 @transaction.atomic
 def save_semester(*, branch, class_id, number):
-    academic_class = AcademicClass.objects.filter(pk=class_id, branch=branch, is_active=True).first()
+    academic_class = scoped(AcademicClass).filter(pk=class_id, branch=branch, is_active=True).first()
     if academic_class is None:
         raise ValidationError("Classe introuvable ou inactive.")
     number = int(number)
@@ -233,11 +234,11 @@ def delete_ec(*, branch, actor=None, ec_id):
 
 @transaction.atomic
 def assign_student_to_class(*, branch, student_id, class_id):
-    student = Student.objects.select_related("user", "inscription__candidature").filter(
+    student = scoped(Student).select_related("user", "inscription__candidature").filter(
         pk=student_id,
         inscription__candidature__branch=branch,
     ).first()
-    academic_class = AcademicClass.objects.select_related("programme", "academic_year", "branch").filter(
+    academic_class = scoped(AcademicClass).select_related("programme", "academic_year", "branch").filter(
         pk=class_id,
         branch=branch,
         is_active=True,

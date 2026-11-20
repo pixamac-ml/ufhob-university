@@ -39,7 +39,7 @@ from accounts.dashboards.helpers import get_user_branch
 from branches.models import Branch
 from students.models import Student
 from academics.permissions import can_manage_bulletins, can_manage_diplomas, can_view_academic_class, can_view_student_academic_report
-from accounts.scoping import scoped
+from accounts.scoping import scoped, scoped_get_object_or_404
 from notifier.models import NotificationMessage
 from notifier.services import NotificationBus
 from academics.services.documents import (
@@ -808,7 +808,7 @@ def lesson_log_create_view(request):
         if payload.get("validated") and not _can_validate_lesson_log(request.user):
             return JsonResponse({"ok": False, "errors": ["Validation réservée au contrôle académique."]}, status=403)
         branch = _resolve_branch(request, payload)
-        academic_class = get_object_or_404(AcademicClass.objects.select_related("branch"), pk=payload.get("academic_class_id"))
+        academic_class = scoped_get_object_or_404(AcademicClass.objects.select_related("branch"), user=request.user, pk=payload.get("academic_class_id"))
         ec = get_object_or_404(EC.objects.select_related("ue__semester__academic_class"), pk=payload.get("ec_id"))
         teacher = get_object_or_404(User, pk=payload.get("teacher_id"))
         schedule_event = None
@@ -875,7 +875,7 @@ def lesson_log_update_view(request, lesson_log_id):
 @login_required
 @require_GET
 def class_lesson_logs_view(request, class_id):
-    academic_class = get_object_or_404(AcademicClass.objects.select_related("branch"), pk=class_id)
+    academic_class = scoped_get_object_or_404(AcademicClass.objects.select_related("branch"), user=request.user, pk=class_id)
     user_branch = get_user_branch(request.user)
     if user_branch and academic_class.branch_id != user_branch.id:
         return JsonResponse({"ok": False, "errors": ["Acces refuse a cette annexe."]}, status=403)

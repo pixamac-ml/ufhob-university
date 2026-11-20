@@ -1,6 +1,8 @@
 # students/admin.py
 
 from django.contrib import admin
+
+from accounts.admin_scoping import UniversityScopeAdminMixin
 from django.utils import timezone
 from .models import (
     AttendanceAlert, AttendanceRollSheet,
@@ -10,7 +12,7 @@ from .models import (
 
 
 @admin.register(Student)
-class StudentAdmin(admin.ModelAdmin):
+class StudentAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     list_display = (
         "matricule",
         "full_name",
@@ -44,7 +46,7 @@ class StudentAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttendanceRollSheet)
-class AttendanceRollSheetAdmin(admin.ModelAdmin):
+class AttendanceRollSheetAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     list_display = (
         "academic_class",
         "date",
@@ -60,7 +62,7 @@ class AttendanceRollSheetAdmin(admin.ModelAdmin):
 
 
 @admin.register(StudentAttendance)
-class StudentAttendanceAdmin(admin.ModelAdmin):
+class StudentAttendanceAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     list_display = (
         "student",
         "academic_class",
@@ -89,7 +91,7 @@ class StudentAttendanceAdmin(admin.ModelAdmin):
 
 
 @admin.register(TeacherAttendance)
-class TeacherAttendanceAdmin(admin.ModelAdmin):
+class TeacherAttendanceAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     list_display = (
         "teacher",
         "schedule_event",
@@ -117,7 +119,7 @@ class TeacherAttendanceAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttendanceAlert)
-class AttendanceAlertAdmin(admin.ModelAdmin):
+class AttendanceAlertAdmin(UniversityScopeAdminMixin, admin.ModelAdmin):
     list_display = ("student", "alert_type", "count", "branch", "triggered_at", "is_resolved")
     list_filter = ("alert_type", "branch", "is_resolved", "triggered_at")
     search_fields = (

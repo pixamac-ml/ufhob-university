@@ -224,6 +224,23 @@ def require_object_scope(obj, *, user=None, context=None):
         raise PermissionDenied("Cet objet est hors du contexte école/campus autorisé.")
 
 
+def scoped_get_object_or_404(queryset, *, user=None, context=None, **lookup):
+    """Charge un objet par identifiant dans le périmètre école/campus.
+
+    Un objet d'une autre école répond 404, comme un objet inexistant, pour ne
+    pas révéler son existence. Le DG et les comptes université gardent l'accès
+    complet ; ``queryset`` peut être un modèle ou un queryset déjà préparé.
+    """
+    from django.shortcuts import get_object_or_404
+
+    if isinstance(queryset, type):
+        queryset = queryset.objects.all()
+    allowed = scoped(queryset.model, user=user, context=context)
+    if allowed.query.where or allowed.query.is_empty():
+        queryset = queryset.filter(pk__in=allowed.values("pk"))
+    return get_object_or_404(queryset, **lookup)
+
+
 def object_in_scope(obj, *, user):
     return scoped(type(obj), user=user).filter(pk=obj.pk).exists()
 

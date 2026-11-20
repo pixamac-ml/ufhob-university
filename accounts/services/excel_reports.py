@@ -202,6 +202,7 @@ def export_branch_report_xlsx(*, branch, report_period, branch_staff_profiles, b
     from accounts.models import BranchCashMovement, BranchExpense, PayrollEntry, TeacherHonorariumEntry
     from accounts.dashboards.manager_dashboard import _resolve_report_period
     from accounts.services.manager_intelligence import get_branch_cash_balance
+    from accounts.scoping import scoped
     from admissions.models import Candidature
     from inscriptions.models import Inscription
 
@@ -313,13 +314,14 @@ def export_branch_report_xlsx(*, branch, report_period, branch_staff_profiles, b
         "available_balance": get_branch_cash_balance(branch),
     }
 
-    period_candidatures = Candidature.objects.filter(
+    # Le contexte de la requête limite aussi à l'école (campus partagé).
+    period_candidatures = scoped(Candidature).filter(
         branch=branch,
         is_deleted=False,
         submitted_at__date__gte=report_period["start"],
         submitted_at__date__lte=report_period["end"],
     )
-    period_inscriptions = Inscription.objects.filter(
+    period_inscriptions = scoped(Inscription).filter(
         candidature__branch=branch,
         candidature__is_deleted=False,
         created_at__date__gte=report_period["start"],
