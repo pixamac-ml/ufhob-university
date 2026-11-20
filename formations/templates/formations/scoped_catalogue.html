@@ -1,6 +1,9 @@
 {% extends "public/base.html" %}
+{% load static %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'src/css/public_hero_images.css' %}">{% endblock %}
 {% block content %}
 {% for entry in catalogue_schools %}
+{% if school_hero_url %}<div class="school-photo-hero"><img class="public-hero-photo" src="{{ school_hero_url }}" srcset="{{ school_hero_srcset }}" sizes="100vw" width="1600" height="900" alt="Étudiants de l’école {{ entry.school.display_name }} — UFHOB-Mali" fetchpriority="high"></div>{% endif %}
 <section class="bg-ufhob-ivory py-10"><div class="mx-auto max-w-ufhob-container px-4 sm:px-6 lg:px-8">
 <h1 class="text-3xl font-bold text-ufhob-primary">{{ entry.school.display_name }}</h1>
 <p class="mt-3 text-lg text-ufhob-primary">{{ entry.school.official_name }}</p>

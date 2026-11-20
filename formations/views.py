@@ -302,11 +302,20 @@ def formation_detail(request, slug, school_code=None):
             break
     practical_sections = [section for tab in context.get("practical_tabs", [])
                           for section in tab.sections.all() if (section.content or "").strip()]
+    from urllib.parse import urljoin
+    formation_hero_url = static(image_path) if image_path and finders.find(image_path) else ""
+    formation_hero_srcset = ", ".join(
+        f"{static(image_path[:-5] + suffix + '.webp')} {width}w"
+        for suffix, width in (("-800", 800), ("", 1600), ("-1920", 1920))
+    ) if formation_hero_url else ""
+    if formation_hero_url:
+        context["og_image_url"] = urljoin(settings.PUBLIC_WEBSITE_URL, formation_hero_url)
     context.update({
         "practical_sections": practical_sections,
         "filiere_title": programme.filiere.name,
         "sibling_levels": sibling_levels,
-        "formation_hero_url": static(image_path) if image_path and finders.find(image_path) else "",
+        "formation_hero_url": formation_hero_url,
+        "formation_hero_srcset": formation_hero_srcset,
         "programme_intro_clean": intro,
         "admission_academic_year": get_current_academic_year(),
     })

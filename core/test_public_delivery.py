@@ -83,7 +83,10 @@ class PublicDeliveryTests(TestCase):
                 self.assertIn("UFHOB-Mali", page.meta["og:title"])
                 self.assertEqual(page.title.strip(), page.meta["og:title"])
                 self.assertEqual(page.meta["og:title"], page.meta["twitter:title"])
-                self.assertIn("ufhob-share.png", page.meta["og:image"])
+                if response.context.get("og_image_url"):
+                    self.assertEqual(page.meta["og:image"], response.context["og_image_url"])
+                else:
+                    self.assertIn("ufhob-share.png", page.meta["og:image"])
                 self.assertNotIn("chart.umd", html)
                 self.assertNotIn("fbevents.js", html)
                 self.assertNotIn("fbq(", html)

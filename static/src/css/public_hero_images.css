@@ -1,0 +1,6 @@
+/* Photo placement only: preserve the existing page structure and hero dimensions. */
+.public-hero-photo{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.school-photo-hero{position:relative;overflow:hidden;height:200px;background:rgb(var(--ufhob-primary-rgb))}
+@media(max-width:767px){.public-hero-photo{object-position:center 30%}}
+@media(min-width:768px){.school-photo-hero{height:260px}}
+@media(min-width:1280px){.school-photo-hero{height:320px}}

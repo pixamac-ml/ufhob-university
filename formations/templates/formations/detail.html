@@ -1,10 +1,11 @@
 {% extends "public/base.html" %}
 {% load static humanize public_content %}
 {% block public_floating_widget %}{% endblock %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'src/css/formation_detail.css' %}">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'src/css/formation_detail.css' %}"><link rel="stylesheet" href="{% static 'src/css/public_hero_images.css' %}">{% endblock %}
 {% block content %}
 <div class="formation-detail">
-  <section class="formation-hero"{% if formation_hero_url %} style="background-image:url('{{ formation_hero_url }}')"{% endif %} aria-label="{{ filiere_title }}">
+  <section class="formation-hero" aria-label="{{ filiere_title }}">
+    {% if formation_hero_url %}<img class="public-hero-photo" src="{{ formation_hero_url }}" srcset="{{ formation_hero_srcset }}" sizes="100vw" width="1600" height="900" alt="Illustration de la filière {{ filiere_title }} à {{ programme.school.display_name }} — UFHOB-Mali" fetchpriority="high">{% endif %}
     <div class="formation-hero-shade"></div>
     <span class="formation-school-badge">{{ programme.school.display_name }}</span>
     <div class="formation-hero-title"><span>{{ programme.school.display_name }} · Filière</span><strong role="heading" aria-level="1">{{ filiere_title }}</strong></div>

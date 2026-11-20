@@ -43,11 +43,23 @@ def school_detail(request, code):
         from formations.fatec_esga import grouped_programmes, public_catalogue_context
         school=get_object_or_404(School.objects.public(),code__iexact=code)
         programmes=Programme.objects.public().filter(school=school).select_related('school','cycle','filiere','diploma_awarded')
+        from django.conf import settings
+        from django.contrib.staticfiles import finders
+        from urllib.parse import urljoin
+        hero_path = f"images/ecoles/{school.code.lower()}-hero.webp"
+        school_hero_url = static(hero_path) if finders.find(hero_path) else ""
+        school_hero_srcset = ", ".join(
+            f"{static(hero_path[:-5] + suffix + '.webp')} {width}w"
+            for suffix, width in (("-800", 800), ("", 1600), ("-1920", 1920))
+        ) if school_hero_url else ""
         return render(request, 'formations/scoped_catalogue.html', {
             'page_title': f'{school.display_name} | UFHOB-Mali | Bamako, Moribabougou',
             'breadcrumb_schema_json': school_breadcrumbs(school),
             'meta_description': f'Découvrez les formations de {school.display_name} à UFHOB-Mali, campus de Moribabougou près de Bamako. Consultez les filières et candidatez en ligne.',
             'catalogue_schools': [{'school': school, 'domains': grouped_programmes(programmes)}],
+            'school_hero_url': school_hero_url,
+            'school_hero_srcset': school_hero_srcset,
+            'og_image_url': urljoin(settings.PUBLIC_WEBSITE_URL, school_hero_url) if school_hero_url else '',
             **public_catalogue_context(),
         })
     public_programmes = (
