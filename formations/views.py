@@ -256,10 +256,10 @@ def formation_detail(request, slug, school_code=None):
             for item in years_with_totals
             if item['fees'] and item['year'].year_number <= (programme.duration_years or 0)
         ]
+    context['apply_url'] = admission_url(request, programme)
     if programme.school_id and programme.school.code in ('FATEC', 'ESGA'):
         context.update(public_catalogue_context())
         context['catalogue_scoped'] = True
-        context['apply_url'] = admission_url(request, programme)
         context['practical_tabs'] = programme.tabs.filter(slug='conditions-catalogue', is_active=True).prefetch_related('sections')
         if programme.cycle.name != 'Master':
             context['years_with_totals'] = [item for item in years_with_totals if item['year'].year_number == 1]

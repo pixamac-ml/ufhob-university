@@ -20,7 +20,7 @@ from core.models import StatusHistory
 NOTIFICATION_MESSAGES = {
     "candidature_submitted": {
         "title": "Candidature soumise avec succes",
-        "message": "Votre candidature a ete soumise avec succes. Nous allons l'examiner dans les prochains jours."
+        "message": "Votre candidature est bien reçue. Le service des admissions vous contactera pour la suite et pour les pièces à fournir. Contact : +223 76 88 24 79."
     },
     "candidature_under_review": {
         "title": "Candidature en cours d'analyse",
@@ -28,7 +28,7 @@ NOTIFICATION_MESSAGES = {
     },
     "candidature_to_complete": {
         "title": "Candidature a completer",
-        "message": "Votre candidature necessite des documents complements. Veuillez televerser les documents manquants."
+        "message": "Le service des admissions vous contactera pour la suite et pour les pièces à fournir. Contact : +223 76 88 24 79."
     },
     "candidature_accepted": {
         "title": "Felicitations ! Candidature acceptee",
@@ -44,7 +44,7 @@ NOTIFICATION_MESSAGES = {
     },
     "document_missing": {
         "title": "Document manquant",
-        "message": "Un document requis est manquant ou invalide dans votre dossier. Veuillez le televerser."
+        "message": "Le service des admissions vous contactera pour les pièces à fournir. Contact : +223 76 88 24 79."
     },
 }
 
@@ -66,6 +66,12 @@ def create_status_notification(candidature, notification_type):
 
     data = NOTIFICATION_MESSAGES[notification_type]
     message = data["message"]
+    if notification_type in {"candidature_submitted", "candidature_to_complete", "document_missing"}:
+        message = (
+            f"Votre candidature est bien reçue (référence {candidature.reference}). "
+            "Le service des admissions vous contactera pour la suite et pour les pièces à fournir. "
+            "Contact : +223 76 88 24 79."
+        )
 
     # CORRIGE: utiliser last_name et first_name au lieu de full_name
     recipient_name = f"{candidature.last_name} {candidature.first_name}"
@@ -75,7 +81,6 @@ def create_status_notification(candidature, notification_type):
         extra_context["reason"] = candidature.rejection_reason
         extra_context["comment"] = candidature.rejection_reason
     elif notification_type == "candidature_to_complete" and candidature.completion_message:
-        message = candidature.completion_message
         extra_context["admin_comment"] = candidature.completion_message
         extra_context["comment"] = candidature.completion_message
     elif notification_type == "candidature_accepted_with_reserve" and candidature.admin_comment:
@@ -105,7 +110,7 @@ def create_status_notification(candidature, notification_type):
             "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
             "support_email": "contact@esfe-mali.org",
             "template_key": notification_type,
-            "url": "/candidature/",
+            "url": "",
             "context": {
                 "recipient_name": recipient_name,
                 "message": message,
@@ -116,8 +121,8 @@ def create_status_notification(candidature, notification_type):
                 "branch_name": getattr(getattr(candidature, "branch", None), "name", ""),
                 "first_name": candidature.first_name,
                 "candidate_name": candidature.full_name,
-                "dashboard_url": "/candidature/",
-                "login_url": "/candidature/",
+                "dashboard_url": "",
+                "login_url": "",
                 "reference": getattr(candidature, "reference", ""),
                 **extra_context,
             },
@@ -247,7 +252,9 @@ def check_documents_after_status_change(sender, instance, created, **kwargs):
             if missing_docs:
                 # Modifier le message avec les documents manquants
                 docs_list = ", ".join(missing_docs)
-                message = f"Un document requis est manquant ou invalide: {docs_list}. Veuillez le televerser."
+                message = (f"Votre candidature est bien reçue (référence {instance.reference}). "
+                           "Le service des admissions vous contactera pour la suite et pour les pièces à fournir. "
+                           f"Contact : +223 76 88 24 79. Pièces : {docs_list}.")
 
                 # CORRIGE: utiliser last_name et first_name au lieu de full_name
                 recipient_name = f"{instance.last_name} {instance.first_name}"
@@ -278,7 +285,7 @@ def check_documents_after_status_change(sender, instance, created, **kwargs):
                         "missing_documents": missing_docs,
                         "required_documents": missing_docs,
                         "admin_comment": message,
-                        "url": "/candidature/",
+                        "url": "",
                         "context": {
                             "recipient_name": recipient_name,
                             "message": message,
@@ -292,8 +299,8 @@ def check_documents_after_status_change(sender, instance, created, **kwargs):
                             "missing_documents": missing_docs,
                             "required_documents": missing_docs,
                             "admin_comment": message,
-                            "dashboard_url": "/candidature/",
-                            "login_url": "/candidature/",
+                            "dashboard_url": "",
+                            "login_url": "",
                             "reference": getattr(instance, "reference", ""),
                         },
                     },

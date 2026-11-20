@@ -18,7 +18,6 @@
   <form method="post"
         novalidate
         action="{% url 'admissions:admission_tunnel' %}"
-        enctype="multipart/form-data"
         class="w-full"
         x-data="admissionTunnelData()"
         @submit.prevent="submitForm($event)">
@@ -64,7 +63,7 @@
         <ol class="tunnel-stepper" aria-label="Étapes de candidature">
           <li :aria-current="step === 1 ? 'step' : null">01 · Identification</li>
           <li :aria-current="step === 2 ? 'step' : null">02 · Informations</li>
-          <li :aria-current="step === 3 ? 'step' : null">03 · Parcours et pièces</li>
+          <li :aria-current="step === 3 ? 'step' : null">03 · Parcours</li>
           <li :aria-current="step === 4 ? 'step' : null">04 · Vérification</li>
         </ol>
         <p x-show="backendError" x-cloak role="alert" class="funnel-error mb-4" x-text="backendError"></p>
@@ -106,15 +105,10 @@
       backendErrorStep: {{ backend_error_step|default:1 }},
       backendErrorField: '{{ backend_error_field|default:""|escapejs }}',
       revealStepOneIdentify: false,
-      documentsDeferred: {{ documents_deferred|yesno:"true,false" }},
       programmePage: 1,
       programmePageSize: window.innerWidth >= 1280 ? 6 : 4,
-      documentFiles: {},
-      fileErrors: {},
-      filesNeedReselection: false,
       submitting: false,
       fragmentError: '',
-      documentsRefreshTick: 0,
       formData: Object.assign({
         last_name: '',
         first_name: '',
@@ -148,7 +142,7 @@
           branch_id: 3,
           current_level: 3,
           formation_slug: 3,
-          documents: 3,
+          documents: 4,
         };
         return fieldToStep[fieldName] || 1;
       },
@@ -165,7 +159,7 @@
           school_code: '[data-field="school_code"]',
           branch_id: '[data-field="branch_id"]',
           formation_slug: '[data-field="formation_slug"]',
-          documents: '[data-field="documents"]',
+          documents: '.tunnel-form-pane',
         };
         return selectors[fieldName] || '';
       },
@@ -203,7 +197,7 @@
           this.step3Phase = this.formData.current_level ? 'program' : (this.formData.branch_id ? 'cycle' : (this.formData.school_code ? 'campus' : 'school'));
         }
         if (fieldName === 'documents') {
-          this.step3Phase = 'documents';
+          this.step = 4;
         }
       },
       scrollToFieldError(fieldName) {
@@ -236,7 +230,7 @@
         const fieldsByStep = {
           1: ['last_name', 'first_name', 'city'],
           2: ['email', 'phone', 'birth_date', 'gender'],
-          3: ['school_code', 'branch_id', 'current_level', 'formation_slug', 'documents'],
+          3: ['school_code', 'branch_id', 'current_level', 'formation_slug'],
         };
         (fieldsByStep[stepNo] || []).forEach((fieldName) => {
           delete this.errors[fieldName];
@@ -268,41 +262,11 @@
               !Array.from(event.target.querySelectorAll('[data-cycle-slug]')).some(node => node.dataset.cycleSlug === this.formData.current_level)) {
             Object.assign(this.formData, {current_level:'', current_cycle_name:'', formation:'', formation_slug:''});
           }
-          if (!event.target || event.target.id !== 'step3-documents-list') {
-            return;
-          }
-          this.documentsRefreshTick += 1;
-          this.allDocumentInputs().forEach(input => {
-            const file = this.documentFiles[input.name];
-            if (file) {
-              const transfer = new DataTransfer();
-              transfer.items.add(file);
-              input.files = transfer.files;
-            }
-          });
-          this.documentsRefreshTick += 1;
-        });
-
-        document.body.addEventListener('change', (event) => {
-          if (!event.target || !event.target.matches('#step3-documents-list input[type=file]')) {
-            return;
-          }
-          const input = event.target;
-          const file = input.files[0];
-          delete this.fileErrors[input.name];
-          delete this.documentFiles[input.name];
-          if (file && !/\.(pdf|jpe?g|png|docx?)$/i.test(file.name)) this.fileErrors[input.name] = 'Format non autorisé.';
-          else if (file && file.size > 10 * 1024 * 1024) this.fileErrors[input.name] = 'Taille maximale : 10 Mo.';
-          if (this.fileErrors[input.name]) input.value = '';
-          else if (file) this.documentFiles[input.name] = file;
-          this.documentsRefreshTick += 1;
-          this.persistDraft();
         });
 
         this.$watch('formData', () => this.persistDraft());
         this.$watch('step', () => this.persistDraft());
         this.$watch('step3Phase', () => this.persistDraft());
-        this.$watch('documentsDeferred', () => this.persistDraft());
         this.$watch('programmePage', () => this.persistDraft());
         ['htmx:responseError', 'htmx:sendError'].forEach(name => document.body.addEventListener(name, event => {
           if (event.target.closest('.admission-shell')) this.fragmentError = 'Le chargement a échoué. Réessayez pour poursuivre.';
@@ -329,12 +293,10 @@
           if (!saved || typeof saved !== 'object' || !saved.formData) return;
           this.formData = Object.assign({}, this.formData, saved.formData);
           if ([1, 2, 3, 4].includes(Number(saved.step))) this.step = Number(saved.step);
-          if (['school', 'campus', 'cycle', 'program', 'documents'].includes(saved.step3Phase)) this.step3Phase = saved.step3Phase;
+          if (['school', 'campus', 'cycle', 'program'].includes(saved.step3Phase)) this.step3Phase = saved.step3Phase;
           this.revealStepOneIdentify = Boolean(saved.revealStepOneIdentify);
-          this.documentsDeferred = saved.documentsDeferred === true;
           this.programmePage = Number(saved.programmePage) || 1;
-          this.filesNeedReselection = Boolean(saved.hadFiles);
-          if (this.step === 4) { this.step = 3; this.step3Phase = 'documents'; }
+          if (saved.step3Phase === 'documents') { this.step3Phase = 'program'; this.step = 4; }
         } catch (error) {
           window.sessionStorage.removeItem(this.draftKey);
         }
@@ -346,9 +308,7 @@
             step3Phase: this.step3Phase,
             revealStepOneIdentify: this.revealStepOneIdentify,
             formData: this.formData,
-            documentsDeferred: this.documentsDeferred,
             programmePage: this.programmePage,
-            hadFiles: this.uploadedDocumentsCount() > 0,
           }));
         } catch (error) {
           // Le tunnel reste utilisable lorsque le stockage navigateur est indisponible.
@@ -364,7 +324,6 @@
           campus: 'admission-step-3-campuses',
           cycle: 'admission-step-3-cycles',
           program: 'admission-step-3',
-          documents: 'admission-step-3-documents',
         };
         const eventName = eventMap[this.step3Phase];
         if (!eventName) {
@@ -376,17 +335,15 @@
           campus: [this.formData.school_code],
           cycle: [this.formData.school_code, this.formData.branch_id],
           program: [this.formData.school_code, this.formData.branch_id, this.formData.current_level, this.programmePage, this.programmePageSize],
-          documents: [this.formData.formation_slug],
         };
         const key = JSON.stringify([phase, ...parameters[phase]]);
-        if (phase === 'documents' && document.querySelector('#step3-documents-list [data-programme-slug]')?.dataset.programmeSlug === this.formData.formation_slug) return;
         if (this.stepThreeRequestKey === key) return;
         this.stepThreeRequestKey = key;
         const requestId = ++this.stepThreeRequestId;
         // HTMX reads the hidden inputs after Alpine has updated their values.
         this.$nextTick(() => {
           if (this.step === 3 && this.step3Phase === phase && this.stepThreeRequestId === requestId) {
-            const targetIds = {campus:'step3-campuses-list', cycle:'step3-cycles-list', program:'step3-formations-list', documents:'step3-documents-list'};
+            const targetIds = {campus:'step3-campuses-list', cycle:'step3-cycles-list', program:'step3-formations-list'};
             const target = document.getElementById(targetIds[phase]);
             const pending = document.createElement('p');
             pending.setAttribute('role', 'status');
@@ -403,7 +360,7 @@
         this.step3Phase = this.formData.school_code
           ? (this.formData.branch_id
             ? (this.formData.current_level
-              ? (this.formData.formation_slug ? 'documents' : 'program')
+              ? 'program'
               : 'cycle')
             : 'campus')
           : 'school';
@@ -418,7 +375,6 @@
         if (this.formData.school_code !== code) {
           Object.assign(this.formData, {branch_id:'', branch_name:'', branch_city:'', campus_image:'', current_level:'', current_cycle_name:'', formation:'', formation_slug:''});
           this.programmePage = 1;
-          this.documentsDeferred = false;
         }
         Object.assign(this.formData, {school_code:code, school_name:name});
         delete this.errors.school_code;
@@ -430,25 +386,18 @@
         Object.assign(this.formData, {branch_id:String(id), branch_name:name, branch_city:city, campus_image:image});
         delete this.errors.branch_id;
         this.programmePage = 1;
-        this.step3Phase = this.formData.formation_slug ? 'documents' : (this.formData.current_level ? 'program' : 'cycle');
+        this.step3Phase = this.formData.current_level ? 'program' : 'cycle';
       },
       selectCycle(slug, name) {
         if (this.formData.current_level !== slug) {
-          this.formData.formation = ''; this.formData.formation_slug = ''; this.documentsDeferred = false;
+          this.formData.formation = ''; this.formData.formation_slug = '';
         }
         this.formData.current_level = slug; this.formData.current_cycle_name = name;
         this.programmePage = 1; delete this.errors.current_level; this.step3Phase = 'program';
       },
       selectProgramme(slug, title) {
-        if (this.formData.formation_slug !== slug) this.documentsDeferred = false;
         this.formData.formation_slug = slug; this.formData.formation = title;
-        delete this.errors.formation_slug; delete this.errors.documents; this.step3Phase = 'documents';
-      },
-      removeDocument(name) {
-        const input = document.querySelector('#step3-documents-list input[name="' + name + '"]');
-        if (input) input.value = '';
-        delete this.documentFiles[name]; delete this.fileErrors[name];
-        this.documentsRefreshTick += 1; this.persistDraft();
+        delete this.errors.formation_slug; this.step3Phase = 'program'; this.goTo(4);
       },
       isStepComplete(stepNo) {
         if (stepNo === 1) return this.formData.last_name && this.formData.first_name && this.formData.city;
@@ -461,7 +410,7 @@
         const fieldsByStep = {
           1: ['last_name', 'first_name', 'city'],
           2: ['email', 'phone', 'birth_date', 'gender'],
-          3: ['school_code', 'branch_id', 'current_level', 'formation_slug', 'documents'],
+          3: ['school_code', 'branch_id', 'current_level', 'formation_slug'],
         };
         if (stepNo === 1) {
           if (!this.formData.last_name) this.errors.last_name = 'Le champ nom est obligatoire.';
@@ -487,12 +436,6 @@
         if (stepNo === 3 && !this.formData.formation_slug) {
           this.errors.formation_slug = 'Veuillez choisir une formation.';
         }
-        if (stepNo === 3 && this.formData.formation_slug) {
-          const ready = document.querySelector('#step3-documents-list [data-programme-slug]')?.dataset.programmeSlug === this.formData.formation_slug;
-          if (!ready) this.errors.documents = 'Attendez le chargement des pièces demandées.';
-          else if (this.requiredDocumentsUploaded() < this.requiredDocumentsTotal() && !this.documentsDeferred) this.errors.documents = 'Ajoutez les pièces obligatoires ou cochez l’engagement de transmission ultérieure.';
-          if (this.allDocumentInputs().some(input => this.fileErrors[input.name])) this.errors.documents = 'Corrigez les fichiers signalés avant de continuer.';
-        }
         return !(fieldsByStep[stepNo] || []).some((fieldName) => Boolean(this.errors[fieldName]));
       },
       async submitForm(event) {
@@ -517,10 +460,10 @@
             return;
           }
           this.errors = result.errors || {};
-          if (Object.keys(this.errors).length) this.revealFirstError();
+          if (Object.keys(this.errors).length) { this.backendError = Object.values(this.errors)[0]; this.revealFirstError(); }
           else this.backendError = 'L’envoi a échoué. Réessayez ; vos données restent dans ce formulaire.';
         } catch (error) {
-          this.backendError = 'Connexion interrompue. Vos données et fichiers restent dans ce formulaire ; réessayez.';
+          this.backendError = 'Connexion interrompue. Vos données restent dans ce formulaire ; réessayez.';
         }
         this.submitting = false;
       },
@@ -541,7 +484,7 @@
         });
         if (target === 3) {
           if (this.formData.school_code && this.formData.branch_id && this.formData.current_level && this.formData.formation_slug) {
-            this.step3Phase = 'documents';
+            this.step3Phase = 'program';
           } else if (this.formData.school_code && this.formData.branch_id && this.formData.current_level) {
             this.step3Phase = 'program';
           } else if (this.formData.school_code && this.formData.branch_id) {
@@ -565,38 +508,6 @@
           ? '-top-2 text-xs text-ufhob-primary'
           : 'top-4 text-sm text-slate-500 peer-focus:-top-2 peer-focus:text-xs peer-focus:text-ufhob-primary';
       },
-      allDocumentInputs() {
-        this.documentsRefreshTick;
-        return Array.from(document.querySelectorAll('#step3-documents-list input[type=file]'));
-      },
-      requiredDocumentInputs() {
-        this.documentsRefreshTick;
-        return Array.from(document.querySelectorAll('#step3-documents-list input[type=file][data-required="1"]'));
-      },
-      uploadedDocumentsCount() {
-        return this.allDocumentInputs().filter((input) => input.files && input.files.length > 0).length;
-      },
-      requiredDocumentsTotal() {
-        return this.requiredDocumentInputs().length;
-      },
-      requiredDocumentsUploaded() {
-        return this.requiredDocumentInputs().filter((input) => input.files && input.files.length > 0).length;
-      },
-      documentUploadPercent() {
-        const total = this.requiredDocumentsTotal();
-        if (!total) return 100;
-        return Math.round((this.requiredDocumentsUploaded() / total) * 100);
-      },
-      documentSubmissionStatus() {
-        const requiredTotal = this.requiredDocumentsTotal();
-        const requiredUploaded = this.requiredDocumentsUploaded();
-        return requiredUploaded >= requiredTotal ? 'Dossier documentaire complet, à vérifier' : 'Dossier incomplet — pièces à compléter';
-      },
-      documentSubmissionNote() {
-        return this.requiredDocumentsUploaded() < this.requiredDocumentsTotal()
-          ? (this.documentsDeferred ? 'Vous vous engagez à transmettre les pièces manquantes ultérieurement.' : 'Les pièces obligatoires ou votre engagement explicite sont nécessaires.')
-          : 'Les fichiers sélectionnés seront transmis avec votre candidature puis vérifiés par les admissions.';
-      },
       prettyValue(value, fallback = 'Non renseigne') {
         return value ? value : fallback;
       }
@@ -616,7 +527,7 @@
   });
 
   document.body.addEventListener('htmx:afterSwap', (event) => {
-    if (!event.target || !['step3-campuses-list', 'step3-cycles-list', 'step3-formations-list', 'step3-documents-list'].includes(event.target.id)) {
+    if (!event.target || !['step3-campuses-list', 'step3-cycles-list', 'step3-formations-list'].includes(event.target.id)) {
       return;
     }
     requestAnimationFrame(() => {

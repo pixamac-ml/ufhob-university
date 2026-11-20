@@ -76,7 +76,6 @@ class AdmissionTunnelValidationTests(TestCase):
 	def _valid_payload(self, **overrides):
 		payload = {
 			"school_code": self.school.code,
-			"documents_deferred": "on",
 			"last_name": "Traore",
 			"first_name": "Awa",
 			"city": "Bamako",
@@ -103,7 +102,8 @@ class AdmissionTunnelValidationTests(TestCase):
 		self.assertEqual(Candidature.objects.count(), 1)
 		self.assertEqual(Candidature.objects.first().documents.count(), 0)
 		self.assertEqual(Candidature.objects.first().status, "to_complete")
-		self.assertIn("Engagement du candidat", Candidature.objects.first().completion_message)
+		self.assertIn("Pièces à fournir", Candidature.objects.first().completion_message)
+		self.assertNotIn("Engagement", Candidature.objects.first().completion_message)
 
 	def test_missing_required_field_returns_precise_message(self):
 		response = self.client.post(self.url, data=self._valid_payload(email=""))
@@ -144,7 +144,7 @@ class AdmissionTunnelValidationTests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.context["initial_step"], 3)
-		self.assertEqual(response.context["initial_step3_phase"], "documents")
+		self.assertEqual(response.context["initial_step3_phase"], "program")
 		form_data = json.loads(response.context["initial_form_json"])
 		self.assertEqual(form_data["branch_id"], str(self.branch.id))
 		self.assertEqual(form_data["branch_name"], self.branch.name)
@@ -269,7 +269,7 @@ class AdmissionTunnelValidationTests(TestCase):
 		response = self.client.post(self.url, data=payload)
 
 		self.assertEqual(response.status_code, 200)
-		self.assertContains(response, "format non autorise")
+		self.assertContains(response, "Les fichiers ne sont pas acceptés")
 		self.assertEqual(Candidature.objects.count(), 0)
 
 	def test_classic_catalogue_and_detail_routes_remain_available(self):
