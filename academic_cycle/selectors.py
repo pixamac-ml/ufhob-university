@@ -17,10 +17,16 @@ from .permissions import has_branch_scope, is_global_cycle_user, user_branch
 def scope_branch_queryset(queryset, user, branch_field="branch"):
     if is_global_cycle_user(user):
         return queryset
-    branch = user_branch(user)
-    if not branch:
+    if not getattr(user, "is_authenticated", False):
         return queryset.none()
-    return queryset.filter(**{branch_field: branch})
+    from accounts.access_context import build_access_context
+    from accounts.scoping import scoped
+    from branches.models import Branch
+
+    context = build_access_context(user)
+    if not context.is_valid or context.context_type != "SYSTEM" or (context.school is None and context.branch is None):
+        return queryset.none()
+    return queryset.filter(**{f"{branch_field}__in": scoped(Branch, context=context)})
 
 
 def get_branch_cycle(branch, academic_year):
