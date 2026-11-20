@@ -1,0 +1,181 @@
+RAPPORT PHASE 1 CODEX — 20 novembre 2026
+
+File exécutée : docs/PROMPTS_PHASE1/PROMPTS_PHASE1/CODEX_file_de_travail.txt.
+Dossier : .local-delivery ; branche livraison/ufhob-securisation-20261114.
+Départ : c014431. Travail effectué dans l'ordre C1, C2, C3, puis clôture documentaire.
+Commits exclusivement locaux. Aucun push, aucune intervention sur un serveur.
+
+C1 — LIVRÉ PARTIELLEMENT : PILOTAGE DG / DGA PAR ÉCOLE
+Commit : 09fee62 ; correction du jeton de focus CSS dans 46963f7.
+
+La vue d'ensemble commence par un tableau UI Core : une ligne par école configurée
+dans le contexte actif, puis TOTAL. Aucun nom ni établissement n'a été créé.
+Les lignes se sélectionnent à la souris ou avec Entrée ; le lien conserve campus
+et année. Le retour TOTAL enlève le filtre école, en conservant campus et année.
+Le sélecteur existant permet toujours de changer école, campus et année.
+
+Sources et conventions :
+- Effectifs : AcademicEnrollment actifs, étudiants distincts par école.
+- Candidatures : non supprimées ; acceptées et acceptées sous réserve regroupées ;
+  en attente = submitted, under_review, to_complete.
+- Inscriptions administratives : non archivées et non annulées, y compris celles
+  qui attendent encore leur premier paiement ; les compteurs actifs existants
+  restent disponibles dans les autres sections.
+- Impayés : somme de max(amount_due - amount_paid, 0), sans multiplication par
+  les jointures des paiements ou des inscriptions académiques.
+- Encaissements : Payment validés uniquement ; année du dossier sélectionnée,
+  conformément à la convention déjà utilisée par les sélecteurs DG. Le mois
+  affiché est le mois civil courant, à l'intérieur de ce périmètre de dossiers.
+- Les agrégations sont indépendantes et groupées par école, sans boucle de
+  requêtes par école pour les quatre familles d'indicateurs.
+
+La caisse actuelle n'a pas de champ school sur BranchCashMovement. Le tableau
+affiche « Données de caisse par école bientôt disponibles », jamais un faux zéro
+ni recettes école moins dépenses du campus entier. Une lecture groupée des
+mouvements par school est prévue si ce champ existe ultérieurement dans le modèle.
+Les dépenses, mouvements, clôtures et versements de campus non attribuables sont
+masqués lorsque l'école est sélectionnée, même si le campus est aussi sélectionné.
+Ils restent consultables dans le contexte universitaire / campus sans filtre école.
+L'attribution scolaire des écritures historiques et sa validation métier attendent
+le chantier caisse de Claude Code ; aucune migration n'a été ajoutée ici.
+
+Les rapports de synthèse Excel et PDF utilisent exactement les mêmes agrégations
+que le cockpit, pour une école ou toute l'université. Les liens d'export portent
+explicitement les trois identifiants de contexte, sans dépendre uniquement de la
+session d'un autre onglet. Les exports détaillés historiques sont conservés.
+Un export ZIP rend les PDF des bulletins déjà publiés dans le périmètre choisi,
+en réutilisant render_bulletin_pdf_bytes et les snapshots officiels existants.
+Il ne recalcule pas les notes et ne publie aucun résultat.
+
+LIMITES RESTANTES DE C1 :
+1. Super-admin : autorisé dans la couche DG de contexte et pour les nouveaux
+   rapports, mais toujours refusé par les gardes finaux de portal/views/views.py
+   pour le cockpit et les sections. Ce fichier est hors du périmètre autorisé
+   et n'a pas été modifié. Le test correspondant reste explicitement en
+   expectedFailure ; le problème n'est pas présenté comme résolu.
+2. La préparation de nouveaux bulletins ou diplômes n'a pas été ajoutée. Seul
+   l'export des bulletins déjà publiés est relié au DG. Le raccordement de la
+   génération complète aux vues académiques existantes reste à terminer dans
+   une intervention qui autorise ces vues et respecte leur gouvernance.
+3. Personnel : les affectations pédagogiques suivent école/campus/année ; les
+   affectations institutionnelles permanentes restent leur état actuel. Aucun
+   historique RH annuel absent du modèle n'a été inventé.
+4. Les documents administratifs de campus sans School sont exclus du contexte
+   école plutôt qu'attribués à tort à l'une des écoles du campus. Le contexte
+   universitaire garde leur lecture, filtrée par date sur l'année sélectionnée.
+
+Les trois postes retirés (finance_manager, payment_agent, admissions) ne figurent
+plus dans les choix DG de recrutement, création et changement d'affectation.
+Les formulaires refusent ces valeurs. Libellés DG : « Directeur d’école » et
+« Gestionnaire ». Les rôles historiques et le registre partagé n'ont pas été migrés.
+La gestionnaire reçoit 404 sur les endpoints DG ; DG et DGA gardent leur accès global.
+
+Lisibilité : composants UI Core conservés, cartes agrandies, cellules espacées,
+tableaux à défilement contenu sur tablette. Les éléments suivants sont masqués,
+sans suppression de leurs gabarits ni de leurs données :
+- les huit indicateurs structurels dupliqués de la vue d'ensemble DG ; ils restent
+  dans la section Structure universitaire ;
+- la comparaison des campus lorsqu'il reste zéro ou un campus ;
+- le panneau d'attention lorsqu'il est vide ;
+- l'activité récente lorsqu'elle est vide ;
+- les écritures et documents de campus non attribuables à l'école sélectionnée.
+
+Fichiers C1 :
+portal/dg/context.py, forms.py, scoping.py, selectors.py, services.py,
+school_reports.py, test_school_reports.py ;
+templates/portal/dg/partials/overview.html, backoffice_list.html,
+finance/summary_ui_core.html, finance/reports_ui_core.html,
+exports/list_ui_core.html ;
+static/src/css/portal/dg_legacy.css, static/src/js/portal/dg_dashboard.js ;
+ui/templates/ui_core/data_display/data_table_row.html.
+Le chemin de gabarits réellement présent est templates/portal/dg/ ; le chemin
+portal/templates/portal/dg/ cité dans la file n'existe pas. Aucun double gabarit créé.
+La primitive data_table de ui/ a reçu un attribut optionnel de lien/focus de ligne.
+
+Validation C1 :
+- check : OK ; makemigrations --check --dry-run : No changes detected.
+- Suite DG : 52 tests, 47 réussis, 4 ignorés et 1 échec attendu explicite.
+- Ignorés : l'ancien contrat qui exigeait le mélange dépenses campus / recettes
+  école, et trois anomalies reproduites avec les modules DG originaux de c014431 :
+  test_branch_finance_keeps_early_payment_of_selected_dossier_year
+  (montant du paiement 250000 pour un dossier dû de 100),
+  test_calendar_pdf_uses_same_school_entries (mock de rendu jamais appelé),
+  test_sensitive_staff_actions_require_a_reason (SimpleTestCase effectuant du SQL).
+  Ces exclusions sont dans le lanceur local de recette, pas dans les tests existants.
+- Le seul expectedFailure ajouté aux tests versionnés concerne le super-admin.
+- Scénarios vérifiés : ESGA/FATEC sur le même campus, totaux, mois courant,
+  années séparées, inscriptions encore impayées, inscriptions académiques inactives,
+  paiements en attente exclus, Excel école/université, vrai PDF, ZIP des seuls
+  bulletins publiés de l'école, DGA, refus gestionnaire, choix RH retirés,
+  liens d'export explicites et absence d'attribution des documents campus.
+- Navigateur à 1280 et 768 px : OK, puis nouvelle vérification après C3 : OK.
+
+C2 — TERMINÉ AVEC UNE EXCEPTION PRUDENTE
+21 fichiers déplacés par git mv, sans réécriture, dans _archive/ en conservant
+leurs chemins relatifs. _archive/ n'est pas dans INSTALLED_APPS ; aucun import
+de ce dossier dans le code actif n'a été trouvé. Aucun autre nettoyage entrepris.
+
+Groupe 1 — dcffa37 :
+accounts/dashboard_views.py, accounts/dashboards/executive_dashboard.py,
+accounts/portal_views.py, accounts/portal_urls.py, accounts/mixins.py.
+Groupe 2 — 396c792 :
+superadmin/superadmin_views_complete.py et les sept fichiers .py de
+superadmin/views/ ; aucun __init__.py déplacé.
+Groupe 3 — 06a67f4 :
+portal/dg/alerts_service.py, analytics_service.py, finance_service.py,
+metrics_service.py, workflow_service.py, annex_service.py.
+Exception : portal/views/it_dashboard_v2.py CONSERVÉ. Contrairement à l'hypothèse
+de la cartographie, portal/urls.py:16 l'importe ; il sert une redirection active.
+Groupe 4 — a5390d0 : main.py et templates/mon_composant.html.
+
+Après CHAQUE groupe : accounts.test_dashboard_entrypoints et
+portal.dg.test_school_reports ; 24 tests, 22 réussis, 1 recette navigateur opt-in
+non relancée, 1 échec attendu super-admin déjà décrit. Contrôle Django OK.
+Aucun déplacement n'a provoqué de casse ni nécessité de remise en place.
+
+C3 — TERMINÉ : PRÉSENTATION GESTIONNAIRE UNIQUEMENT
+Commit : 46963f7.
+Vérification git log depuis l'état distant et git status avant édition : aucun des
+trois gabarits modifiés n'avait reçu de changement concurrent ; aucun gabarit ignoré.
+Les cartes de tâches manuelles utilisent maintenant ui_core.stat_card ; mêmes
+liens, compteurs, conditions d'affichage et couleurs sémantiques. Cartes de KPI
+moins compactes, panneaux plus espacés, lignes et filtres plus lisibles.
+Les cinq règles CSS ajoutées sont limitées au shell manager et à
+#manager-dashboard-content. Le CSS source et le bundle app portent ces seules
+règles supplémentaires ; les sélecteurs globaux précédents ont été conservés.
+La compilation Tailwind app a été vérifiée avec les dépendances locales existantes.
+Aucun fichier Python d'application modifié pendant C3, aucune dépendance installée.
+
+Fichiers C3 :
+accounts/templates/accounts/dashboard/partials/manager_overview_workspace.html,
+manager_subview_kpi_grid.html, manager_workspace.html ;
+static/src/css/input.css, static/app/css/main.css.
+Une correction CSS du focus DG emploie le jeton existant --ui-focus-color dans
+static/src/css/portal/dg_legacy.css.
+
+Validation C3 :
+- accounts.test_manager_dashboard_presentation,
+  accounts.test_manager_admissions_workspace,
+  accounts.test_manager_finance_workspace : 21 tests, 20 réussis, 1 échec existant.
+- Échec : test_admissions_route_uses_shared_manager_workspace_and_branch_scope
+  attend seulement trois liens de navigation ; le contexte contient aussi
+  « messagerie » et « mon-salaire ». Même échec dans une exécution avec un chargeur
+  prévu pour les gabarits originaux : aucun gabarit modifié par C3 n'était même
+  chargé par ce test. Aucun changement de navigation ou de logique fait pour le masquer.
+- Recette navigateur : vue d'ensemble, candidatures et paiements, chacune à
+  1280 et 768 px : six vues OK ; cartes au moins 136 px, cellules espacées de 16 px,
+  aucun débordement de page et ressources locales chargées sans erreur.
+
+ENVIRONNEMENT ET CLÔTURE
+Python : venv UFHOB, Python 3.14 ; Django 6.0.5.
+Tests exclusivement sur .tmp-responsive-tests.sqlite3 avec assertion du moteur
+SQLite et du chemin local, paramètres de recette locaux et e-mails en mémoire.
+Les pages du navigateur sont rendues par le client Django de test et servies
+par interception sur une origine localhost, sans démarrer ni modifier de serveur.
+Captures de recette dans livrables/phase1-dg-*.png et phase1-manager-*.png,
+laissées hors des commits. Journal : livrables/JOURNAL_CODEX.txt, une ligne par tâche.
+Aucune migration créée. Aucun changement de modèle, tunnel ou workflow gestionnaire.
+Le travail concurrent academic_cycle et les documents fournis restent hors des commits.
+esfe-core : non touché. esfe_db : non touchée. Base et serveur de production : non touchés.
+Aucun push effectué. Les tâches C2 et C3 ont été poursuivies malgré les limites
+documentées de C1, conformément à la file de travail.
