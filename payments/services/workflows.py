@@ -39,6 +39,8 @@ def sync_payment_finance_history(*, payment, actor=None):
             "receipt_number": payment.receipt_number or "",
             "notes": f"Workflow FIRST_PAYMENT_VALIDATED pour paiement #{payment.pk}.",
             "created_by": actor,
+            # T6 : le mouvement appartient à la caisse de l'école du dossier.
+            "school": getattr(getattr(candidature, "programme", None), "school", None),
         },
     )
     changed_fields = []

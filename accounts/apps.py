@@ -7,3 +7,6 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import accounts.signals
+        from accounts import signals_finance_school
+
+        signals_finance_school.connect()
