@@ -131,3 +131,79 @@ class AttribuerEcoleFinanceTests(CaisseParEcoleBase):
         call_command("attribuer_ecole_finance", "--apply", "--sans-acteur", stdout=StringIO())
         expense.refresh_from_db()
         self.assertIsNone(expense.school)
+
+
+class IsolationCaisseEcoleTests(CaisseParEcoleBase):
+    """ESGA et FATEC sur le même campus A : deux caisses ; le DG voit tout."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from accounts.models import BranchMonthlyClosure
+
+        cls.dg = cls.make_user("t6-dg", "executive_director")
+        with access_scope(build_access_context(cls.gest_esga)):
+            cls.mv_esga = BranchCashMovement.objects.create(
+                branch=cls.a, movement_type=BranchCashMovement.TYPE_IN, amount=70000, label="Recette ESGA")
+            cls.exp_esga = BranchExpense.objects.create(branch=cls.a, title="Dépense ESGA", amount=5000)
+            cls.clo_esga = BranchMonthlyClosure.objects.create(branch=cls.a, period_month=date(2026, 11, 1))
+        with access_scope(build_access_context(cls.gest_fatec)):
+            cls.mv_fatec = BranchCashMovement.objects.create(
+                branch=cls.a, movement_type=BranchCashMovement.TYPE_IN, amount=30000, label="Recette FATEC")
+            cls.exp_fatec = BranchExpense.objects.create(branch=cls.a, title="Dépense FATEC", amount=8000)
+            # Même campus, même mois : chaque école a sa propre clôture.
+            cls.clo_fatec = BranchMonthlyClosure.objects.create(branch=cls.a, period_month=date(2026, 11, 1))
+
+    def as_user(self, user):
+        return access_scope(build_access_context(user))
+
+    def test_chaque_gestionnaire_ne_voit_que_sa_caisse(self):
+        from accounts.models import BranchMonthlyClosure
+        from accounts.services.manager_intelligence import get_branch_cash_balance
+
+        self.assertEqual((self.mv_esga.school, self.mv_fatec.school), (self.esga, self.fatec))
+        with self.as_user(self.gest_esga):
+            self.assertEqual(get_branch_cash_balance(self.a), 70000)
+            self.assertEqual(list(BranchExpense.objects.filter(branch=self.a)), [self.exp_esga])
+            self.assertEqual(list(BranchMonthlyClosure.objects.filter(branch=self.a)), [self.clo_esga])
+            self.assertFalse(BranchExpense.objects.filter(pk=self.exp_fatec.pk).exists())
+        with self.as_user(self.gest_fatec):
+            self.assertEqual(get_branch_cash_balance(self.a), 30000)
+            self.assertEqual(list(BranchExpense.objects.filter(branch=self.a)), [self.exp_fatec])
+
+    def test_dg_voit_toutes_les_ecoles(self):
+        from accounts.services.manager_intelligence import get_branch_cash_balance
+
+        with self.as_user(self.dg):
+            self.assertEqual(get_branch_cash_balance(self.a), 100000)
+            self.assertEqual(BranchExpense.objects.filter(branch=self.a).count(), 2)
+        self.assertEqual(BranchCashMovement.all_objects.filter(branch=self.a).count(), 2)
+
+    def test_scoped_et_numerotation_par_ecole(self):
+        from accounts.scoping import scoped
+        from accounts.services.accounting_documents import ensure_expense_reference
+
+        with self.as_user(self.gest_fatec):
+            self.assertEqual(list(scoped(BranchExpense, user=self.gest_fatec)), [self.exp_fatec])
+        ref_esga = ensure_expense_reference(self.exp_esga)
+        ref_fatec = ensure_expense_reference(self.exp_fatec)
+        self.assertIn("-ESGA-", ref_esga)
+        self.assertIn("-FATEC-", ref_fatec)
+        self.assertTrue(ref_esga.endswith("000001") and ref_fatec.endswith("000001"))
+
+    def test_http_gestionnaire_ne_peut_pas_approuver_la_depense_de_l_autre_ecole(self):
+        from django.urls import reverse
+
+        self.client.force_login(self.gest_esga)
+        response = self.client.post(
+            reverse("accounts:htmx_manager_expense_approve", args=[self.exp_fatec.pk]), HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(response.status_code, 404)
+        self.exp_fatec.refresh_from_db()
+        self.assertEqual(self.exp_fatec.status, BranchExpense.STATUS_SUBMITTED)
+        ok = self.client.post(
+            reverse("accounts:htmx_manager_expense_approve", args=[self.exp_esga.pk]), HTTP_HX_REQUEST="true",
+        )
+        self.assertNotEqual(ok.status_code, 404)
+        self.exp_esga.refresh_from_db()
+        self.assertEqual(self.exp_esga.status, BranchExpense.STATUS_APPROVED)
