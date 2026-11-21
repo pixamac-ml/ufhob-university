@@ -18,8 +18,9 @@ from .scoping import current_navigation
 
 
 DG_RECRUITMENT_POSITION_CHOICES = [
-    (code, "Directeur d’école" if code == "director_of_studies" else
-     "Gestionnaire" if code == "secretary" else definition.label)
+    # Libellés du registre des postes (« Gestionnaire », « Directeur d’école »,
+    # « Secrétaire ») : aucune surcharge locale.
+    (code, definition.label)
     for code, definition in dg_assignable_positions().items()
     if code not in {"finance_manager", "payment_agent", "admissions"}
 ]

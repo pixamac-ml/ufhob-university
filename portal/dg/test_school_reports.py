@@ -131,7 +131,8 @@ class DgSchoolReportsTests(TestCase):
         choices = dict(DG_RECRUITMENT_POSITION_CHOICES)
         self.assertFalse(set(choices) & {"finance_manager", "payment_agent", "admissions"})
         self.assertEqual(choices["director_of_studies"], "Directeur d’école")
-        self.assertEqual(choices["secretary"], "Gestionnaire")
+        self.assertEqual(choices["annex_manager"], "Gestionnaire")
+        self.assertEqual(choices["secretary"], "Secrétaire")
         for code in ("finance_manager", "payment_agent", "admissions"):
             form = DgRecruitmentForm(data={"position": code}, allowed_branch_ids=[self.a.pk])
             self.assertFalse(form.is_valid())
