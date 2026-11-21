@@ -298,8 +298,8 @@ class PaymentCorrectionAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialLog)
 class FinancialLogAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("created_at", "branch", "action", "payment", "old_amount", "new_amount", "delta_amount", "actor")
-    list_filter = ("action", "branch", "created_at")
+    list_display = ("created_at", "branch", "school", "action", "payment", "old_amount", "new_amount", "delta_amount", "actor")
+    list_filter = ("action", "branch", "school", "created_at")
     search_fields = (
         "payment__reference",
         "payment__receipt_number",

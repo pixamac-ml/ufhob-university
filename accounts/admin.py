@@ -38,11 +38,11 @@ class SchoolFinanceAdminMixin:
 
 @admin.register(PaymentSignatureSession)
 class PaymentSignatureSessionAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("id", "payment_type", "beneficiary", "branch", "amount", "status", "expires_at", "signed_at", "completed_at")
-    list_filter = ("branch", "payment_type", "status")
+    list_display = ("id", "payment_type", "beneficiary", "branch", "school", "amount", "status", "expires_at", "signed_at", "completed_at")
+    list_filter = ("branch", "school", "payment_type", "status")
     search_fields = ("beneficiary__username", "beneficiary__email", "token_hash")
     readonly_fields = ("token_hash", "signature_sha256", "signature_data", "created_at", "updated_at")
-    autocomplete_fields = ("branch", "beneficiary", "payroll_entry", "honorarium_entry", "created_by", "approved_by", "cash_movement")
+    autocomplete_fields = ("branch", "school", "beneficiary", "payroll_entry", "honorarium_entry", "created_by", "approved_by", "cash_movement")
 
 
 @admin.register(Profile)
@@ -55,26 +55,26 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(PayrollEntry)
 class PayrollEntryAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("employee", "branch", "period_month", "base_salary", "paid_amount", "status", "paid_at")
-    list_filter = ("branch", "status", "period_month")
+    list_display = ("employee", "branch", "school", "period_month", "base_salary", "paid_amount", "status", "paid_at")
+    list_filter = ("branch", "school", "status", "period_month")
     search_fields = ("employee__username", "employee__first_name", "employee__last_name", "employee__email")
     autocomplete_fields = ("employee", "branch", "created_by", "updated_by")
 
 
 @admin.register(BranchExpense)
 class BranchExpenseAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("title", "branch", "category", "amount", "expense_date", "status", "paid_at")
-    list_filter = ("branch", "category", "status", "expense_date")
+    list_display = ("title", "branch", "school", "category", "amount", "expense_date", "status", "paid_at")
+    list_filter = ("branch", "school", "category", "status", "expense_date")
     search_fields = ("title", "supplier", "reference")
-    autocomplete_fields = ("branch", "created_by", "approved_by", "paid_by")
+    autocomplete_fields = ("branch", "school", "created_by", "approved_by", "paid_by")
 
 
 @admin.register(BranchCashMovement)
 class BranchCashMovementAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("reference", "receipt_number", "label", "branch", "movement_type", "source", "amount", "movement_date", "created_by")
-    list_filter = ("branch", "movement_type", "source", "movement_date")
+    list_display = ("reference", "receipt_number", "label", "branch", "school", "movement_type", "source", "amount", "movement_date", "created_by")
+    list_filter = ("branch", "school", "movement_type", "source", "movement_date")
     search_fields = ("label", "reference", "source_reference", "receipt_number", "notes")
-    autocomplete_fields = ("branch", "expense", "created_by")
+    autocomplete_fields = ("branch", "school", "expense", "created_by")
 
     def has_add_permission(self, request):
         return False
@@ -93,12 +93,12 @@ class BranchCashMovementAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
 @admin.register(BranchCashRegisterSession)
 class BranchCashRegisterSessionAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = (
-        "branch", "session_date", "status", "system_opening_balance",
+        "branch", "school", "session_date", "status", "system_opening_balance",
         "expected_amount", "counted_amount", "difference_amount", "closed_at",
     )
-    list_filter = ("branch", "status", "session_date")
+    list_filter = ("branch", "school", "status", "session_date")
     search_fields = ("branch__name", "branch__code", "opening_notes", "closing_notes")
-    autocomplete_fields = ("branch", "opened_by", "closed_by")
+    autocomplete_fields = ("branch", "school", "opened_by", "closed_by")
     readonly_fields = (
         "branch", "session_date", "opening_amount", "system_opening_balance",
         "expected_amount", "counted_amount", "difference_amount", "status",
@@ -115,58 +115,58 @@ class BranchCashRegisterSessionAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
 
 @admin.register(AccountingDocumentSequence)
 class AccountingDocumentSequenceAdmin(admin.ModelAdmin):
-    list_display = ("branch", "document_type", "year", "last_number", "updated_at")
-    list_filter = ("branch", "document_type", "year")
+    list_display = ("branch", "school", "document_type", "year", "last_number", "updated_at")
+    list_filter = ("branch", "school", "document_type", "year")
     search_fields = ("branch__name", "branch__code")
 
 
 @admin.register(TeacherHonorariumEntry)
 class TeacherHonorariumEntryAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("teacher", "branch", "period_month", "hourly_rate", "validated_hours", "paid_amount", "status", "paid_at")
-    list_filter = ("branch", "status", "period_month")
+    list_display = ("teacher", "branch", "school", "period_month", "hourly_rate", "validated_hours", "paid_amount", "status", "paid_at")
+    list_filter = ("branch", "school", "status", "period_month")
     search_fields = ("teacher__username", "teacher__first_name", "teacher__last_name", "teacher__email")
     autocomplete_fields = ("teacher", "branch", "created_by", "updated_by")
 
 
 @admin.register(BranchMonthlyClosure)
 class BranchMonthlyClosureAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("branch", "period_month", "status", "result_amount", "bank_transfer_amount", "closed_at")
-    list_filter = ("branch", "status", "period_month")
+    list_display = ("branch", "school", "period_month", "status", "result_amount", "bank_transfer_amount", "closed_at")
+    list_filter = ("branch", "school", "status", "period_month")
     search_fields = ("branch__name", "branch__code", "notes")
-    autocomplete_fields = ("branch", "created_by", "validated_by")
+    autocomplete_fields = ("branch", "school", "created_by", "validated_by")
 
 
 @admin.register(BranchBankTransfer)
 class BranchBankTransferAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("branch", "bank_name", "reference", "transfer_date", "amount", "created_by")
-    list_filter = ("branch", "transfer_date")
+    list_display = ("branch", "school", "bank_name", "reference", "transfer_date", "amount", "created_by")
+    list_filter = ("branch", "school", "transfer_date")
     search_fields = ("bank_name", "reference", "comment")
-    autocomplete_fields = ("branch", "closure", "created_by")
+    autocomplete_fields = ("branch", "school", "closure", "created_by")
 
 
 @admin.register(Donation)
 class DonationAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("donor_name", "amount", "branch", "date", "motif", "payment_method", "receipt_number", "created_by")
-    list_filter = ("branch", "motif", "payment_method", "date")
+    list_display = ("donor_name", "amount", "branch", "school", "date", "motif", "payment_method", "receipt_number", "created_by")
+    list_filter = ("branch", "school", "motif", "payment_method", "date")
     search_fields = ("donor_name", "description", "receipt_number")
-    autocomplete_fields = ("branch", "cash_movement", "created_by")
+    autocomplete_fields = ("branch", "school", "cash_movement", "created_by")
 
 
 @admin.register(SensitiveActionRequest)
 class SensitiveActionRequestAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("action_type", "target_model", "target_id", "branch", "requested_by", "status", "created_at", "expires_at")
-    list_filter = ("branch", "action_type", "status")
+    list_display = ("action_type", "target_model", "target_id", "branch", "school", "requested_by", "status", "created_at", "expires_at")
+    list_filter = ("branch", "school", "action_type", "status")
     search_fields = ("target_model", "reason")
-    autocomplete_fields = ("branch", "requested_by", "approved_by")
+    autocomplete_fields = ("branch", "school", "requested_by", "approved_by")
     readonly_fields = ("otp_code_hash", "otp_display_code", "created_at", "resolved_at")
 
 
 @admin.register(FinancialAuditLog)
 class FinancialAuditLogAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
-    list_display = ("action_type", "target_model", "target_id", "branch", "performed_by", "approved_by", "created_at")
-    list_filter = ("branch", "action_type")
+    list_display = ("action_type", "target_model", "target_id", "branch", "school", "performed_by", "approved_by", "created_at")
+    list_filter = ("branch", "school", "action_type")
     search_fields = ("target_model",)
-    autocomplete_fields = ("branch", "performed_by", "approved_by", "sensitive_action_request")
+    autocomplete_fields = ("branch", "school", "performed_by", "approved_by", "sensitive_action_request")
     readonly_fields = ("created_at",)
 
 

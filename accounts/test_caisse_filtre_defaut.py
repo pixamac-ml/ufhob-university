@@ -93,6 +93,12 @@ class FiltreDefautCaisseTests(CaisseParEcoleBase):
             self.assertIn(label, body)
         detail = self.client.get(reverse("admin:accounts_branchcashmovement_change", args=[self.mv_fatec.pk]))
         self.assertEqual(detail.status_code, 200)
+        # Recette 3 : colonne et filtre « École » dans l'admin.
+        filtered = self.client.get(reverse("admin:accounts_branchcashmovement_changelist"),
+                                   {"school__id__exact": self.fatec.pk})
+        self.assertContains(filtered, "Recette FATEC")
+        self.assertNotContains(filtered, "Recette ESGA")
+        self.assertContains(filtered, "column-school")
 
     # (d) ---------------------------------------------------------------
     def test_d_dg_voit_tout_le_campus_et_chaque_ecole_quand_il_filtre(self):
