@@ -88,3 +88,46 @@ class EcritureEcoleTests(CaisseParEcoleBase):
         self.assertEqual(lone.school, self.esmed)
         unknown = self.movement(created_by=self.global_user)
         self.assertIsNone(unknown.school)
+
+
+class AttribuerEcoleFinanceTests(CaisseParEcoleBase):
+    def _legacy(self):
+        """Lignes « d'avant » : école effacée comme avant la migration."""
+        ins = self.inscription(self.programmes[1], "esga-legacy")
+        payment = Payment.objects.create(
+            inscription=ins, amount=40000, method=Payment.METHOD_CASH,
+            status=Payment.STATUS_VALIDATED, paid_at=timezone.now(), reference="T6-LEGACY-ESGA",
+        )
+        pay_mv = self.movement(source=BranchCashMovement.SOURCE_STUDENT_PAYMENT, source_reference=payment.reference)
+        expense = BranchExpense.objects.create(branch=self.a, title="Ancienne", amount=900, created_by=self.gest_fatec)
+        exp_mv = self.movement(movement_type=BranchCashMovement.TYPE_OUT, source=BranchCashMovement.SOURCE_EXPENSE,
+                               source_reference=f"expense:{expense.pk}")
+        mono = self.movement(branch=self.b)  # campus B : ESMED seule
+        orphan = self.movement(created_by=self.global_user)
+        rows = [pay_mv, expense, exp_mv, mono, orphan]
+        for row in rows:
+            type(row).objects.filter(pk=row.pk).update(school=None)
+        return rows
+
+    def test_simulation_n_ecrit_rien_puis_apply_repartit(self):
+        pay_mv, expense, exp_mv, mono, orphan = self._legacy()
+        out = StringIO()
+        call_command("attribuer_ecole_finance", "--dry-run", stdout=out)
+        self.assertIn("SIMULATION", out.getvalue())
+        self.assertFalse(BranchCashMovement.objects.filter(school__isnull=False, pk__in=[pay_mv.pk, mono.pk]).exists())
+        out = StringIO()
+        call_command("attribuer_ecole_finance", "--apply", stdout=out)
+        for row in (pay_mv, expense, exp_mv, mono, orphan):
+            row.refresh_from_db()
+        self.assertEqual(pay_mv.school, self.esga)
+        self.assertEqual(expense.school, self.fatec)
+        self.assertEqual(exp_mv.school, self.fatec)
+        self.assertEqual(mono.school, self.esmed)
+        self.assertIsNone(orphan.school)
+        self.assertIn(str(orphan.pk), out.getvalue())
+
+    def test_sans_acteur_laisse_la_depense_a_repartir(self):
+        _pay, expense, *_ = self._legacy()
+        call_command("attribuer_ecole_finance", "--apply", "--sans-acteur", stdout=StringIO())
+        expense.refresh_from_db()
+        self.assertIsNone(expense.school)
