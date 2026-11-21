@@ -608,6 +608,17 @@ class SensitiveActionRequest(models.Model):
         related_name="sensitive_action_requests",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     action_type = models.CharField(max_length=30, choices=ACTION_CHOICES, db_index=True)
     target_model = models.CharField(max_length=60, help_text="Nom du modele cible (ex: Payment).")
     target_id = models.PositiveBigIntegerField()
@@ -667,6 +678,17 @@ class FinancialAuditLog(models.Model):
         related_name="financial_audit_logs",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     action_type = models.CharField(max_length=30)
     target_model = models.CharField(max_length=60)
     target_id = models.PositiveBigIntegerField()
@@ -725,6 +747,17 @@ class PayrollEntry(models.Model):
         on_delete=models.PROTECT,
         related_name="payroll_entries",
         db_index=True,
+    )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
     )
 
     employee = models.ForeignKey(
@@ -798,7 +831,13 @@ class PayrollEntry(models.Model):
         verbose_name_plural = "Fiches de paie"
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "employee", "period_month"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_school_employee_payroll_period",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "employee", "period_month"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_branch_employee_payroll_period",
             )
         ]
@@ -917,6 +956,17 @@ class BranchExpense(models.Model):
         related_name="expenses",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     title = models.CharField(max_length=180)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER, db_index=True)
     amount = models.PositiveBigIntegerField()
@@ -993,6 +1043,17 @@ class BranchCashMovement(models.Model):
         related_name="cash_movements",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     movement_type = models.CharField(max_length=10, choices=TYPE_CHOICES, db_index=True)
     source = models.CharField(max_length=30, choices=SOURCE_CHOICES, default=SOURCE_MANUAL, db_index=True)
     amount = models.PositiveBigIntegerField()
@@ -1030,8 +1091,13 @@ class BranchCashMovement(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "source", "source_reference"],
+                condition=~models.Q(source_reference="") & models.Q(school__isnull=False),
+                name="accounts_unique_school_cash_source_reference",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "source", "source_reference"],
-                condition=~models.Q(source_reference=""),
+                condition=~models.Q(source_reference="") & models.Q(school__isnull=True),
                 name="accounts_unique_cash_source_reference",
             ),
         ]
@@ -1059,6 +1125,17 @@ class BranchCashRegisterSession(models.Model):
         on_delete=models.PROTECT,
         related_name="cash_register_sessions",
         db_index=True,
+    )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
     )
     session_date = models.DateField(default=timezone.localdate, db_index=True)
     opening_amount = models.PositiveBigIntegerField(default=0)
@@ -1094,7 +1171,13 @@ class BranchCashRegisterSession(models.Model):
         verbose_name_plural = "Sessions de caisse"
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "session_date"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_school_cash_register_day",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "session_date"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_branch_cash_register_day",
             ),
         ]
@@ -1121,6 +1204,17 @@ class BranchWallet(models.Model):
     STATUS_CHOICES = [(STATUS_ACTIVE, "Active"), (STATUS_CLOSED, "Cloturee"), (STATUS_ARCHIVED, "Archivee")]
 
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="wallets", db_index=True)
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     name = models.CharField(max_length=100)
     wallet_type = models.CharField(max_length=16, choices=TYPE_CHOICES, db_index=True)
     category = models.CharField(max_length=50, db_index=True)
@@ -1137,7 +1231,10 @@ class BranchWallet(models.Model):
 
     class Meta:
         ordering = ["-is_favorite", "name"]
-        constraints = [models.UniqueConstraint(fields=["branch", "name"], name="accounts_unique_branch_wallet_name")]
+        constraints = [
+            models.UniqueConstraint(fields=["branch", "school", "name"], condition=models.Q(school__isnull=False), name="accounts_unique_school_wallet_name"),
+            models.UniqueConstraint(fields=["branch", "name"], condition=models.Q(school__isnull=True), name="accounts_unique_branch_wallet_name"),
+        ]
         indexes = [models.Index(fields=["branch", "status", "wallet_type"])]
 
     def __str__(self):
@@ -1202,6 +1299,17 @@ class AccountingDocumentSequence(models.Model):
         on_delete=models.PROTECT,
         related_name="accounting_sequences",
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     document_type = models.CharField(max_length=30, choices=DOCUMENT_CHOICES)
     year = models.PositiveSmallIntegerField()
     last_number = models.PositiveIntegerField(default=0)
@@ -1212,7 +1320,13 @@ class AccountingDocumentSequence(models.Model):
         verbose_name_plural = "Sequences comptables"
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "document_type", "year"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_accounting_sequence_school_type_year",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "document_type", "year"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_accounting_sequence_branch_type_year",
             )
         ]
@@ -1239,6 +1353,17 @@ class TeacherHonorariumEntry(models.Model):
         on_delete=models.PROTECT,
         related_name="teacher_honorarium_entries",
         db_index=True,
+    )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
     )
     teacher = models.ForeignKey(
         User,
@@ -1279,7 +1404,13 @@ class TeacherHonorariumEntry(models.Model):
         verbose_name_plural = "Honoraires enseignants"
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "teacher", "period_month"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_school_teacher_honorarium_period",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "teacher", "period_month"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_branch_teacher_honorarium_period",
             )
         ]
@@ -1354,6 +1485,17 @@ class PaymentSignatureSession(models.Model):
     ACTIVE_STATUSES = (STATUS_INITIATED, STATUS_AWAITING_SIGNATURE, STATUS_SIGNED)
 
     branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="payment_signature_sessions", db_index=True)
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     payment_type = models.CharField(max_length=20, choices=TYPE_CHOICES, db_index=True)
     payroll_entry = models.ForeignKey(
         "PayrollEntry", null=True, blank=True, on_delete=models.PROTECT,
@@ -1423,6 +1565,17 @@ class BranchMonthlyClosure(models.Model):
         related_name="monthly_closures",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     period_month = models.DateField(db_index=True)
     total_entries = models.PositiveBigIntegerField(default=0)
     total_exits = models.PositiveBigIntegerField(default=0)
@@ -1477,7 +1630,13 @@ class BranchMonthlyClosure(models.Model):
         verbose_name_plural = "Clotures mensuelles"
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "period_month"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_school_monthly_closure_period",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "period_month"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_branch_monthly_closure_period",
             )
         ]
@@ -1509,6 +1668,17 @@ class BranchBankTransfer(models.Model):
         on_delete=models.PROTECT,
         related_name="bank_transfers",
         db_index=True,
+    )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
     )
     closure = models.ForeignKey(
         BranchMonthlyClosure,
@@ -1564,12 +1734,23 @@ class BranchBankTransfer(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(
+                fields=["branch", "school", "reference"],
+                condition=models.Q(school__isnull=False),
+                name="accounts_unique_school_bank_transfer_reference",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "reference"],
+                condition=models.Q(school__isnull=True),
                 name="accounts_unique_branch_bank_transfer_reference",
             ),
             models.UniqueConstraint(
+                fields=["branch", "school", "idempotency_key"],
+                condition=~models.Q(idempotency_key="") & models.Q(school__isnull=False),
+                name="accounts_unique_school_bank_transfer_idempotency",
+            ),
+            models.UniqueConstraint(
                 fields=["branch", "idempotency_key"],
-                condition=~models.Q(idempotency_key=""),
+                condition=~models.Q(idempotency_key="") & models.Q(school__isnull=True),
                 name="accounts_unique_branch_bank_transfer_idempotency",
             ),
         ]
@@ -1680,6 +1861,17 @@ class Donation(models.Model):
         on_delete=models.PROTECT,
         related_name="donations",
         db_index=True,
+    )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
     )
     cash_movement = models.OneToOneField(
         BranchCashMovement,

@@ -513,6 +513,17 @@ class FinancialLog(models.Model):
         related_name="financial_logs",
         db_index=True,
     )
+    # T6 caisse par école : nullable le temps de la répartition
+    # (manage.py attribuer_ecole_finance), à rendre obligatoire ensuite.
+    school = models.ForeignKey(
+        "core.School",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        db_index=True,
+        verbose_name="École",
+    )
     payment = models.ForeignKey(
         Payment,
         on_delete=models.SET_NULL,
