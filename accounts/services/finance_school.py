@@ -124,9 +124,9 @@ def _movement_reference_school_id(movement):
     if source in simple:
         pattern, model = simple[source]
         match = re.fullmatch(pattern, ref)
-        qs = model.objects.filter(pk=int(match.group(1))) if match else None
+        qs = model._base_manager.filter(pk=int(match.group(1))) if match else None
         if qs is None and model is BranchExpense:
-            qs = BranchExpense.objects.filter(reference=ref)
+            qs = BranchExpense._base_manager.filter(reference=ref)
         if qs is not None:
             return qs.values_list("school_id", flat=True).first()
     return None
@@ -145,7 +145,7 @@ def _target_school_id(instance):
     except (LookupError, ValueError):
         return None
     try:
-        target = model.objects.filter(pk=target_id).first()
+        target = model._base_manager.filter(pk=target_id).first()
     except (ValueError, TypeError):
         return None
     if target is None:
@@ -164,8 +164,8 @@ def record_school_id(instance):
         return _movement_reference_school_id(instance)
     if label == "accounts.payrollentry":
         return _school_id_of_user(instance.employee) if instance.employee_id else None
-    if label == "accounts.teacherhonorariumentry":
-        return _school_id_of_user(instance.teacher) if instance.teacher_id else None
+    # Honoraires : un enseignant peut servir deux écoles ; l'école vient du
+    # contexte de la gestionnaire, son école de rattachement n'est qu'un repli.
     if label == "accounts.paymentsignaturesession":
         return (
             _related_school_id(instance, "payroll_entry")
@@ -236,5 +236,11 @@ def resolve_finance_school_id(instance, *, use_context=True, use_actor=True):
         if school_id and _school_on_branch(school_id, getattr(instance, "branch_id", None)):
             return school_id
     if use_actor:
-        return _actor_school_id(instance)
+        school_id = _actor_school_id(instance)
+        if school_id:
+            return school_id
+    if instance._meta.label_lower == "accounts.teacherhonorariumentry" and instance.teacher_id:
+        school_id = _school_id_of_user(instance.teacher)
+        if _school_on_branch(school_id, instance.branch_id):
+            return school_id
     return None

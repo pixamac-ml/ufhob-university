@@ -6,7 +6,7 @@ from django.db.models import Sum
 from django.contrib.auth import get_user_model
 
 from branches.models import Branch
-from accounts.models import FinancialAuditLog
+from accounts.models import FinancialAuditLog, SchoolFinanceManager
 from inscriptions.models import Inscription
 
 from payments.services.receipt import generate_receipt_number
@@ -552,6 +552,9 @@ class FinancialLog(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     metadata = models.JSONField(default=dict, blank=True)
+
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-created_at"]

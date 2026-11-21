@@ -21,9 +21,9 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from accounts.services.finance_school import (
-    _actor_school_id,
     _school_on_branch,
     record_school_id,
+    resolve_finance_school_id,
 )
 
 # Ordre : les sources d'abord, les lignes qui en dépendent ensuite.
@@ -94,7 +94,7 @@ class Command(BaseCommand):
     def _process(self, label, single, options, apply):
         model = apps.get_model(label)
         lower = model._meta.label_lower
-        queryset = model.objects.filter(school__isnull=True).order_by("pk")
+        queryset = model._base_manager.filter(school__isnull=True).order_by("pk")
         frozen = FROZEN_STATUSES.get(lower)
         skipped = 0
         if frozen and not options["inclure_clotures"]:
@@ -109,14 +109,17 @@ class Command(BaseCommand):
                 school_id = None
             if not school_id and branch_id in single:
                 school_id, reason = single[branch_id], "campus mono-école"
-            if not school_id and not options["sans_acteur"]:
-                school_id, reason = _actor_school_id(obj), "créateur"
+            if not school_id:
+                school_id = resolve_finance_school_id(
+                    obj, use_context=False, use_actor=not options["sans_acteur"],
+                )
+                reason = "créateur / rattachement"
             if not school_id:
                 left.append(obj.pk)
                 continue
             reasons[reason] += 1
             # update() : aucune logique de save()/signal relancée sur l'existant.
-            model.objects.filter(pk=obj.pk, school__isnull=True).update(school_id=school_id)
+            model._base_manager.filter(pk=obj.pk, school__isnull=True).update(school_id=school_id)
         done = sum(reasons.values())
         detail = ", ".join(f"{k} {v}" for k, v in sorted(reasons.items())) or "-"
         line = f"{label}: {done} attribuée(s) ({detail}), {len(left)} restante(s)"

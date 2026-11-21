@@ -63,6 +63,22 @@ SCOPE_PATHS = {
     "portal.supportticket": (None, "branch_id"),
     "portal.supportauditlog": (None, "branch_id"),
     "portal.accountsupportstate": (None, None),
+    # T6-c caisse par école
+    "accounts.sensitiveactionrequest": ("school_id", "branch_id"),
+    "accounts.financialauditlog": ("school_id", "branch_id"),
+    "accounts.payrollentry": ("school_id", "branch_id"),
+    "accounts.branchexpense": ("school_id", "branch_id"),
+    "accounts.branchcashmovement": ("school_id", "branch_id"),
+    "accounts.branchcashregistersession": ("school_id", "branch_id"),
+    "accounts.branchwallet": ("school_id", "branch_id"),
+    "accounts.accountingdocumentsequence": ("school_id", "branch_id"),
+    "accounts.teacherhonorariumentry": ("school_id", "branch_id"),
+    "accounts.paymentsignaturesession": ("school_id", "branch_id"),
+    "accounts.branchmonthlyclosure": ("school_id", "branch_id"),
+    "accounts.branchbanktransfer": ("school_id", "branch_id"),
+    "accounts.donation": ("school_id", "branch_id"),
+    "payments.financiallog": ("school_id", "branch_id"),
+    "accounts.branchwalletentry": ("wallet__school_id", "wallet__branch_id"),
 }
 
 

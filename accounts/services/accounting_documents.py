@@ -27,15 +27,30 @@ def _branch_code(branch):
     return (getattr(branch, "code", "") or "GEN").upper()
 
 
-def next_accounting_reference(branch, document_type, *, document_date=None):
+def _reference_school(branch, school):
+    """T6 : école de la numérotation (explicite, sinon celle du contexte)."""
+    if school is not None:
+        return school
+    from accounts.models import finance_context_school_id
+    from core.models import School, SchoolBranch
+
+    school_id = finance_context_school_id()
+    if school_id and SchoolBranch.objects.filter(school_id=school_id, branch=branch).exists():
+        return School.objects.filter(pk=school_id).first()
+    return None
+
+
+def next_accounting_reference(branch, document_type, *, document_date=None, school=None):
     document_date = document_date or timezone.localdate()
     year = document_date.year
+    school = _reference_school(branch, school)
     with transaction.atomic():
         sequence, _ = (
             AccountingDocumentSequence.objects
             .select_for_update()
             .get_or_create(
                 branch=branch,
+                school=school,
                 document_type=document_type,
                 year=year,
                 defaults={"last_number": 0},
@@ -44,6 +59,9 @@ def next_accounting_reference(branch, document_type, *, document_date=None):
         sequence.last_number += 1
         sequence.save(update_fields=["last_number", "updated_at"])
     prefix = PREFIX_BY_TYPE[document_type]
+    if school is not None:
+        school_code = (school.code or school.short_name or f"E{school.pk}").upper()
+        return f"{prefix}-{_branch_code(branch)}-{school_code}-{year}-{sequence.last_number:06d}"
     return f"{prefix}-{_branch_code(branch)}-{year}-{sequence.last_number:06d}"
 
 
@@ -54,6 +72,7 @@ def ensure_expense_reference(expense):
         expense.branch,
         AccountingDocumentSequence.DOCUMENT_EXPENSE,
         document_date=expense.expense_date,
+        school=expense.school,
     )
     expense.save(update_fields=["reference", "updated_at"])
     return expense.reference
@@ -66,6 +85,7 @@ def ensure_cash_movement_reference(movement):
             movement.branch,
             AccountingDocumentSequence.DOCUMENT_CASH,
             document_date=movement.movement_date,
+            school=movement.school,
         )
         updates.append("reference")
     if not movement.receipt_number:

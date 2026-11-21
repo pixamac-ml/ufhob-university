@@ -562,6 +562,49 @@ class UserPreference(models.Model):
         return f"Preferences de {self.user.username}"
 
 
+
+# ============================================================
+# T6-c — caisse par école : filtre automatique par l'école du contexte
+# ============================================================
+
+def finance_context_school_id():
+    """École du contexte d'accès courant (gestionnaire, directeur d'école…).
+
+    ``None`` pour un compte université / campus (DG, DGA…) ou hors requête :
+    aucun filtre, ces comptes voient toutes les écoles.
+    """
+    from accounts.scoping import _request_context
+
+    context = _request_context.get()
+    if context is None or not getattr(context, "is_valid", False):
+        return None
+    if getattr(context, "context_type", None) != "SYSTEM":
+        return None
+    return getattr(getattr(context, "school", None), "pk", None)
+
+
+class SchoolFinanceManager(models.Manager):
+    """Gestionnaire par défaut des modèles de caisse.
+
+    Sous un contexte d'école, toute requête (solde, listes, exports,
+    clôtures, recherches par pk) ne voit que la caisse de cette école. Les
+    lignes non encore réparties (école vide) n'apparaissent qu'aux comptes
+    université / campus. ``all_objects`` donne la vue complète.
+    """
+
+    school_path = "school_id"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        school_id = finance_context_school_id()
+        if school_id:
+            queryset = queryset.filter(**{self.school_path: school_id})
+        return queryset
+
+
+class WalletEntrySchoolFinanceManager(SchoolFinanceManager):
+    school_path = "wallet__school_id"
+
 class SensitiveActionRequest(models.Model):
     """Demande de modification sur une operation financiere deja finalisee.
 
@@ -652,6 +695,9 @@ class SensitiveActionRequest(models.Model):
     expires_at = models.DateTimeField()
     resolved_at = models.DateTimeField(null=True, blank=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Demande d'action sensible"
@@ -715,6 +761,9 @@ class FinancialAuditLog(models.Model):
         related_name="audit_entries",
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-created_at"]
@@ -824,6 +873,9 @@ class PayrollEntry(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-period_month", "employee__last_name", "employee__first_name"]
@@ -984,6 +1036,9 @@ class BranchExpense(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-expense_date", "-created_at"]
         verbose_name = "Depense annexe"
@@ -1079,6 +1134,9 @@ class BranchCashMovement(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_cash_movements")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-movement_date", "-created_at"]
         verbose_name = "Mouvement de caisse"
@@ -1165,6 +1223,9 @@ class BranchCashRegisterSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-session_date", "-created_at"]
         verbose_name = "Session de caisse"
@@ -1229,6 +1290,9 @@ class BranchWallet(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-is_favorite", "name"]
         constraints = [
@@ -1271,6 +1335,9 @@ class BranchWalletEntry(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_wallet_entries")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = WalletEntrySchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-created_at", "-pk"]
@@ -1398,6 +1465,9 @@ class TeacherHonorariumEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-period_month", "teacher__last_name", "teacher__first_name"]
         verbose_name = "Honoraire enseignant"
@@ -1524,6 +1594,9 @@ class PaymentSignatureSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-created_at"]
         indexes = [
@@ -1624,6 +1697,9 @@ class BranchMonthlyClosure(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ["-period_month", "-created_at"]
         verbose_name = "Cloture mensuelle"
@@ -1723,6 +1799,9 @@ class BranchBankTransfer(models.Model):
         related_name="validated_bank_transfers",
     )
     validated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-transfer_date", "-created_at"]
@@ -1897,6 +1976,9 @@ class Donation(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SchoolFinanceManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["-date", "-created_at"]
