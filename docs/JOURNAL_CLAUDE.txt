@@ -1,0 +1,15 @@
+JOURNAL CLAUDE CODE — PHASE 1 (coeur UFHOB-Mali)
+Format : date heure | tache | statut | commit
+Tests : SECRET_KEY=... ENABLE_WEBSOCKETS=False python manage.py test <lot> --settings=config.settings_test_campaign
+
+2026-11-20 17:30 | DEMARRAGE | environnement de test OK (core.test_cloisonnement_ecoles 5/5), makemigrations --check propre | -
+2026-11-20 18:01 | T1 sécurité academic_cycle (R-C2) | FAIT, academic_cycle 10/10 OK ; academics.test_annual_deliberation : 6 échecs antérieurs sans lien (modules non modifiés) | 4e25413
+2026-11-20 18:12 | T2 suppression définitive (R-C3) | FAIT, 3/3 OK ; échec antérieur test_manager_admissions_workspace (navigation messagerie/mon-salaire) sans lien | 6534897
+2026-11-20 18:44 | T3 Directeur d'école (D1) | FAIT, 4/4 OK ; migrations accounts 0046 + academics 0055 (libellés) ; 12 échecs antérieurs portal.test_director_* identiques avant/après | 9380b7b
+2026-11-21 09:34 | T4 gestionnaire unique + agent auto (D2/D3) | FAIT, 7/7 OK ; migrations accounts 0047 (modèle trace) + 0048 (conversion) ; 7 échecs antérieurs inchangés ; 6 tests des anciens rôles marqués skip D2 | b112e85
+2026-11-21 09:34 | NOTE POUR CODEX | portal/dg/forms.py:20-25 : le filtre des 3 postes est déjà là, mais le libellé « Gestionnaire » est appliqué à 'secretary' au lieu de 'annex_manager' ; le registre donne déjà 'Gestionnaire' et 'Directeur d’école' (supprimer les surcharges) | -
+2026-11-21 | T6 bloc 1 (a, b, d) caisse par école | FAIT : a 682d84f (migrations accounts 0049 + payments 0008, champ school nullable, contraintes dédoublées), b 78f5a93 (résolveur + pre_save), d (commande attribuer_ecole_finance) ; 8/8 tests en mémoire | voir git log
+2026-11-21 | T6 bloc 2 (c, e) caisse par école | FAIT : c a008b8d (SchoolFinanceManager par défaut + SCOPE_PATHS + numérotation par école), e (tests isolation) ; 12/12 en mémoire | voir git log
+2026-11-21 | T6 RESTE | portal/dg/context.py school_ledgers_unavailable/mixed_campus_finance à retirer ; admin (school dans listes/filtres) ; boutique (À CONFIRMER) et StudentFinancialPosition non traités ; bulk_create non couvert par pre_save (rattrapé par attribuer_ecole_finance) ; rendre school obligatoire après --apply ; suite complète accounts/portal non relancée (consigne : tests de la tâche) | -
+2026-11-21 | T5 libellés DG + agent de caisse fiable (R-I3, R-M1) | FAIT : 159dbfd (libellés), ea312d1 (agent = gestionnaire école + campus, HX-Trigger JSON) ; 3 échecs antérieurs payments.tests inchangés | -
+2026-11-21 | T6 RECETTE 1-3 | FAIT : 1dfb93c (filtre prouvé hors contexte, admin superutilisateur), 3fd73e2 (DG sans drapeaux caisse mixte, solde de caisse par école), f00027f (admin : école en colonne/filtre) | -
