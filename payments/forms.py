@@ -23,15 +23,12 @@ class StudentPaymentForm(forms.Form):
         )
     )
 
-    agent_name = forms.CharField(
+    # R-I3 : plus de nom à taper. L'agent est la gestionnaire de l'école du
+    # dossier ; le code n'est demandé que s'il y en a plusieurs sur le campus.
+    agent_code = forms.CharField(
         required=False,
-        label="Nom de l'agent",
-        widget=forms.TextInput(
-            attrs={
-                "class": "w-full border border-gray-300 rounded-lg px-4 py-2",
-                "placeholder": "Ex : Fatoumata Dia"
-            }
-        )
+        label="Gestionnaire qui encaisse",
+        max_length=8,
     )
 
     verification_code = forms.CharField(
@@ -75,7 +72,7 @@ class StudentPaymentForm(forms.Form):
         cleaned_data = super().clean()
 
         method = cleaned_data.get("method")
-        agent_name = cleaned_data.get("agent_name")
+        agent_code = cleaned_data.get("agent_code")
         code = cleaned_data.get("verification_code")
         amount = cleaned_data.get("amount")
 
@@ -91,16 +88,10 @@ class StudentPaymentForm(forms.Form):
         # ==================================================
         if method == "cash":
 
-            # 1️⃣ Nom agent obligatoire
-            if not agent_name:
-                raise forms.ValidationError(
-                    "Veuillez entrer le nom de l'agent en charge de votre dossier."
-                )
-
-            # 2️⃣ Vérification agent (sans casser session existante)
+            # 1️⃣ Agent = gestionnaire de l'école + campus du dossier
             agent, error = verify_agent_and_create_session(
                 self.inscription,
-                agent_name
+                agent_code,
             )
 
             if error:

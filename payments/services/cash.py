@@ -3,19 +3,65 @@
 from django.utils import timezone
 from datetime import timedelta
 import secrets
-from django.db.models import Q
 from django.db import transaction
 
 from payments.models import PaymentAgent, CashPaymentSession
 
 
+MANAGER_POSITIONS = ("annex_manager", "branch_manager")
+NO_AGENT_MESSAGE = (
+    "Aucune gestionnaire de votre école n'est disponible sur ce campus. "
+    "Adressez-vous au service des admissions."
+)
+
+
+def eligible_agents_for_inscription(inscription):
+    """Gestionnaires pouvant encaisser ce dossier (décision D3, R-I3).
+
+    L'agent est la gestionnaire de l'ÉCOLE de la formation, sur le CAMPUS
+    du dossier. Deux écoles d'un même campus ne partagent jamais d'agent.
+    """
+    candidature = getattr(inscription, "candidature", None)
+    branch = getattr(candidature, "branch", None)
+    school = getattr(getattr(candidature, "programme", None), "school", None)
+    if branch is None or school is None:
+        return PaymentAgent.objects.none()
+    return (
+        PaymentAgent.objects.select_related("user", "branch")
+        .filter(
+            is_active=True,
+            user__is_active=True,
+            branch=branch,
+            user__institutional_profile__position__in=MANAGER_POSITIONS,
+            user__institutional_profile__school=school,
+        )
+        .order_by("user__last_name", "user__first_name", "pk")
+    )
+
+
+def resolve_cash_agent(inscription, agent_code=None):
+    """Retourne (agent, erreur). Plus aucune recherche par nom approché."""
+    agents = list(eligible_agents_for_inscription(inscription))
+    if not agents:
+        return None, NO_AGENT_MESSAGE
+    code = (agent_code or "").strip().upper()
+    if code:
+        for agent in agents:
+            if agent.agent_code.upper() == code:
+                return agent, None
+        return None, "Ce code agent ne correspond à aucune gestionnaire de votre école sur ce campus."
+    if len(agents) == 1:
+        return agents[0], None
+    return None, "Choisissez la gestionnaire qui encaisse votre paiement."
+
+
 # ============================================================
-# 1️⃣ Vérifier agent + créer (ou récupérer) session active
+# 1️⃣ Déterminer l'agent + créer (ou récupérer) session active
 # ============================================================
 
-def verify_agent_and_create_session(inscription, agent_full_name):
+def verify_agent_and_create_session(inscription, agent_code=None):
     """
-    Vérifie que l’agent existe.
+    Détermine l'agent (gestionnaire de l'école + campus du dossier).
 
     Réutilise une session active si elle existe.
     Sinon crée une nouvelle session (valide 5 minutes).
@@ -24,37 +70,9 @@ def verify_agent_and_create_session(inscription, agent_full_name):
         (agent, error)
     """
 
-    if not agent_full_name:
-        return None, "Nom de l’agent requis."
-
-    agent_full_name = agent_full_name.strip()
-
-    if len(agent_full_name) < 2:
-        return None, "Nom invalide."
-
-    parts = agent_full_name.split()
-
-    queryset = PaymentAgent.objects.select_related("user", "branch").filter(
-        is_active=True
-    )
-
-    # Force la correspondance annexe pour eviter d'envoyer le code au mauvais agent.
-    inscription_branch = getattr(getattr(inscription, "candidature", None), "branch", None)
-    if inscription_branch:
-        queryset = queryset.filter(branch=inscription_branch)
-
-    query = Q()
-
-    for part in parts:
-        query &= (
-            Q(user__first_name__icontains=part) |
-            Q(user__last_name__icontains=part)
-        )
-
-    agent = queryset.filter(query).distinct().first()
-
-    if not agent:
-        return None, "Agent introuvable pour cette annexe."
+    agent, error = resolve_cash_agent(inscription, agent_code)
+    if error:
+        return None, error
 
     with transaction.atomic():
 

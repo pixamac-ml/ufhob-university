@@ -249,11 +249,10 @@ class Command(BaseCommand):
             raise CommandError(f"Trop de paiements existants pour l'inscription {inscription.pk}.")
 
         created = 0
-        agent_name = agent.user.get_full_name()
         for amount in amounts[len(existing_amounts):]:
             if amount > inscription.balance:
                 raise CommandError(f"Paiement de {amount} FCFA superieur au solde restant.")
-            resolved_agent, error = verify_agent_and_create_session(inscription, agent_name)
+            resolved_agent, error = verify_agent_and_create_session(inscription, agent.agent_code)
             if error or resolved_agent != agent:
                 raise CommandError(error or "Agente de paiement ISMI incoherente.")
             session = inscription.cash_sessions.filter(

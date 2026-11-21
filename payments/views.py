@@ -11,6 +11,7 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.db import transaction
 from django.db.models import Q
+import json
 import logging
 
 from inscriptions.models import Inscription
@@ -26,6 +27,11 @@ from accounts.scoping import scoped
 
 
 logger = logging.getLogger(__name__)
+
+
+def _toast_trigger(level, message):
+    """En-tête HX-Trigger toujours encodé en JSON valide (R-M1)."""
+    return json.dumps({"toast": {"type": level, "message": str(message)}}, ensure_ascii=False)
 
 
 def _can_initiate_payment(inscription, has_pending_payment):
@@ -70,7 +76,7 @@ def student_initiate_payment(request, token):
             {"message": "Accès non autorisé."},
             status=403,
         )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Accès non autorisé."}}'
+        response["HX-Trigger"] = _toast_trigger("error", "Accès non autorisé.")
         return response
 
     # Récupérer le contexte actuel
@@ -112,7 +118,7 @@ def student_initiate_payment(request, token):
             context,
             status=400
         )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Veuillez corriger les erreurs du formulaire."}}'
+        response["HX-Trigger"] = _toast_trigger("error", "Veuillez corriger les erreurs du formulaire.")
         return response
 
     # Validation métier supplémentaire
@@ -137,7 +143,7 @@ def student_initiate_payment(request, token):
             context,
             status=400
         )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Le montant dépasse le solde restant."}}'
+        response["HX-Trigger"] = _toast_trigger("error", "Le montant dépasse le solde restant.")
         return response
 
     if has_pending_payment:
@@ -151,7 +157,7 @@ def student_initiate_payment(request, token):
             "payments/partials/payment_error.html",
             {"message": "Un paiement est déjà en attente de validation."}
         )
-        response["HX-Trigger"] = '{"toast": {"type": "warning", "message": "Un paiement est déjà en attente."}}'
+        response["HX-Trigger"] = _toast_trigger("warning", "Un paiement est déjà en attente.")
         return response
 
     with transaction.atomic():
@@ -178,7 +184,7 @@ def student_initiate_payment(request, token):
                 "payments/partials/payment_error.html",
                 {"message": "Paiement impossible pour ce dossier actuellement."},
             )
-            response["HX-Trigger"] = '{"toast": {"type": "warning", "message": "Paiement impossible pour ce dossier actuellement."}}'
+            response["HX-Trigger"] = _toast_trigger("warning", "Paiement impossible pour ce dossier actuellement.")
             return response
 
         payment = Payment.objects.create(
@@ -216,7 +222,7 @@ def student_initiate_payment(request, token):
     )
 
     # Toast de succès
-    response["HX-Trigger"] = '{"toast": {"type": "success", "message": "Paiement de ' + str(amount) + ' F soumis avec succès!"}}'
+    response["HX-Trigger"] = _toast_trigger("success", f"Paiement de {amount} F soumis avec succès !")
 
     return response
 
@@ -239,21 +245,12 @@ def verify_agent(request, token):
             {"show_error": True, "error": "Accès non autorisé."},
             status=403,
         )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Accès non autorisé."}}'
+        response["HX-Trigger"] = _toast_trigger("error", "Accès non autorisé.")
         return response
 
-    agent_name = request.POST.get("agent_name", "").strip()
+    agent_code = request.POST.get("agent_code", "").strip()
 
-    if not agent_name or len(agent_name) < 2:
-        response = render(
-            request,
-            "payments/partials/agent_input.html",
-            {"show_error": True, "error": "Veuillez entrer au moins 2 caractères."}
-        )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "Veuillez entrer au moins 2 caractères."}}'
-        return response
-
-    agent, error = verify_agent_and_create_session(inscription, agent_name)
+    agent, error = verify_agent_and_create_session(inscription, agent_code)
 
     if error:
         response = render(
@@ -261,7 +258,7 @@ def verify_agent(request, token):
             "payments/partials/agent_input.html",
             {"show_error": True, "error": error}
         )
-        response["HX-Trigger"] = '{"toast": {"type": "error", "message": "' + error + '"}}'
+        response["HX-Trigger"] = _toast_trigger("error", error)
         return response
 
     session = CashPaymentSession.objects.filter(
@@ -271,9 +268,9 @@ def verify_agent(request, token):
     response = render(
         request,
         "payments/partials/agent_confirmed.html",
-        {"agent": agent, "agent_name": agent_name, "session": session}
+        {"agent": agent, "agent_name": agent.user.get_full_name(), "session": session}
     )
-    response["HX-Trigger"] = '{"toast": {"type": "success", "message": "Agent vérifié avec succès!"}}'
+    response["HX-Trigger"] = _toast_trigger("success", "Agent vérifié avec succès!")
     return response
 
 
@@ -293,9 +290,9 @@ def initiate_cash_session(request, token):
             status=403,
         )
 
-    agent_name = request.POST.get("agent_name", "").strip()
+    agent_code = request.POST.get("agent_code", "").strip()
 
-    agent, error = verify_agent_and_create_session(inscription, agent_name)
+    agent, error = verify_agent_and_create_session(inscription, agent_code)
 
     if error:
         return render(request, "payments/partials/agent_error.html", {"error": error}, status=400)

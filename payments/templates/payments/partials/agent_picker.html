@@ -1,0 +1,37 @@
+{% load payment_agents %}
+{% eligible_payment_agents inscription as cash_agents %}
+{# R-I3 : l'agent est la gestionnaire de l'école du dossier, sur son campus. #}
+<label class="block text-sm font-medium text-gray-700 mb-2" for="id_agent_code">
+    Gestionnaire qui encaisse <span class="text-red-500">*</span>
+</label>
+{% if cash_agents|length > 1 %}
+<select name="agent_code" id="id_agent_code"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3.5 text-sm"
+        hx-post="{% url 'payments:verify_agent' inscription.public_token %}"
+        hx-trigger="change"
+        hx-target="#agent-result"
+        hx-swap="outerHTML">
+    <option value="">Choisissez votre gestionnaire</option>
+    {% for agent in cash_agents %}
+    <option value="{{ agent.agent_code }}">{{ agent.user.get_full_name|default:agent.user.username }} — code {{ agent.agent_code }}</option>
+    {% endfor %}
+</select>
+<p class="text-xs text-gray-500">Seules les gestionnaires de {{ inscription.candidature.programme.school.short_name|default:"votre école" }} sur ce campus sont proposées.</p>
+{% elif cash_agents %}
+{% with agent=cash_agents.0 %}
+<input type="hidden" name="agent_code" id="id_agent_code" value="{{ agent.agent_code }}">
+<div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm">
+    <span>Votre paiement est encaissé par <strong>{{ agent.user.get_full_name|default:agent.user.username }}</strong></span>
+    <button type="button" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium"
+            hx-post="{% url 'payments:verify_agent' inscription.public_token %}"
+            hx-include="#id_agent_code"
+            hx-target="#agent-result"
+            hx-swap="outerHTML">Demander le code</button>
+</div>
+{% endwith %}
+{% else %}
+<p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+    Aucune gestionnaire de votre école n'est disponible sur ce campus. Adressez-vous au service des admissions.
+</p>
+{% endif %}
+<div id="agent-result"></div>
