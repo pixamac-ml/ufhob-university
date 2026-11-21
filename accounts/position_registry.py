@@ -32,11 +32,8 @@ POSITION_REGISTRY = {
     STUDENT: PositionDefinition(STUDENT, "Étudiant", CATEGORY_STUDENT, SCOPE_BRANCH, "portal_student:dashboard", "student", True),
     TEACHER: PositionDefinition(TEACHER, "Enseignant", CATEGORY_TEACHING, SCOPE_BRANCH, "accounts_portal:portal_teacher", "teacher", True),
     MONITOR: PositionDefinition(MONITOR, "Moniteur / Monitrice", CATEGORY_TEACHING, SCOPE_BRANCH, "accounts_portal:portal_teacher", MONITOR, True),
-    ANNEX_MANAGER: PositionDefinition(ANNEX_MANAGER, "Gestionnaire de campus", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_annex_manager", "annex_manager", True),
-    "finance_manager": PositionDefinition("finance_manager", "Responsable finance", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_finance", "finance_manager", True),
-    "payment_agent": PositionDefinition("payment_agent", "Agent de paiement", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_finance", "payment_agent", True),
+    ANNEX_MANAGER: PositionDefinition(ANNEX_MANAGER, "Gestionnaire", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_annex_manager", "annex_manager", True),
     "secretary": PositionDefinition("secretary", "Secrétaire", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_secretary", "secretary", True),
-    "admissions": PositionDefinition("admissions", "Agent des admissions", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_admissions", "admissions", True),
     "academic_supervisor": PositionDefinition("academic_supervisor", "Surveillant général", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_dashboard", "academic_supervisor", True),
     "it_support": PositionDefinition("it_support", "Informaticien", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_dashboard", "it_support", True),
     "director_of_studies": PositionDefinition("director_of_studies", "Directeur d’école", CATEGORY_ADMIN, SCOPE_BRANCH, "accounts_portal:portal_director", "director_of_studies", True),
@@ -46,8 +43,14 @@ POSITION_REGISTRY = {
     "super_admin": PositionDefinition("super_admin", "Super administrateur", CATEGORY_ADMIN, SCOPE_GLOBAL, "superadmin:dashboard", "super_admin", False),
 }
 
+# Décision D2 (20/11/2026) : une seule gestionnaire par école fait tout.
+# Les anciens postes finance / agent de paiement / admissions ne sont plus
+# proposés ; leurs codes restent reconnus comme alias de la gestionnaire.
+RETIRED_MANAGER_POSITIONS = frozenset({"finance_manager", "payment_agent", "admissions"})
+
 LEGACY_POSITION_ALIASES = {
     "branch_manager": ANNEX_MANAGER,
+    **{code: ANNEX_MANAGER for code in RETIRED_MANAGER_POSITIONS},
 }
 
 DG_EXCLUDED_POSITIONS = frozenset({STUDENT, "executive_director", "deputy_executive_director", "super_admin"})

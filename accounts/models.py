@@ -39,15 +39,12 @@ class Profile(models.Model):
         ("student", "Etudiant"),
         ("teacher", "Enseignant"),
         ("moniteur", "Moniteur / Monitrice"),
-        ("finance_manager", "Responsable finance"),
-        ("payment_agent", "Agent de paiement"),
         ("secretary", "Secretaire"),
-        ("admissions", "Admissions"),
         ("director_of_studies", "Directeur d’école"),
         ("executive_director", "Direction executive"),
         ("deputy_executive_director", "Direction generale adjointe"),
-        ("branch_manager", "Gestionnaire annexe"),
-        ("annex_manager", "Gestionnaire d'annexe"),
+        ("branch_manager", "Gestionnaire (ancien code)"),
+        ("annex_manager", "Gestionnaire"),
         ("academic_supervisor", "Surveillant academique"),
         ("it_support", "Informaticien"),
         ("marketing_manager", "Responsable marketing digital"),
@@ -266,6 +263,30 @@ class Profile(models.Model):
     @property
     def is_teacher(self):
         return self.role == "teacher"
+
+
+class LegacyPositionConversion(models.Model):
+    """Trace de la conversion D2 (anciens postes → gestionnaire unique).
+
+    Sert à annuler exactement la migration de données si besoin.
+    """
+
+    SOURCE_PROFILE = "profile"
+    SOURCE_INSTITUTIONAL = "institutional"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="legacy_position_conversions")
+    source = models.CharField(max_length=20)
+    old_position = models.CharField(max_length=40)
+    new_position = models.CharField(max_length=40)
+    payment_agent_created = models.BooleanField(default=False)
+    converted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Conversion de poste historique"
+        verbose_name_plural = "Conversions de postes historiques"
+
+    def __str__(self):
+        return f"{self.user_id}: {self.old_position} -> {self.new_position}"
 
 
 class UserEmailHistory(models.Model):

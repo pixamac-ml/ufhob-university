@@ -34,8 +34,9 @@ class DashboardEntryPointTests(SimpleTestCase):
             "academic_supervisor": "accounts_portal:portal_dashboard",
             "secretary": "accounts_portal:portal_secretary",
             "annex_manager": "accounts_portal:portal_annex_manager",
-            "finance_manager": "accounts_portal:portal_finance",
-            "admissions": "accounts_portal:portal_admissions",
+            # D2 : les anciens postes finance / admissions mènent à la gestionnaire.
+            "finance_manager": "accounts_portal:portal_annex_manager",
+            "admissions": "accounts_portal:portal_annex_manager",
             "marketing_manager": "marketing:dashboard",
             "super_admin": "superadmin:dashboard",
         }

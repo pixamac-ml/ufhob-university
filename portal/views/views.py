@@ -5897,12 +5897,10 @@ def portal_dashboard(request):
     if user_requires_branch_assignment(request.user):
         return redirect("accounts_portal:access_regularization")
 
-    if position in {"finance_manager", "payment_agent"}:
-        return redirect("accounts:finance_dashboard")
+    if position in {"annex_manager", "branch_manager"}:
+        return redirect("accounts_portal:portal_annex_manager")
     if position == "secretary":
         return redirect("secretary:secretary_dashboard")
-    if position == "admissions":
-        return redirect("accounts:admissions_dashboard")
     if position == "super_admin" or request.user.is_superuser:
         return redirect("superadmin:dashboard")
     if position in {"executive_director", "deputy_executive_director"}:
@@ -7691,11 +7689,14 @@ def teacher_recording_download(request, recording_id: int):
         return HttpResponse(exc.messages[0] if exc.messages else str(exc), status=409)
 
 
-@_position_required({"finance_manager", "payment_agent"})
-def finance_portal(request):
-    from accounts.dashboards.finance_dashboard import finance_dashboard
+def _redirect_to_manager_section(section):
+    return redirect(f"{reverse('accounts_portal:portal_annex_manager')}?section={section}")
 
-    return finance_dashboard(request)
+
+@login_required
+def finance_portal(request):
+    """Ancien espace finance : la gestionnaire unique fait tout (D2)."""
+    return _redirect_to_manager_section("paiements")
 
 
 @_position_required({"secretary"})
@@ -7705,11 +7706,10 @@ def secretary_portal(request):
     return secretary_dashboard(request)
 
 
-@_position_required({"admissions"})
+@login_required
 def admissions_portal(request):
-    from accounts.dashboards.admissions_dashboard import admissions_dashboard
-
-    return admissions_dashboard(request)
+    """Ancien espace admissions : la gestionnaire unique fait tout (D2)."""
+    return _redirect_to_manager_section("candidatures")
 
 
 @_position_required({"director_of_studies", "executive_director", "deputy_executive_director", "super_admin"})

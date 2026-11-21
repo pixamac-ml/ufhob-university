@@ -28,6 +28,10 @@ LEGACY_ACCESS_GROUPS = frozenset(
         "marketing",
         "branch_manager",
         "deputy_director",
+        # Postes retirés par la décision D2 : la gestionnaire fait tout.
+        "finance_manager",
+        "payment_agent",
+        "admissions",
     }
 )
 

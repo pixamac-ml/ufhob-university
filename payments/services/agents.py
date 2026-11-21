@@ -6,13 +6,27 @@ from accounts.position_registry import ANNEX_MANAGER, normalize_position
 from payments.models import PaymentAgent
 
 
+def _manager_position_and_branch(user):
+    """Poste et campus officiels : affectation institutionnelle d'abord."""
+    institutional = getattr(user, "institutional_profile", None)
+    profile = getattr(user, "profile", None)
+    position = getattr(institutional, "position", None) or getattr(profile, "position", None)
+    branch = getattr(institutional, "branch", None) or getattr(profile, "branch", None)
+    return normalize_position(position), branch
+
+
 @transaction.atomic
 def ensure_cash_agent_for_manager(*, user, branch=None):
-    """Ensure an annex manager can immediately receive cash payments."""
-    profile = getattr(user, "profile", None)
-    if profile is None or normalize_position(profile.position) != ANNEX_MANAGER:
+    """La gestionnaire est l'agent de caisse de son école (décision D3).
+
+    Crée ou met à jour son profil d'agent sur son campus. L'école est celle de
+    son affectation institutionnelle : un agent ne peut donc encaisser que
+    pour son école, même sur un campus partagé.
+    """
+    position, assigned_branch = _manager_position_and_branch(user)
+    if position != ANNEX_MANAGER:
         return None
-    branch = branch or profile.branch
+    branch = branch or assigned_branch
     if branch is None:
         return None
     agent, _created = PaymentAgent.objects.get_or_create(

@@ -1,3 +1,4 @@
+from unittest import skip
 from unittest.mock import patch
 from datetime import timedelta
 
@@ -45,17 +46,15 @@ class ManagerFinanceWorkspaceTests(TestCase):
         )
         cls.dg = _create_user("finance_correction_dg", branch=cls.branch, position="executive_director")
         cls.dga = _create_user("finance_correction_dga", branch=cls.branch, position="deputy_executive_director")
-        PaymentAgent.objects.create(
+        # D3 : l'agent de la gestionnaire est créé automatiquement.
+        PaymentAgent.objects.update_or_create(
             user=cls.finance_manager,
-            branch=cls.branch,
-            agent_code="FIN001",
-            is_active=True,
+            defaults={"branch": cls.branch, "agent_code": "FIN001", "is_active": True},
         )
-        PaymentAgent.objects.create(
+        # D3 : l'agent de la gestionnaire est créé automatiquement.
+        PaymentAgent.objects.update_or_create(
             user=cls.payment_agent_user,
-            branch=cls.branch,
-            agent_code="AGT001",
-            is_active=True,
+            defaults={"branch": cls.branch, "agent_code": "AGT001", "is_active": True},
         )
 
         candidature = _create_candidature(
@@ -94,6 +93,7 @@ class ManagerFinanceWorkspaceTests(TestCase):
             method=Payment.METHOD_ORANGE,
         )
 
+    @skip("D2 (20/11/2026) : postes finance / agent de paiement retirés ; la gestionnaire unique fait tout (voir accounts.test_gestionnaire_unique).")
     def test_finance_route_uses_shared_manager_workspace_and_branch_scope(self):
         self.client.force_login(self.finance_manager)
 
@@ -152,6 +152,7 @@ class ManagerFinanceWorkspaceTests(TestCase):
         self.assertEqual(self.payment.status, Payment.STATUS_VALIDATED)
         self.assertEqual(self.other_payment.status, Payment.STATUS_PENDING)
 
+    @skip("D2 (20/11/2026) : postes finance / agent de paiement retirés ; la gestionnaire unique fait tout (voir accounts.test_gestionnaire_unique).")
     def test_payment_agent_can_view_but_cannot_correct(self):
         self.payment.status = Payment.STATUS_VALIDATED
         self.payment.save(update_fields=["status"])
@@ -171,6 +172,7 @@ class ManagerFinanceWorkspaceTests(TestCase):
         self.assertNotContains(detail, "Correction controlee")
         self.assertEqual(correction.status_code, 403)
 
+    @skip("D2 (20/11/2026) : postes finance / agent de paiement retirés ; la gestionnaire unique fait tout (voir accounts.test_gestionnaire_unique).")
     def test_finance_role_cannot_call_non_finance_manager_workflow(self):
         self.client.force_login(self.finance_manager)
 

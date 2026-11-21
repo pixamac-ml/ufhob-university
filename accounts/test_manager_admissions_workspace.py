@@ -1,3 +1,5 @@
+from unittest import skip
+
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -108,6 +110,7 @@ class ManagerAdmissionsWorkspaceTests(TestCase):
         self.assertEqual(self.candidature.status, "under_review")
         self.assertEqual(self.other_candidature.status, "submitted")
 
+    @skip("D2 (20/11/2026) : le poste admissions est retiré ; la gestionnaire unique fait tout.")
     def test_inscription_detail_is_read_only_for_finance_actions(self):
         self.client.force_login(self.admissions_user)
 
@@ -121,6 +124,7 @@ class ManagerAdmissionsWorkspaceTests(TestCase):
         self.assertNotContains(response, "Paiement en espece")
         self.assertNotContains(response, "Corriger paiement")
 
+    @skip("D2 (20/11/2026) : le poste admissions est retiré ; la gestionnaire unique fait tout.")
     def test_admissions_role_cannot_call_finance_workflow(self):
         self.client.force_login(self.admissions_user)
 
@@ -155,6 +159,7 @@ class ManagerAdmissionsWorkspaceTests(TestCase):
         self.assertEqual(inscription.candidature.branch, self.branch)
         self.assertEqual(inscription.amount_due, 125000)
 
+    @skip("D2 (20/11/2026) : le poste admissions est retiré ; la gestionnaire unique fait tout.")
     def test_admissions_account_context_uses_real_role(self):
         self.client.force_login(self.admissions_user)
 

@@ -132,6 +132,18 @@ def synchronize_direct_institutional_position_group(sender, instance, **kwargs):
     synchronize_user_position_groups(instance.user, position=instance.position)
 
 
+@receiver(post_save, sender=InstitutionalProfile)
+def ensure_manager_cash_agent(sender, instance, **kwargs):
+    """D3 : toute gestionnaire reçoit automatiquement son profil d'agent de caisse."""
+    from accounts.position_registry import ANNEX_MANAGER, normalize_position
+
+    if normalize_position(instance.position) != ANNEX_MANAGER or not instance.branch_id:
+        return
+    from payments.services.agents import ensure_cash_agent_for_manager
+
+    ensure_cash_agent_for_manager(user=instance.user, branch=instance.branch)
+
+
 @receiver(pre_delete, sender=InstitutionalProfile)
 def audit_direct_institutional_assignment_delete(sender, instance, **kwargs):
     # Quand Profile.position vient d'etre vide, le signal Profile a deja audite

@@ -33,8 +33,8 @@ class CloisonnementEcolesTests(TestCase):
         cls.c_fatec = cls._candidature(cls.p_fatec, "fatec.candidat@example.invalid")
         cls.s_fatec = cls._student(cls.c_fatec)
         cls.users = {
-            "esga": cls.make_user("gest-esga", "admissions", cls.a, cls.esga, "SCHOOL_BRANCH"),
-            "fatec": cls.make_user("gest-fatec", "admissions", cls.a, cls.fatec, "SCHOOL_BRANCH"),
+            "esga": cls.make_user("gest-esga", "annex_manager", cls.a, cls.esga, "SCHOOL_BRANCH"),
+            "fatec": cls.make_user("gest-fatec", "annex_manager", cls.a, cls.fatec, "SCHOOL_BRANCH"),
         }
         cls.dg = cls.global_user
 
@@ -76,7 +76,8 @@ class CloisonnementEcolesTests(TestCase):
         for key, own, foreign in self.pairs():
             with self.subTest(key):
                 self.client.force_login(self.users[key])
-                listing = self.client.get(reverse("accounts_portal:portal_admissions"))
+                # L'ancien espace admissions mène au cockpit de la gestionnaire (D2).
+                listing = self.client.get(reverse("accounts_portal:portal_admissions"), follow=True)
                 self.assertContains(listing, own.email)
                 self.assertNotContains(listing, foreign.email)
                 for route in ("accounts:htmx_candidature_detail", "accounts:htmx_candidature_under_review"):

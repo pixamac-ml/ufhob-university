@@ -73,10 +73,11 @@ class SuperadminUserManagementTests(TestCase):
         created = User.objects.get(username='agent_adm')
         self.assertTrue(created.is_staff)
         self.assertTrue(created.is_active)
-        self.assertEqual(created.profile.position, 'admissions')
-        self.assertEqual(created.profile.role, 'admissions')
+        # D2 : l'ancien code « admissions » est enregistré comme gestionnaire.
+        self.assertEqual(created.profile.position, 'annex_manager')
+        self.assertEqual(created.profile.role, '')
         self.assertEqual(created.profile.branch_id, self.branch.pk)
-        self.assertEqual(list(created.groups.values_list('name', flat=True)), ['admissions'])
+        self.assertEqual(list(created.groups.values_list('name', flat=True)), ['annex_manager'])
 
     def test_edit_user_synchronizes_position_group(self):
         target = User.objects.create_user(

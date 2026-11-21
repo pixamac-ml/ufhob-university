@@ -287,6 +287,12 @@ def get_user_position(user):
         else:
             position = None
 
+    # Les anciens codes (branch_manager, finance_manager, payment_agent,
+    # admissions) désignent tous la gestionnaire unique de l'école (D2).
+    from accounts.position_registry import normalize_position
+
+    position = normalize_position(position) or None
+
     logger.debug(
         "Position detectee pour %s: %s",
         getattr(user, "username", "anonymous"),
