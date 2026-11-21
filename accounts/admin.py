@@ -17,8 +17,27 @@ from accounts.models import (
 )
 
 
+class SchoolFinanceAdminMixin:
+    """T6 : l'admin d'un superutilisateur voit toutes les écoles.
+
+    Le manager par défaut des modèles de caisse filtre par l'école du contexte
+    d'accès ; un superutilisateur rattaché à une école ne doit pas perdre la
+    vue complète dans l'admin (listes, fiches, autocomplétion).
+    """
+
+    def get_queryset(self, request):
+        manager = getattr(self.model, "all_objects", None)
+        if manager is None or not getattr(request.user, "is_superuser", False):
+            return super().get_queryset(request)
+        queryset = manager.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            queryset = queryset.order_by(*ordering)
+        return queryset
+
+
 @admin.register(PaymentSignatureSession)
-class PaymentSignatureSessionAdmin(admin.ModelAdmin):
+class PaymentSignatureSessionAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("id", "payment_type", "beneficiary", "branch", "amount", "status", "expires_at", "signed_at", "completed_at")
     list_filter = ("branch", "payment_type", "status")
     search_fields = ("beneficiary__username", "beneficiary__email", "token_hash")
@@ -35,7 +54,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
 
 @admin.register(PayrollEntry)
-class PayrollEntryAdmin(admin.ModelAdmin):
+class PayrollEntryAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("employee", "branch", "period_month", "base_salary", "paid_amount", "status", "paid_at")
     list_filter = ("branch", "status", "period_month")
     search_fields = ("employee__username", "employee__first_name", "employee__last_name", "employee__email")
@@ -43,7 +62,7 @@ class PayrollEntryAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchExpense)
-class BranchExpenseAdmin(admin.ModelAdmin):
+class BranchExpenseAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("title", "branch", "category", "amount", "expense_date", "status", "paid_at")
     list_filter = ("branch", "category", "status", "expense_date")
     search_fields = ("title", "supplier", "reference")
@@ -51,7 +70,7 @@ class BranchExpenseAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchCashMovement)
-class BranchCashMovementAdmin(admin.ModelAdmin):
+class BranchCashMovementAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("reference", "receipt_number", "label", "branch", "movement_type", "source", "amount", "movement_date", "created_by")
     list_filter = ("branch", "movement_type", "source", "movement_date")
     search_fields = ("label", "reference", "source_reference", "receipt_number", "notes")
@@ -72,7 +91,7 @@ class BranchCashMovementAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchCashRegisterSession)
-class BranchCashRegisterSessionAdmin(admin.ModelAdmin):
+class BranchCashRegisterSessionAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = (
         "branch", "session_date", "status", "system_opening_balance",
         "expected_amount", "counted_amount", "difference_amount", "closed_at",
@@ -102,7 +121,7 @@ class AccountingDocumentSequenceAdmin(admin.ModelAdmin):
 
 
 @admin.register(TeacherHonorariumEntry)
-class TeacherHonorariumEntryAdmin(admin.ModelAdmin):
+class TeacherHonorariumEntryAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("teacher", "branch", "period_month", "hourly_rate", "validated_hours", "paid_amount", "status", "paid_at")
     list_filter = ("branch", "status", "period_month")
     search_fields = ("teacher__username", "teacher__first_name", "teacher__last_name", "teacher__email")
@@ -110,7 +129,7 @@ class TeacherHonorariumEntryAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchMonthlyClosure)
-class BranchMonthlyClosureAdmin(admin.ModelAdmin):
+class BranchMonthlyClosureAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("branch", "period_month", "status", "result_amount", "bank_transfer_amount", "closed_at")
     list_filter = ("branch", "status", "period_month")
     search_fields = ("branch__name", "branch__code", "notes")
@@ -118,7 +137,7 @@ class BranchMonthlyClosureAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchBankTransfer)
-class BranchBankTransferAdmin(admin.ModelAdmin):
+class BranchBankTransferAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("branch", "bank_name", "reference", "transfer_date", "amount", "created_by")
     list_filter = ("branch", "transfer_date")
     search_fields = ("bank_name", "reference", "comment")
@@ -126,7 +145,7 @@ class BranchBankTransferAdmin(admin.ModelAdmin):
 
 
 @admin.register(Donation)
-class DonationAdmin(admin.ModelAdmin):
+class DonationAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("donor_name", "amount", "branch", "date", "motif", "payment_method", "receipt_number", "created_by")
     list_filter = ("branch", "motif", "payment_method", "date")
     search_fields = ("donor_name", "description", "receipt_number")
@@ -134,7 +153,7 @@ class DonationAdmin(admin.ModelAdmin):
 
 
 @admin.register(SensitiveActionRequest)
-class SensitiveActionRequestAdmin(admin.ModelAdmin):
+class SensitiveActionRequestAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("action_type", "target_model", "target_id", "branch", "requested_by", "status", "created_at", "expires_at")
     list_filter = ("branch", "action_type", "status")
     search_fields = ("target_model", "reason")
@@ -143,7 +162,7 @@ class SensitiveActionRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(FinancialAuditLog)
-class FinancialAuditLogAdmin(admin.ModelAdmin):
+class FinancialAuditLogAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("action_type", "target_model", "target_id", "branch", "performed_by", "approved_by", "created_at")
     list_filter = ("branch", "action_type")
     search_fields = ("target_model",)

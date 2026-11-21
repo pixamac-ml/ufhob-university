@@ -1,6 +1,7 @@
 # payments/admin.py
 from django.utils.safestring import mark_safe
 from django.utils import timezone
+from accounts.admin import SchoolFinanceAdminMixin
 from accounts.admin_scoping import UniversityScopeAdminMixin
 from django.contrib import admin, messages
 from django.utils.html import format_html
@@ -296,7 +297,7 @@ class PaymentCorrectionAdmin(admin.ModelAdmin):
 
 
 @admin.register(FinancialLog)
-class FinancialLogAdmin(admin.ModelAdmin):
+class FinancialLogAdmin(SchoolFinanceAdminMixin, admin.ModelAdmin):
     list_display = ("created_at", "branch", "action", "payment", "old_amount", "new_amount", "delta_amount", "actor")
     list_filter = ("action", "branch", "created_at")
     search_fields = (

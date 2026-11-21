@@ -9,7 +9,8 @@ Règles (dans l'ordre, rien n'est inventé) :
 2. campus qui n'accueille qu'une seule école active → cette école ;
 3. école du compte qui a créé la ligne, si elle est présente sur le campus
    (désactivable avec --sans-acteur).
-Ne remplit que les lignes sans école. Les clôtures et versements bancaires
+Lit et écrit via ``all_objects`` (jamais le filtre de contexte) : toutes
+les lignes, avec ou sans utilisateur connecté. Ne remplit que les lignes sans école. Les clôtures et versements bancaires
 validés/clos ne sont pas touchés sans --inclure-clotures (date de bascule).
 Les lignes restantes sont listées pour répartition manuelle.
 """
@@ -94,7 +95,7 @@ class Command(BaseCommand):
     def _process(self, label, single, options, apply):
         model = apps.get_model(label)
         lower = model._meta.label_lower
-        queryset = model._base_manager.filter(school__isnull=True).order_by("pk")
+        queryset = model.all_objects.filter(school__isnull=True).order_by("pk")
         frozen = FROZEN_STATUSES.get(lower)
         skipped = 0
         if frozen and not options["inclure_clotures"]:
@@ -119,7 +120,7 @@ class Command(BaseCommand):
                 continue
             reasons[reason] += 1
             # update() : aucune logique de save()/signal relancée sur l'existant.
-            model._base_manager.filter(pk=obj.pk, school__isnull=True).update(school_id=school_id)
+            model.all_objects.filter(pk=obj.pk, school__isnull=True).update(school_id=school_id)
         done = sum(reasons.values())
         detail = ", ".join(f"{k} {v}" for k, v in sorted(reasons.items())) or "-"
         line = f"{label}: {done} attribuée(s) ({detail}), {len(left)} restante(s)"
