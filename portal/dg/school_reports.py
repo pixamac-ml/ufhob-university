@@ -38,18 +38,20 @@ def school_summary(navigation):
         inscriptions=Count("pk"), due=Sum(Greatest(F("amount_due") - F("amount_paid"), 0)))
     payments = grouped(base["payments"], "inscription__candidature__programme__school_id",
         year=Sum("amount"), month=Sum("amount", filter=Q(paid_at__gte=month_start, paid_at__lt=month_end)))
-    # Cash is a ledger balance, never revenue minus campus expenses. Legacy
-    # ledgers without a school cannot be distributed across its schools.
-    cash = None
-    if any(field.name == "school" for field in BranchCashMovement._meta.fields):
-        movements = BranchCashMovement.objects.filter(branch_id__in=navigation.scoped_branch_ids)
-        if navigation.selected_school:
-            movements = movements.filter(school=navigation.selected_school)
-        if navigation.academic_year:
-            movements = movements.filter(movement_date__lte=navigation.academic_year.end_date)
-        cash = grouped(movements, "school_id",
-            incoming=Sum("amount", filter=Q(movement_type=BranchCashMovement.TYPE_IN)),
-            outgoing=Sum("amount", filter=Q(movement_type=BranchCashMovement.TYPE_OUT)))
+    # Solde de caisse = grand livre de l'école (champ school, T6), jamais
+    # revenus moins dépenses. Lecture explicite par école via all_objects ;
+    # les écritures non encore réparties (school vide) ne sont attribuées à
+    # aucune école.
+    movements = BranchCashMovement.all_objects.filter(
+        branch_id__in=navigation.scoped_branch_ids, school__isnull=False,
+    )
+    if navigation.selected_school:
+        movements = movements.filter(school=navigation.selected_school)
+    if navigation.academic_year:
+        movements = movements.filter(movement_date__lte=navigation.academic_year.end_date)
+    cash = grouped(movements, "school_id",
+        incoming=Sum("amount", filter=Q(movement_type=BranchCashMovement.TYPE_IN)),
+        outgoing=Sum("amount", filter=Q(movement_type=BranchCashMovement.TYPE_OUT)))
 
     schools = [navigation.selected_school] if navigation.selected_school else navigation.available_schools
     rows = []
@@ -58,12 +60,12 @@ def school_summary(navigation):
         item = {"school": school, **dict.fromkeys(METRICS, 0)}
         for source in (students, applications, inscriptions, payments):
             item.update({key: value or 0 for key, value in source.get(school.pk, {}).items() if key in METRICS})
-        ledger = cash.get(school.pk, {}) if cash is not None else None
-        item["cash"] = ((ledger.get("incoming") or 0) - (ledger.get("outgoing") or 0)) if ledger is not None else None
+        ledger = cash.get(school.pk, {})
+        item["cash"] = (ledger.get("incoming") or 0) - (ledger.get("outgoing") or 0)
         for key in METRICS:
             total[key] += item[key]
         rows.append(item)
-    total.update(school=None, cash=sum(row["cash"] for row in rows) if cash is not None else None)
+    total.update(school=None, cash=sum(row["cash"] for row in rows))
     return rows, total
 
 

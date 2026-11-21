@@ -15,11 +15,6 @@
     {% endfill %}
   {% endcomponent %}
 
-  {% if dg_school_finance %}
-    {% if dg_active_section == 'expenses' or dg_active_section == 'cash_movements' or dg_active_section == 'closures' or dg_active_section == 'bank_transfers' %}
-      {% component "ui_core.alert" title="Ventilation par école" message="Données de caisse par école bientôt disponibles. Les écritures du campus entier restent consultables dans le contexte universitaire." tone="info" %}{% endcomponent %}
-    {% endif %}
-  {% endif %}
   {% if selected_school and dg_active_section == 'documents' %}
     {% component "ui_core.alert" title="Documents par école" message="Les documents de campus sans rattachement à une école restent consultables dans le contexte universitaire." tone="info" %}{% endcomponent %}
   {% endif %}

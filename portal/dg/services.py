@@ -116,11 +116,6 @@ def _age_label(value):
     return f"{minutes}min"
 
 
-def _school_only_finance_scope():
-    navigation = current_navigation()
-    return bool(navigation and navigation.selected_school)
-
-
 def _performance_label(student_count, class_count, alert_count, balance):
     """Operational vigilance signal — not a certified institutional grade."""
     ratio = int(student_count / class_count) if class_count else 0
@@ -351,20 +346,15 @@ def _build_branch_summaries(branches, base, *, academic_year=None, include_detai
         for covered_branch_id in covered_branch_ids:
             directors_by_branch_id.setdefault(covered_branch_id, []).append(label)
 
-    school_only = _school_only_finance_scope()
     summaries = []
     for branch in branches:
         payment_stats = payment_stats_by_branch.get(branch.id) or {}
         revenue = _money(payment_stats.get("total"))
-        # School-wide views hide campus ledgers; do not present a fake zero balance.
-        if school_only:
-            expenses = None
-            balance = None
-            pending_expense_count = 0
-        else:
-            expenses = _money((expense_stats.get(branch.id) or {}).get("total"))
-            balance = revenue - expenses
-            pending_expense_count = (expense_stats.get(branch.id) or {}).get("pending", 0) or 0
+        # T6 : les dépenses portent l'école ; sous une école sélectionnée,
+        # seules les siennes sont comptées (filtre par école des modèles de caisse).
+        expenses = _money((expense_stats.get(branch.id) or {}).get("total"))
+        balance = revenue - expenses
+        pending_expense_count = (expense_stats.get(branch.id) or {}).get("pending", 0) or 0
         student_count = student_counts.get(branch.id, 0)
         class_count = class_counts.get(branch.id, 0)
         open_alert_count = alert_counts.get(branch.id, 0)
@@ -401,7 +391,7 @@ def _build_branch_summaries(branches, base, *, academic_year=None, include_detai
                 "validated_payment_count": payment_stats.get("count", 0),
                 "expense_total": expenses,
                 "balance_total": balance,
-                "campus_ledgers_available": not school_only,
+                "campus_ledgers_available": True,
                 "pending_expense_count": pending_expense_count,
                 "open_alert_count": open_alert_count,
                 "top_classes": get_top_classes_for_branch(branch, academic_year=academic_year) if include_details else [],
@@ -2038,7 +2028,6 @@ def build_dg_section_context(request, section, base_context_builder):
         context = build_dg_dashboard_context(request, base_context_builder)
     context["dg_section"] = section
     if section == "finance_reports":
-        school_only = _school_only_finance_scope()
         context["finance_report_headers"] = ["Campus", "Revenus", "Dépenses", "Solde", "Inscriptions", "Alertes"]
         report_context = resolve_dg_context(request)
         report_base = get_dg_base_querysets(
@@ -2056,8 +2045,8 @@ def build_dg_section_context(request, section, base_context_builder):
                 "cells": [
                     {"value": item["branch"].name, "secondary": item.get("manager_name") or "Responsable non assigné", "strong": True},
                     {"value": f"{item['revenue_total']} FCFA", "amount": True},
-                    {"value": "Non ventilé par école" if school_only else f"{item['expense_total']} FCFA", "amount": True},
-                    {"value": "Non calculable par école" if school_only else f"{item['balance_total']} FCFA", "amount": True},
+                    {"value": f"{item['expense_total']} FCFA", "amount": True},
+                    {"value": f"{item['balance_total']} FCFA", "amount": True},
                     {"value": item["active_inscription_count"], "amount": True},
                     {"value": item["open_alert_count"], "tone": "warning" if item["open_alert_count"] else "success"},
                 ],

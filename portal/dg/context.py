@@ -51,16 +51,6 @@ class DgDashboardContext:
         ids = {school for school, branch in self.school_branch_pairs if branch == self.selected_branch.id}
         return [school for school in self.all_schools if school.id in ids]
 
-    @property
-    def school_ledgers_unavailable(self) -> bool:
-        """A campus selection does not attribute legacy ledgers to a school."""
-        return bool(self.selected_school)
-
-    @property
-    def mixed_campus_finance(self) -> bool:
-        """Compatibility flag for a school/campus selection, not a cash balance."""
-        return bool(self.selected_school and self.selected_branch)
-
     def template_context(self):
         return {
             "academic_years": self.academic_years,
@@ -74,8 +64,6 @@ class DgDashboardContext:
             "available_schools": self.available_schools,
             "available_branches": self.available_branches,
             "dashboard_scope_label": self.scope_label,
-            "dg_school_finance": self.school_ledgers_unavailable,
-            "dg_mixed_campus_finance": self.mixed_campus_finance,
         }
 
     @property

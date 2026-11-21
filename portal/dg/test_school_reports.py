@@ -50,7 +50,13 @@ class DgSchoolReportsTests(TestCase):
         pending.save(update_fields=["status"])
 
     def test_shared_campus_totals_and_current_month(self):
+        from accounts.models import BranchCashMovement
         self.populate()
+        esga, fatec = self.schools[1], self.schools[2]
+        for school, kind, amount in ((esga, "in", 500), (esga, "out", 120), (fatec, "in", 80), (None, "in", 9999)):
+            BranchCashMovement.objects.create(branch=self.a, school=school, movement_type=kind, amount=amount,
+                label="T6", movement_date=date(2026, 11, 3))
+        BranchCashMovement.all_objects.filter(amount=9999).update(school=None)  # écriture non répartie
         with patch("portal.dg.school_reports.timezone.localdate", return_value=date(2026, 11, 20)):
             response = self.overview(scope_school_id="", scope_branch_id=self.a.pk)
         self.assertEqual(response.status_code, 200)
@@ -60,8 +66,10 @@ class DgSchoolReportsTests(TestCase):
         self.assertEqual((rows["ESGA"]["month"], rows["FATEC"]["year"]), (30, 70))
         total = response.context["school_summary_total"]
         self.assertEqual((total["students"], total["year"], total["due"]), (2, 100, 100))
-        self.assertIsNone(total["cash"])
-        self.assertContains(response, "Données de caisse par école bientôt disponibles")
+        # T6 : « Solde de caisse » = grand livre de chaque école (champ school).
+        self.assertEqual((rows["ESGA"]["cash"], rows["FATEC"]["cash"]), (380, 80))
+        self.assertEqual(total["cash"], 460)
+        self.assertNotContains(response, "bientôt disponibles")
 
     def test_school_campus_year_and_zero_school_preserved(self):
         self.populate()
@@ -164,8 +172,10 @@ class DgSchoolReportsTests(TestCase):
         response = self.client.get(reverse("accounts_portal:dg_section", args=["finance"]),
             {"scope_school_id": self.schools[1].pk, "scope_branch_id": self.a.pk, "academic_year_id": self.year.pk})
         self.assertEqual(response.context["finance"]["revenue"], 30)
-        self.assertTrue(response.context["dg_school_finance"])
-        self.assertContains(response, "Données de caisse par école bientôt disponibles")
+        # T6 : une dépense sans école n'est jamais comptée dans une école.
+        self.assertEqual(response.context["finance"]["expenses"], 0)
+        self.assertNotIn("dg_school_finance", response.context)
+        self.assertNotContains(response, "bientôt disponibles")
         self.assertNotContains(response, "Croisement revenus")
 
     def test_bulletin_export_keeps_school_and_publication_scope(self):

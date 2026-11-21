@@ -11,7 +11,6 @@
   {% endif %}
 
   <p class="text-sm text-ui-text-muted">{{ dashboard_scope_label }} · {{ selected_academic_year.name }}</p>
-  {% if dg_school_finance %}<p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Les paiements sont rattachés à l’école par leur dossier. Les dépenses, caisses, clôtures et documents généraux sans rattachement école ne sont pas ventilés : ouvrez un campus précis, ou consultez la vue universitaire. Aucun solde d’école ne peut être déduit de ces écritures.</p>{% elif dg_mixed_campus_finance %}<p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Revenus filtrés par école. Dépenses, caisses et clôtures sont des écritures de campus (partagées entre écoles du même site). Le solde croise ces deux niveaux — ce n’est pas un résultat d’école pur.</p>{% endif %}
   <div class="min-w-0" aria-live="polite">
     {% include dg_section_template %}
   </div>

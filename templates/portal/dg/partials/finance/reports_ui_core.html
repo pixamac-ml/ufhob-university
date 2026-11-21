@@ -13,13 +13,8 @@
 
   <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     {% component "ui_core.stat_card" label="Revenus" value=finance.revenue|intcomma unit="FCFA" icon="wallet-cards" tone="success" description="Paiements validés" compact=False %}{% endcomponent %}
-    {% if dg_school_finance %}
-      <p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Dépenses : non ventilées par école</p>
-      <p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Données de caisse par école bientôt disponibles</p>
-    {% else %}
-      {% component "ui_core.stat_card" label="Dépenses" value=finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" description="Dépenses comptabilisées" compact=False %}{% endcomponent %}
-      {% component "ui_core.stat_card" label="Solde" value=finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" description="Revenus moins dépenses" compact=False %}{% endcomponent %}
-    {% endif %}
+    {% component "ui_core.stat_card" label="Dépenses" value=finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" description="Dépenses comptabilisées" compact=False %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Solde" value=finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" description="Revenus moins dépenses" compact=False %}{% endcomponent %}
     {% component "ui_core.stat_card" label="En attente" value=finance.pending_payments|intcomma icon="clock-3" tone="warning" description="Paiements non validés" compact=False %}{% endcomponent %}
   </div>
 

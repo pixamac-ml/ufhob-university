@@ -13,16 +13,8 @@
 
   <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     {% component "ui_core.stat_card" label="Revenus" value=finance.revenue|intcomma unit="FCFA" icon="wallet-cards" tone="success" description="Paiements validés dans le contexte actif" compact=False %}{% endcomponent %}
-    {% if dg_school_finance %}
-      <p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Dépenses : non ventilées par école — données bientôt disponibles</p>
-      <p class="rounded-ui-card border border-ui-border p-3 text-sm text-ui-text-muted">Données de caisse par école bientôt disponibles</p>
-    {% elif dg_mixed_campus_finance %}
-      {% component "ui_core.stat_card" label="Dépenses" value=finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" description="Écritures de campus (non ventilées par école)" compact=False %}{% endcomponent %}
-      {% component "ui_core.stat_card" label="Solde" value=finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" description="Croisement revenus école / dépenses campus" compact=False %}{% endcomponent %}
-    {% else %}
-      {% component "ui_core.stat_card" label="Dépenses" value=finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" description="Dépenses comptabilisées dans le contexte actif" compact=False %}{% endcomponent %}
-      {% component "ui_core.stat_card" label="Solde" value=finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" description="Revenus moins dépenses" compact=False %}{% endcomponent %}
-    {% endif %}
+    {% component "ui_core.stat_card" label="Dépenses" value=finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" description="Dépenses comptabilisées dans le contexte actif" compact=False %}{% endcomponent %}
+    {% component "ui_core.stat_card" label="Solde" value=finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" description="Revenus moins dépenses" compact=False %}{% endcomponent %}
     {% component "ui_core.stat_card" label="En attente" value=finance.pending_payments icon="clock-3" tone="warning" description="Paiements non validés" compact=False %}{% endcomponent %}
   </div>
 

@@ -200,9 +200,8 @@ class DgUniversityTests(TestCase):
         ])
         response = self.section("finance", scope_school_id=self.schools[0].pk)
         self.assertEqual(response.context["finance"]["revenue"], 40)
-        self.assertTrue(response.context["dg_school_finance"])
-        self.assertFalse(response.context["dg_mixed_campus_finance"])
-        self.assertContains(response, "non ventil")
+        self.assertNotIn("dg_school_finance", response.context)
+        self.assertNotContains(response, "non ventil")
         export = self.client.get(reverse("accounts_portal:dg_export"), {"kind": "payments"})
         self.assertContains(export, "OWN-PAY")
         self.assertNotContains(export, "FOREIGN-PAY")
@@ -282,11 +281,11 @@ class DgUniversityTests(TestCase):
         )
         response = self.section("finance", scope_school_id=self.schools[0].pk, scope_branch_id=self.a.pk)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["dg_school_finance"])
-        self.assertTrue(response.context["dg_mixed_campus_finance"])
+        self.assertNotIn("dg_mixed_campus_finance", response.context)
         self.assertEqual(response.context["finance"]["revenue"], 55)
-        self.assertEqual(response.context["finance"]["expenses"], 20)
-        self.assertContains(response, "écritures de campus")
+        # T6 : dépense créée par un compte université, sans école → hors école.
+        self.assertEqual(response.context["finance"]["expenses"], 0)
+        self.assertNotContains(response, "écritures de campus")
 
     def test_teacher_assignment_to_semester_derives_school_and_year(self):
         from academics.models import Semester

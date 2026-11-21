@@ -10014,13 +10014,12 @@ def dg_export(request):
             writer.writerow([item.title, item.school.display_name if item.school else "Non rattaché", item.is_active, item.is_archived])
     elif kind == "finance":
         writer.writerow(["Campus", "Revenus", "Depenses", "Solde", "Paiements valides", "Alertes ouvertes"])
-        school_only = resolve_dg_context(request).school_ledgers_unavailable
         for item in context["branch_summaries"]:
             writer.writerow([
                 item["branch"].name,
                 item["revenue_total"],
-                item["expense_total"] if not school_only else "Non ventilé par école",
-                item["balance_total"] if not school_only else "Non calculable par école",
+                item["expense_total"],
+                item["balance_total"],
                 item.get("validated_payment_count", len(item["latest_payments"])),
                 item["open_alert_count"],
             ])
@@ -10200,7 +10199,6 @@ def dg_export(request):
             ])
     else:
         writer.writerow(["Campus", "Manager", "Etudiants", "Classes", "Inscriptions", "Candidatures", "Revenus", "Depenses", "Solde", "Vigilance"])
-        school_only = resolve_dg_context(request).school_ledgers_unavailable
         for item in context["branch_summaries"]:
             writer.writerow([
                 item["branch"].name,
@@ -10210,8 +10208,8 @@ def dg_export(request):
                 item["active_inscription_count"],
                 item["candidature_count"],
                 item["revenue_total"],
-                item["expense_total"] if not school_only else "Non ventilé par école",
-                item["balance_total"] if not school_only else "Non calculable par école",
+                item["expense_total"],
+                item["balance_total"],
                 item["performance_label"],
             ])
     if export_format == "xlsx":

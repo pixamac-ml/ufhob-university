@@ -24,13 +24,8 @@
   {% component "ui_core.panel" title="Situation financière" subtitle="Montants limités à l’année académique et au campus actifs." density="compact" %}
     <div class="grid gap-3 sm:grid-cols-3">
       {% component "ui_core.stat_card" label="Revenus" value=drawer_branch_finance.revenue|intcomma unit="FCFA" icon="wallet-cards" tone="success" compact=True %}{% endcomponent %}
-      {% if dg_school_finance %}
-        <p class="p-3 text-sm text-ui-text-muted">Dépenses : non ventilées par école</p>
-        <p class="p-3 text-sm text-ui-text-muted">Solde : non calculable par école seule</p>
-      {% else %}
-        {% component "ui_core.stat_card" label="Dépenses" value=drawer_branch_finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" compact=True %}{% endcomponent %}
-        {% component "ui_core.stat_card" label="Solde" value=drawer_branch_finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" compact=True %}{% endcomponent %}
-      {% endif %}
+      {% component "ui_core.stat_card" label="Dépenses" value=drawer_branch_finance.expenses|intcomma unit="FCFA" icon="receipt-text" tone="danger" compact=True %}{% endcomponent %}
+      {% component "ui_core.stat_card" label="Solde" value=drawer_branch_finance.balance|intcomma unit="FCFA" icon="scale" tone="primary" compact=True %}{% endcomponent %}
     </div>
   {% endcomponent %}
 
